@@ -1,16 +1,31 @@
 # GoreeCloud Mail Android Client
 
-This directory contains the Android application foundation.
+This directory contains the current-main recovery line for GoreeCloud Mail's first-party native Android client.
 
-The Android client target is a first-party GoreeCloud application distributed as an APK/AAB.
+## Current Development foundation
 
-Goals:
+The Android client is intentionally a disconnected Development sidecar. It provides a buildable Kotlin/Jetpack Compose application shell targeting Android SDK 36 with minimum SDK 29 and Java 17, while preserving all runtime mail capabilities as unavailable.
 
-- Native Android experience
-- Background synchronization
-- Push notification integration
-- Secure local storage
-- Attachment handling
-- Shared GoreeCloud Mail backend compatibility
+Current foundation:
 
-APK generation requires the Android project, signing configuration, build validation, and release acceptance before artifacts are published.
+- Native Android `:app` module and launcher activity.
+- Development application identity `com.goreecloud.mail.dev`.
+- No `INTERNET` permission and no provider/session transport.
+- Android backup disabled and cleartext traffic disabled.
+- Explicit fail-closed capability state for account transport, background synchronization, push notifications, secure local storage, and attachment handling.
+- Explicit Platform Contract 0.4 and GLAZE UI V1.6 / 1.6.0 target status.
+- `glazeUiAccepted=false`, `productionAccepted=false`, and `runtimeConnected=false`.
+- JVM tests proving capability and governance truthfulness.
+- Exact-head CI that builds and verifies the Development APK.
+
+The current UI is a generic Development shell. It is **not** represented as GLAZE UI V1.6-conformant or application-accepted.
+
+## Authority boundary
+
+External mail providers remain authoritative for mailbox hosting, mailbox content, delivery state, and Internet mail transport.
+
+This foundation adds no mailbox credentials, GoreeCloud Identity runtime registration, OAuth/OIDC client, provider account, network transport, local authoritative mailbox, background synchronization, push token, attachment transfer, secure message store, or production signing authority.
+
+## Next governed tranches
+
+Recover future Android capabilities only through bounded current-main branches. Identity registration/session binding, provider-account contracts, authenticated transport, synchronization, storage, notifications, attachments, current GLAZE UI V1.6 migration, platform-system runtime acceptance, representative-device testing, recovery, signing/provenance, Release Candidate, Production Acceptance, and Stable qualification remain separate gates.

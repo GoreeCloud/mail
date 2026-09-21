@@ -1,0 +1,95 @@
+name: Mail Android Client
+
+on:
+  pull_request:
+    paths:
+      - 'clients/android/**'
+      - 'scripts/validate_android_native_foundation.py'
+      - '.github/workflows/android-client.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'clients/android/**'
+      - 'scripts/validate_android_native_foundation.py'
+      - '.github/workflows/android-client.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goreecloud-mail-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact candidate revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA"
+          mkdir -p clients/android/build-evidence
+          printf '%s\n' "$ACTUAL_SHA" | tee clients/android/build-evidence/source-commit.txt
+
+      - name: Validate disconnected Android foundation
+        run: python3 scripts/validate_android_native_foundation.py
+
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Unit tests
+        run: gradle -p clients/android :app:testDebugUnitTest --stacktrace
+
+      - name: Lint
+        run: gradle -p clients/android :app:lintDebug --stacktrace
+
+      - name: Assemble Development APK
+        run: gradle -p clients/android :app:assembleDebug --stacktrace
+
+      - name: Verify Development APK identity and authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="clients/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          sha256sum "$APK" | tee clients/android/build-evidence/app-debug.apk.sha256
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt -print | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | tee clients/android/build-evidence/app-debug.badging.txt
+          grep -Fq "package: name='com.goreecloud.mail.dev' versionCode='1' versionName='0.1.0-dev'" clients/android/build-evidence/app-debug.badging.txt
+          grep -Fq "application-label:'GoreeCloud Mail Dev'" clients/android/build-evidence/app-debug.badging.txt
+          if grep -Fq "uses-permission: name='android.permission.INTERNET'" clients/android/build-evidence/app-debug.badging.txt; then
+            echo "Development Mail foundation unexpectedly requests INTERNET." >&2
+            exit 1
+          fi
+
+      - name: Upload Development APK evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: goreecloud-mail-android-foundation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            clients/android/app/build/outputs/apk/debug/app-debug.apk
+            clients/android/build-evidence/source-commit.txt
+            clients/android/build-evidence/app-debug.apk.sha256
+            clients/android/build-evidence/app-debug.badging.txt
+          if-no-files-found: error
+          retention-days: 14

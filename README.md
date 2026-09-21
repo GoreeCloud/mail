@@ -1,6 +1,6 @@
 # GoreeCloud Mail
 
-GoreeCloud Mail is GoreeCloud's privacy-first, first-party email client platform for web and planned native clients. It connects to compatible external mail providers through trusted GoreeCloud provider adapters; GoreeCloud does **not** currently operate mailbox hosting, MX infrastructure, or Internet mail-delivery infrastructure.
+GoreeCloud Mail is GoreeCloud's privacy-first, first-party email client platform for web and native clients under governed Development. It connects to compatible external mail providers through trusted GoreeCloud provider adapters; GoreeCloud does **not** currently operate mailbox hosting, MX infrastructure, or Internet mail-delivery infrastructure.
 
 ## Status
 
@@ -86,14 +86,14 @@ Mail content, HTML, links, attachments, provider responses, protocol data, sende
 
 Passing source tests does not establish production acceptance for any of these systems.
 
-## Planned client surfaces
+## Client surfaces
 
-- Web
-- Linux desktop
-- Android
-- iOS
+- Web — current Development web/trusted-backend foundation.
+- Android — disconnected current-main Development foundation under `clients/android`; no network/provider authority and no GLAZE UI V1.6 application acceptance yet.
+- Linux desktop — planned / not recovered onto current main.
+- iOS — planned / not implemented.
 
-Native packaging and representative-device acceptance remain incomplete unless a later release record explicitly states otherwise.
+Native packaging beyond the Development Android APK and representative-device acceptance remain incomplete unless a later release record explicitly states otherwise.
 
 ## Documentation
 
