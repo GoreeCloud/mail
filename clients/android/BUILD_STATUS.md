@@ -14,9 +14,9 @@
 - Backup and cleartext traffic are disabled.
 - Runtime account transport, background sync, push, secure storage, and attachment handling remain `NOT_IMPLEMENTED`.
 - Platform Contract target is 0.4.
-- Current mandatory design-system target is GLAZE UI V1.6 / 1.6.0, but application-level Glaze acceptance is false.
+- GLAZE UI V1.6 / 1.6.0 source mapping is implemented against accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`, but application-level Glaze acceptance remains false.
 - Production acceptance and runtime connection are false.
-- JVM tests cover capability and governance truthfulness.
+- JVM tests cover capability/governance truthfulness and the V1.6 presentation policy/context projection.
 - Exact-head CI must pass unit tests, lint, Development APK assembly, APK identity verification, and authority-boundary checks.
 
 ## Open gates
