@@ -3,7 +3,7 @@
 **Status:** Active roadmap control  
 **As of:** 2026-09-08  
 **Authoritative project record:** Project Specification — Mail  
-**Canonical repository:** GoreeCloud/goreecloud-mail
+**Canonical repository:** GoreeCloud/mail
 **Drive control:** `GoreeCloud/Feature Roadmap/GoreeCloud Mail/FEATURE-ROADMAP.docx`
 
 ## Purpose
