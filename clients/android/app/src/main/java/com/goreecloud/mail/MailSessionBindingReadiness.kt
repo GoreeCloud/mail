@@ -35,6 +35,7 @@ object MailSessionBindingReadiness {
         MISSING_PROOF,
         INVALID_EXPECTATION,
         INVALID_PROOF,
+        APPLICATION_AUDIENCE_MISMATCH,
         PRINCIPAL_MISMATCH,
         AUDIENCE_MISMATCH,
         ACCOUNT_MISMATCH,
@@ -76,6 +77,10 @@ object MailSessionBindingReadiness {
         ) {
             blockers += Blocker.INVALID_EXPECTATION
             return decision(blockers)
+        }
+
+        if (expectation.audience != MailIdentityNativeSessionReference.DEVELOPMENT_AUDIENCE) {
+            blockers += Blocker.APPLICATION_AUDIENCE_MISMATCH
         }
 
         if (proof == null) {
