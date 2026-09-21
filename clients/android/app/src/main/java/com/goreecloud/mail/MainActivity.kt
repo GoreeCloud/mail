@@ -1,6 +1,8 @@
 package com.goreecloud.mail
 
+import android.animation.ValueAnimator
 import android.os.Bundle
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,11 +28,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val accessibilityManager = getSystemService(AccessibilityManager::class.java)
+        val glazeContext = MailAndroidGlazeContext.fromSignals(
+            fontScale = resources.configuration.fontScale,
+            animatorsEnabled = ValueAnimator.areAnimatorsEnabled(),
+            touchExplorationEnabled = accessibilityManager?.isTouchExplorationEnabled == true,
+        )
+        val glazePresentation = MailGlazePresentationPolicy.resolve(
+            requestedMaterial = MailGlazeMaterialRole.RAISED,
+            context = glazeContext,
+        )
+
         setContent {
             MaterialTheme {
                 MailDevelopmentFoundation(
                     capabilities = MailCapabilitySnapshot.developmentShell(),
                     status = MailAndroidFoundationStatus.development(),
+                    presentation = glazePresentation,
                 )
             }
         }
@@ -41,6 +55,7 @@ class MainActivity : ComponentActivity() {
 private fun MailDevelopmentFoundation(
     capabilities: MailCapabilitySnapshot,
     status: MailAndroidFoundationStatus,
+    presentation: MailGlazeResolvedPresentation,
 ) {
     val unavailableCount = listOf(
         capabilities.accountTransport,
@@ -59,7 +74,7 @@ private fun MailDevelopmentFoundation(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = presentation.screenGutterDp.dp, vertical = 16.dp),
         ) {
             Text(
                 text = "GoreeCloud Mail",
@@ -75,7 +90,7 @@ private fun MailDevelopmentFoundation(
             Spacer(Modifier.height(18.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(presentation.surfaceRadiusDp.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -96,7 +111,7 @@ private fun MailDevelopmentFoundation(
             Spacer(Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(presentation.surfaceRadiusDp.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -108,7 +123,8 @@ private fun MailDevelopmentFoundation(
                     Text(
                         text = "Platform Contract ${status.platformContractVersion}; " +
                             "GLAZE UI ${status.glazeUiTargetVersion} migration required. " +
-                            "Application-level Glaze UI and production acceptance are not established.",
+                            "Application-level Glaze UI and production acceptance are not established. " +
+                            "Source mapping: ${MailGlazeTokens.Version}.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

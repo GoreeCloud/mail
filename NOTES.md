@@ -11,6 +11,8 @@
 
 ## Active stabilization gates
 
+- Stacked child `stabilize/android-glaze-v1.6-source-boundary-20260921` adds only a repository-local GLAZE UI V1.6 / 1.6.0 presentation source mapping on top of the green disconnected Android foundation. It binds the accepted shared release source, projects only local Android font-scale/animator/touch-exploration signals, forbids mail/provider/Identity/attachment/security state from optical context, keeps the optical adapter inactive, and leaves Mail-local rendered, assistive-technology, device, performance, Human Visual Excellence, production, release, and Stable acceptance open.
+
 - Current child candidate `stabilize/android-native-foundation-current-main-20260921` rebuilds only the disconnected native Android foundation on top of the green Platform Contract 0.4 control-plane candidate. It uses Development identity `com.goreecloud.mail.dev`, requests no INTERNET permission, keeps all five runtime mail capabilities NOT_IMPLEMENTED, records GLAZE UI V1.6 / 1.6.0 as migration-required rather than accepted, and adds exact-head build/test/APK evidence. No provider/session transport, mailbox authority, runtime platform-system acceptance, release, or production authority is added.
 
 - Fresh current-main GLAZE UI V1.6 migration and application-specific rendered, accessibility, responsive, representative-environment, rollback, Human Visual Excellence, release, and production acceptance.
