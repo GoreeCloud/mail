@@ -1,10 +1,10 @@
-schema_version: "0.2"
+schema_version: "0.4"
 
 component:
   type: application
   id: goreecloud-mail
   product_name: GoreeCloud Mail
-  repository: GoreeCloud/goreecloud-mail
+  repository: GoreeCloud/mail
 
 lifecycle: development
 version: "0.1.0-dev"
@@ -63,7 +63,7 @@ platform_systems:
       - web/attachment-security.css
       - contracts/glaze.mail-attachment-security-presentation.json
       - scripts/validate_glaze_mail_attachment_security.py
-    notes: Current platform authority requires GLAZE UI V1.1 / 1.1.0. Older Mail V1.0 and pre-reset 2.x source/specification records are historical Development evidence only. The known immutable 1.1.0 import-closure defect still requires a corrected governed immutable Stable release, explicit Mail re-pin, and fresh rendered/accessibility/responsive/representative-environment/Human Visual Excellence acceptance before application conformance can be claimed.
+    notes: The implemented Mail web presentation remains historical Development evidence mapped to GLAZE UI V1.1 / 1.1.0. Current Official Stable consumer authority is GLAZE UI V1.6 / 1.6.0 at accepted release source a7180679ea851389e0f3004515f9a25f420e716d, so Mail remains migration-required until it is deliberately re-pinned and freshly validated for rendered, accessibility, responsive, representative-environment, Human Visual Excellence, rollback, release, and production acceptance.
   mesh:
     result: applicable-blocked
     version: null
@@ -85,6 +85,22 @@ platform_systems:
       - server/encrypted-file-credential-vault.js
       - docs/credential-vault.md
     notes: Mail has trusted session-derived application identity and provider-account isolation boundaries, while external-provider OAuth remains a separate authority. Accepted GoreeCloud Identity application authentication, production service identity/key lifecycle, browser sessions, and production provider-credential custody are not established.
+  policy:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+      - SECURITY.md
+    notes: GoreeCloud Policy is applicable to provider capability, content/privacy/security, attachment, account, synchronization, retention, and consequential mail-operation decisions, but no accepted Mail policy decision, distribution, enforcement-coordination, explanation, freshness, exception, or runtime evidence integration is established.
+  observability:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - docs/database-maintenance.md
+      - goreecloud.platform.yaml
+    notes: GoreeCloud Observability is applicable to Mail health, readiness, provider dependency health, synchronization, delivery diagnostics, performance, security/privacy evidence freshness, and operational events, but no accepted Mail observability integration or representative target-runtime evidence is established.
 
 health:
   health_endpoint: null
@@ -130,11 +146,11 @@ external_dependencies:
     version_constraint: null
 
 compatibility:
-  platform_contract: "0.2"
-  glaze_ui_required: "1.1.0"
+  platform_contract: "0.4"
+  glaze_ui_required: "1.6.0"
   requires:
-    - goreecloud-platform-contract==0.2
-    - glaze-ui==1.1.0
+    - goreecloud-platform-contract==0.4
+    - glaze-ui==1.6.0
     - node>=22
   provides:
     - courier.provider-capabilities/1
@@ -171,13 +187,15 @@ conformance:
     - server/sqlite-backup.js
     - clients/android/BUILD_STATUS.md
   blockers:
-    - Current GLAZE UI authority is V1.1 / 1.1.0; older V1.0 and pre-reset 2.x Mail records must not be treated as current acceptance, and the known immutable 1.1.0 defect requires a corrected immutable Stable release, explicit Mail re-pin, and fresh application-specific rendered/accessibility/responsive/representative-environment/Human Visual Excellence acceptance.
+    - Mail's implemented web presentation remains historical V1.1 / 1.1.0 Development source while current mandatory Stable target is GLAZE UI V1.6 / 1.6.0; deliberate migration plus fresh rendered/accessibility/responsive/representative-environment/Human Visual Excellence/rollback/release acceptance remains outstanding.
     - GoreeCloud Manager integration and acceptance are not established.
     - Privacy Shield runtime/policy integration and production privacy acceptance are not established.
     - Wardveil attachment enforcement is bounded and runtime-validated only for the controlled-provider consumer matrix; real Gmail execution, production identity/credential lifecycle, authoritative Audit/Security Center provenance, quarantine, and broad production acceptance remain outstanding.
     - Everkeep integration, complete Mail-owned backup scope, restore implementation, representative recovery drills, rollback, and production continuity acceptance remain incomplete.
     - GoreeCloud Mesh registration, capability/event publication, authenticated delivery, and runtime acceptance are not established.
     - GoreeCloud Identity application authentication and production service/browser/provider-credential custody acceptance are not established; provider authorization remains a separate authority.
+    - GoreeCloud Policy runtime decision, distribution, enforcement-coordination, explanation, freshness, exception, and evidence integration/acceptance are not established.
+    - GoreeCloud Observability health, readiness, provider dependency-health, metrics/events, diagnostics, performance, provenance/freshness, alerting, and target-environment acceptance are not established.
     - The trusted Mail API does not yet publish a complete versioned Platform Contract API declaration or accepted health/readiness interfaces.
     - Real Gmail and standards-based IMAP/SMTP provider execution and production interoperability remain unaccepted.
     - The Linux first-party client and Android Gradle application are not complete; clients/android/BUILD_STATUS.md explicitly records the Android application implementation as pending.
