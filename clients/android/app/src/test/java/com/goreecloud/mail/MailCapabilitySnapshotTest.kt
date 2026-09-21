@@ -21,6 +21,8 @@ class MailCapabilitySnapshotTest {
         assertTrue(capabilities.all { it.state == MailCapabilityState.NOT_IMPLEMENTED })
         assertTrue(capabilities.none { it.state == MailCapabilityState.AVAILABLE })
         assertTrue(capabilities.all { it.explanation.isNotBlank() })
+        assertEquals(MailCapabilityState.SOURCE_READY, snapshot.sessionBindingContract.state)
+        assertTrue(snapshot.sessionBindingContract.explanation.isNotBlank())
     }
 
     @Test
