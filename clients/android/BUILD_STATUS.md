@@ -18,6 +18,7 @@
 - Production acceptance and runtime connection are false.
 - JVM tests cover capability/governance truthfulness and the V1.6 presentation policy/context projection.
 - Exact-head CI must pass unit tests, lint, Development APK assembly, APK identity verification, and authority-boundary checks.
+- Session-binding metadata policy is SOURCE_READY only; GoreeCloud Identity Draft PR #9 remains contract-only, its native registration registry is empty, and Mail runtime session acceptance remains false.
 
 ## Open gates
 
