@@ -97,18 +97,24 @@ if not errors:
     ):
         require(android_context, marker, "MailAndroidGlazeContext")
 
+    # Keep the Android context mapper dependency-free: the only inputs are the explicit
+    # primitive presentation signals in fromSignals(). Documentation prose may name forbidden
+    # mail-domain concepts while explaining that they are excluded, so enforce code structure
+    # rather than substring-banning those words.
     for forbidden in (
+        "import ",
         "java.net",
         "android.net",
-        "MailProvider",
-        "IdentitySession",
-        "Mailbox",
-        "Message",
-        "Attachment",
-        "Wardveil",
-        "PrivacyShield",
+        "android.content",
+        "android.os",
     ):
         forbid(android_context, forbidden, "MailAndroidGlazeContext")
+    for marker in (
+        "fontScale: Float",
+        "animatorsEnabled: Boolean",
+        "touchExplorationEnabled: Boolean",
+    ):
+        require(android_context, marker, "MailAndroidGlazeContext")
 
     for marker in (
         "MailAndroidGlazeContext.fromSignals(",
