@@ -11,6 +11,8 @@
 
 ## Active stabilization gates
 
+- Current child candidate `stabilize/android-native-foundation-current-main-20260921` rebuilds only the disconnected native Android foundation on top of the green Platform Contract 0.4 control-plane candidate. It uses Development identity `com.goreecloud.mail.dev`, requests no INTERNET permission, keeps all five runtime mail capabilities NOT_IMPLEMENTED, records GLAZE UI V1.6 / 1.6.0 as migration-required rather than accepted, and adds exact-head build/test/APK evidence. No provider/session transport, mailbox authority, runtime platform-system acceptance, release, or production authority is added.
+
 - Fresh current-main GLAZE UI V1.6 migration and application-specific rendered, accessibility, responsive, representative-environment, rollback, Human Visual Excellence, release, and production acceptance.
 - Accepted GoreeCloud Identity, Privacy Shield, Wardveil Security, Everkeep, Mesh, Manager, Policy, and Observability runtime integrations where applicable.
 - Complete provider production interoperability, provider credential custody, account/session isolation, health/readiness, synchronization/offline behavior, recovery, upgrade/rollback, protected signing/provenance, deployment, Release Candidate, and Stable qualification.
