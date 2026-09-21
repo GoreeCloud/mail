@@ -66,6 +66,23 @@ class MailSessionBindingReadinessTest {
     }
 
     @Test
+    fun callerCannotSubstituteAnotherApplicationAudience() {
+        val substitutedExpectation = expectation.copy(audience = "goreecloud-messenger-android")
+        val decision = MailSessionBindingReadiness.evaluate(
+            proof(audience = substitutedExpectation.audience),
+            substitutedExpectation,
+            now,
+        )
+
+        assertFalse(decision.structuralAcceptance)
+        assertFalse(decision.runtimeReady)
+        assertTrue(
+            MailSessionBindingReadiness.Blocker.APPLICATION_AUDIENCE_MISMATCH in
+                decision.blockers,
+        )
+    }
+
+    @Test
     fun principalAudienceAccountAndClientInstanceMustMatchExactly() {
         val cases = listOf(
             proof(principalId = "principal-41") to MailSessionBindingReadiness.Blocker.PRINCIPAL_MISMATCH,
