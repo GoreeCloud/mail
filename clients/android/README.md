@@ -17,6 +17,7 @@ Current foundation:
 - `glazeUiAccepted=false`, `productionAccepted=false`, and `runtimeConnected=false`.
 - JVM tests proving capability and governance truthfulness.
 - Exact-head CI that builds and verifies the Development APK.
+- Source-ready Mail session-binding readiness that validates exact non-secret principal/audience/account/client-instance metadata while keeping GoreeCloud Identity runtime acceptance and Mail native registration explicitly false.
 
 The current UI now consumes a bounded local V1.6 presentation policy for font-scale, reduced-motion, touch-assistance, gutter, and surface-radius behavior. It is **not** represented as fully GLAZE UI V1.6-conformant or application-accepted; rendered, assistive-technology, physical-device, performance, and Human Visual Excellence acceptance remain open.
 
@@ -28,4 +29,4 @@ This foundation adds no mailbox credentials, GoreeCloud Identity runtime registr
 
 ## Next governed tranches
 
-Recover future Android capabilities only through bounded current-main branches. Identity registration/session binding, provider-account contracts, authenticated transport, synchronization, storage, notifications, attachments, current GLAZE UI V1.6 migration, platform-system runtime acceptance, representative-device testing, recovery, signing/provenance, Release Candidate, Production Acceptance, and Stable qualification remain separate gates.
+Recover future Android capabilities only through bounded current-main branches. A source-only session-binding readiness model is now present, but Identity runtime acceptance and concrete Mail native registration remain blocked. Provider-account contracts, authenticated transport, synchronization, storage, notifications, attachments, complete GLAZE UI V1.6 application acceptance, platform-system runtime acceptance, representative-device testing, recovery, signing/provenance, Release Candidate, Production Acceptance, and Stable qualification remain separate gates.
