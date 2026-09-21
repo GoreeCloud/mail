@@ -105,6 +105,16 @@ private fun MailDevelopmentFoundation(
                             "or attachment runtime is connected.",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Session-binding prerequisite: ${capabilities.sessionBindingContract.state.name.replace('_', ' ')}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = capabilities.sessionBindingContract.explanation,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
 
