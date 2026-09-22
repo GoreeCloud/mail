@@ -4,15 +4,16 @@
 **Repository:** `GoreeCloud/mail`  
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0-dev`  
-**Migration state:** Candidate on `migration/repository-feature-records-20260922`; becomes authoritative only after accepted merge to `main`.  
-**Authoritative baseline:** `096f53da62c92567cd2fe949fe40a4f6e946a68c` on `main`.  
+**Migration state:** Complete on authoritative `main`; PR #64 merged as `9e0220856782ca4d19ade7fd7ced53507a581b80`, exact-main Validate GoreeCloud Mail #190 and CI #755 passed, and the mapped legacy Drive roadmap/changelog sources were permanently retired and independently verified absent on September 22, 2026.  
+**Current governance baseline:** `9e0220856782ca4d19ade7fd7ced53507a581b80` on `main`.  
+**Pre-migration capability baseline:** `096f53da62c92567cd2fe949fe40a4f6e946a68c`; PR #64 changed documentation/governance only.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0.
 
 ## Interpretation
 
-This record describes capabilities accepted on authoritative `main`. It does not promote open Draft pull requests, stale Drive roadmap wording, or superseded design-system targets into current implementation state.
+This record describes capabilities accepted on authoritative `main`. It does not promote open Draft pull requests, retired Drive roadmap wording, or superseded design-system targets into current implementation state.
 
-Authoritative `main` is Development / nonconformant. The current direct-main Draft control-plane/Android stack (PRs #60–#63) and older open Draft stacks are candidate-only and are not represented below as accepted implementation.
+Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; exact-main Validate GoreeCloud Mail #190 / run `35780338172` and CI #755 / run `35780338226` passed on that exact revision. The migration changed documentation authority only and did not alter Mail runtime behavior or lifecycle state. The current direct-main Draft control-plane/Android stack (PRs #60–#63) and older open Draft stacks remain candidate-only and are not represented below as accepted implementation.
 
 ## Implemented Development foundations
 

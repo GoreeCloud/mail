@@ -4,21 +4,21 @@
 **Repository:** `GoreeCloud/mail`  
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0-dev`  
-**Migration state:** Candidate on `migration/repository-feature-records-20260922`; becomes authoritative only after accepted merge to `main`.  
-**Evidence baseline:** authoritative `main` at `096f53da62c92567cd2fe949fe40a4f6e946a68c`.  
+**Migration state:** Complete on authoritative `main`; PR #64 merged as `9e0220856782ca4d19ade7fd7ced53507a581b80`, exact-main Validate GoreeCloud Mail #190 and CI #755 passed, and the mapped legacy Drive roadmap/changelog sources were permanently retired and independently verified absent on September 22, 2026.  
+**Governance baseline:** repository-native records accepted on `main` at `9e0220856782ca4d19ade7fd7ced53507a581b80`; the migration changed documentation/governance only.  
 **Current GLAZE UI target:** Official Stable V1.6 / `1.6.0`, published from source `a7180679ea851389e0f3004515f9a25f420e716d`.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0.
 
 ## Purpose and migration sources
 
 This file carries forward material planned, partial, blocked, deferred, acceptance-gated, or future capability obligations from:
-- the former root `FEATURE-ROADMAP.md`;
-- legacy Drive `FEATURE-ROADMAP.docx` (`1C9HNOKLlRFBEiomCA6Uf-2TmJMDyEvoy`);
+- the retired former root `FEATURE-ROADMAP.md`, preserved through Git history;
+- retired legacy Drive `FEATURE-ROADMAP.docx` (`1C9HNOKLlRFBEiomCA6Uf-2TmJMDyEvoy`), whose migrated dispositions are preserved below;
 - current repository `README.md`, `FEATURES.md`, `SPECIFICATIONS.md`, and accepted Platform Contract evidence;
 - current live GitHub repository identity and open Draft candidate evidence; and
 - verified current GLAZE UI release authority.
 
-The legacy roadmap namespace `GoreeCloud/goreecloud-mail` is stale. Current live repository identity is `GoreeCloud/mail`.
+The retired legacy roadmap namespace `GoreeCloud/goreecloud-mail` is stale. Current live repository identity is `GoreeCloud/mail`.
 
 Open Draft pull requests remain candidate-only. The current direct-main candidate line through PRs #60–#63 is not implementation authority, and older open stacked Drafts are likewise not accepted current behavior.
 
@@ -79,7 +79,7 @@ Complete monitoring, privacy/security evidence, backup/recovery, dependency and 
 
 ## Legacy roadmap migration disposition
 
-Every legacy Drive roadmap identifier is accounted for below.
+Every retired legacy Drive roadmap identifier is accounted for below.
 
 | Legacy ID | Disposition under repository-native governance |
 | --- | --- |
@@ -108,8 +108,8 @@ Every legacy Drive roadmap identifier is accounted for below.
 
 ## Repository-governance obligations
 
-- Do not recreate `FEATURE-ROADMAP.md` after verified retirement.
-- Do not recreate, synchronize, mirror, back up, or maintain a Mail roadmap or changelog in Google Drive after the migration deletion gate passes.
+- Do not recreate `FEATURE-ROADMAP.md`.
+- Do not recreate, synchronize, mirror, back up, or maintain a Mail roadmap or changelog in Google Drive.
 - Keep `IMPLEMENTED-FEATURES.md`, this file, and `CHANGELOGS.md` current in the same governed change when lifecycle state materially changes.
 - Preserve open Draft/candidate evidence without promoting it to accepted implementation.
 - Use current live repository identity `GoreeCloud/mail` in active records; retain `GoreeCloud/goreecloud-mail` only where historical provenance requires it.
