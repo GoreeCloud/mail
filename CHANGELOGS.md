@@ -9,7 +9,7 @@
 
 ## Authority and interpretation
 
-After accepted migration, this file becomes the repository-local changelog authority. Historical Mail chronology formerly stored in Google Drive is preserved in five contiguous files under `docs/changelog-history/`.
+After accepted migration, this file becomes the repository-local changelog authority. Historical Mail chronology formerly stored in Google Drive is preserved in fourteen contiguous files under `docs/changelog-history/`.
 
 The historical archive preserves all 699 non-empty paragraphs from `Change Log — Mail.docx` in source order. Historical Draft/candidate/lifecycle statements apply only to their original dated context and do not override current authoritative `main`.
 
@@ -22,11 +22,20 @@ Legacy source:
 - Drive file ID `1KFedQv6vx9TiZYabLu7u07CNFc15oVJf`
 
 Migrated repository archive:
-- [`legacy-drive-mail-changelog-part-01.md`](docs/changelog-history/legacy-drive-mail-changelog-part-01.md) — source non-empty paragraphs 1–140 of 699
-- [`legacy-drive-mail-changelog-part-02.md`](docs/changelog-history/legacy-drive-mail-changelog-part-02.md) — paragraphs 141–280
-- [`legacy-drive-mail-changelog-part-03.md`](docs/changelog-history/legacy-drive-mail-changelog-part-03.md) — paragraphs 281–420
-- [`legacy-drive-mail-changelog-part-04.md`](docs/changelog-history/legacy-drive-mail-changelog-part-04.md) — paragraphs 421–560
-- [`legacy-drive-mail-changelog-part-05.md`](docs/changelog-history/legacy-drive-mail-changelog-part-05.md) — paragraphs 561–699
+- [`legacy-drive-mail-changelog-part-01.md`](docs/changelog-history/legacy-drive-mail-changelog-part-01.md) — source non-empty paragraphs 1–50 of 699
+- [`legacy-drive-mail-changelog-part-02.md`](docs/changelog-history/legacy-drive-mail-changelog-part-02.md) — paragraphs 51–100
+- [`legacy-drive-mail-changelog-part-03.md`](docs/changelog-history/legacy-drive-mail-changelog-part-03.md) — paragraphs 101–150
+- [`legacy-drive-mail-changelog-part-04.md`](docs/changelog-history/legacy-drive-mail-changelog-part-04.md) — paragraphs 151–200
+- [`legacy-drive-mail-changelog-part-05.md`](docs/changelog-history/legacy-drive-mail-changelog-part-05.md) — paragraphs 201–250
+- [`legacy-drive-mail-changelog-part-06.md`](docs/changelog-history/legacy-drive-mail-changelog-part-06.md) — paragraphs 251–300
+- [`legacy-drive-mail-changelog-part-07.md`](docs/changelog-history/legacy-drive-mail-changelog-part-07.md) — paragraphs 301–350
+- [`legacy-drive-mail-changelog-part-08.md`](docs/changelog-history/legacy-drive-mail-changelog-part-08.md) — paragraphs 351–400
+- [`legacy-drive-mail-changelog-part-09.md`](docs/changelog-history/legacy-drive-mail-changelog-part-09.md) — paragraphs 401–450
+- [`legacy-drive-mail-changelog-part-10.md`](docs/changelog-history/legacy-drive-mail-changelog-part-10.md) — paragraphs 451–500
+- [`legacy-drive-mail-changelog-part-11.md`](docs/changelog-history/legacy-drive-mail-changelog-part-11.md) — paragraphs 501–550
+- [`legacy-drive-mail-changelog-part-12.md`](docs/changelog-history/legacy-drive-mail-changelog-part-12.md) — paragraphs 551–600
+- [`legacy-drive-mail-changelog-part-13.md`](docs/changelog-history/legacy-drive-mail-changelog-part-13.md) — paragraphs 601–650
+- [`legacy-drive-mail-changelog-part-14.md`](docs/changelog-history/legacy-drive-mail-changelog-part-14.md) — paragraphs 651–699
 
 Together these files preserve the complete non-empty Drive chronology, including source milestones, failed/corrected validation attempts, Draft candidate evidence, provider boundaries, Wardveil/Privacy Shield work, GLAZE UI transitions, and release-boundary statements.
 
@@ -34,12 +43,12 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ### September 22, 2026 — Repository feature/changelog governance migration candidate
 - Add root `IMPLEMENTED-FEATURES.md`, `PLANNED-FEATURES.md`, and `CHANGELOGS.md`.
-- Preserve all 699 non-empty legacy Drive changelog paragraphs across five contiguous repository historical-provenance files.
+- Preserve all 699 non-empty legacy Drive changelog paragraphs across fourteen contiguous repository historical-provenance files.
 - Reconcile the former root `FEATURE-ROADMAP.md` and broader Drive roadmap into evidence-backed implemented/open records.
 - Explicitly disposition every legacy FR identifier.
 - Correct active feature/changelog governance records to live repository identity `GoreeCloud/mail`; the old `GoreeCloud/goreecloud-mail` identity remains only where historical or stale-source provenance is explicitly described.
 - Update the current GLAZE UI planning target to verified Official Stable V1.6 / `1.6.0` without relabeling accepted Mail source as V1.6-complete.
-- Add a repository-governance regression check requiring the new root records, all five archive parts, their contiguous source-range markers, and absence of the retired root roadmap filename.
+- Add a repository-governance regression check requiring the new root records, all fourteen archive parts, their contiguous source-range markers, and absence of the retired root roadmap filename.
 - No provider behavior, mailbox authority, authentication/session runtime, Android runtime, permission, network behavior, platform-system runtime authority, Production Acceptance, Release Candidate, or Stable state is changed by this governance migration.
 - Drive sources remain migration sources until this candidate is accepted, authoritative `main` is read back, post-merge validation passes, and the deletion gate is satisfied.
 
@@ -57,14 +66,14 @@ Together these files preserve the complete non-empty Drive chronology, including
 - Wardveil scan inputs were restricted to bounded binary content before hashing/signing/transport, with fail-closed regression coverage.
 
 ### September 2, 2026 and earlier — migrated Drive chronology
-See the five-part complete historical archive linked above. It preserves the source chronology and original status/evidence language through its final September 2 Development entries.
+See the fourteen-part complete historical archive linked above. It preserves the source chronology and original status/evidence language through its final September 2 Development entries.
 
 ## Drive retirement gate
 
 The mapped Drive roadmap and changelog must not be deleted until:
 1. this migration is accepted through the repository workflow;
 2. applicable exact-head checks pass;
-3. the three root records and five-part historical archive are read back from authoritative `main`;
+3. the three root records and fourteen-part historical archive are read back from authoritative `main`;
 4. retired root `FEATURE-ROADMAP.md` is confirmed absent;
 5. directly affected repository references/governance are reconciled; and
 6. applicable post-merge validation passes on the accepted revision.
