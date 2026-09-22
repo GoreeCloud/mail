@@ -29,6 +29,9 @@ jobs:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
+      - name: Validate repository feature and changelog records
+        run: python3 scripts/validate_repository_feature_records.py
+
       - name: Test Wardveil attachment security consumer
         run: python3 scripts/test_mail_attachment_security.py
 
@@ -51,6 +54,7 @@ jobs:
           reference/mail_attachment_security_ui.py
           scripts/test_mail_attachment_security.py
           scripts/test_mail_attachment_security_ui.py
+          scripts/validate_repository_feature_records.py
           scripts/validate_wardveil_mail_integration.py
           scripts/validate_mail_wardveil_runtime_acceptance.py
           scripts/validate_glaze_mail_attachment_security.py
