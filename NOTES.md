@@ -5,7 +5,8 @@
 - Repository lifecycle remains Development; Production Acceptance, Release Candidate, deployment, and Stable qualification are not established.
 - Canonical GitHub repository identity is `GoreeCloud/mail`.
 - Authoritative `main` contains the current web/trusted-backend foundation. The older native Android PR stack is not accepted into `main` and must not be treated as current implementation authority.
-- This current-main candidate migrates only the repository control plane to Platform Contract 0.4, declares all nine Integral Platform Systems, pins the accepted shared evaluator, corrects repository identity, and records current Official Stable GLAZE UI V1.6 / 1.6.0 as the migration target.
+- Authoritative `main` already contains the canonical `GoreeCloud/mail` Platform Contract 0.4 declaration, all nine Integral Platform Systems and the current accepted validator pin through merged PRs #68 and #69. V1.6 / 1.6.0 remains the required design-system target, not an accepted application migration.
+- This new current-main-derived Draft branch proposes only the disconnected Android Development sidecar recovered selectively from historical PR #61; it adds no provider/session/network or production authority and is not integrated until a separate reviewed merge.
 - The implemented web presentation remains historical V1.1 / 1.1.0 Development source; this candidate does not relabel it as V1.6-conformant.
 - External mail providers remain authoritative for mailbox hosting, mailbox content, Internet delivery state, and provider-owned policy except where an approved provider interface explicitly delegates an operation.
 
