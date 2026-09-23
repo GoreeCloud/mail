@@ -148,6 +148,12 @@ export class DemoMailProvider {
     return { id, flagged: Boolean(flagged) };
   }
 
+  async setReadState(id, read = true) {
+    const message = this.messages.find((candidate) => candidate.id === id);
+    if (message) message.unread = !Boolean(read);
+    return { id, read: Boolean(read) };
+  }
+
   async sync() {
     return { synchronized: true, mode: 'demo' };
   }
@@ -167,7 +173,7 @@ export class DemoMailProvider {
       threads: false,
       move: true,
       delete: true,
-      readState: false,
+      readState: true,
       spam: false,
       trashRecovery: false,
       serverSideSearch: false,
