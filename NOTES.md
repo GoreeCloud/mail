@@ -12,6 +12,8 @@
 
 ## Active stabilization gates
 
+- The Android source also contains a pure Mail-side native session-binding metadata readiness model referenced to GoreeCloud Identity Draft PR #9's separately verified Development source candidate `b010bcc3610c3898f108340b8c978bb783418980` and schema `goreecloud.identity.native-application-session/v1`. Identity runtime remains contract-only and its native registration registry is empty. Exact Mail principal/audience/account/client-instance and lifetime checks may be structurally source-ready but do not authenticate a user, authorize a mailbox, activate provider transport or make runtime readiness true.
+
 - Complete fresh GLAZE UI V1.6 application adoption beyond the bounded Android source presentation mapping, with rendered/keyboard/TalkBack, accessibility, responsive/form-factor, representative-device, rollback, Human Visual Excellence, release and production acceptance; migrate the separately historical web V1.1 presentation.
 - Accepted GoreeCloud Identity, Privacy Shield, Wardveil Security, Everkeep, Mesh, Manager, Policy, and Observability runtime integrations where applicable.
 - Complete provider production interoperability, provider credential custody, account/session isolation, health/readiness, synchronization/offline behavior, recovery, upgrade/rollback, protected signing/provenance, deployment, Release Candidate, and Stable qualification.

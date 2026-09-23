@@ -16,7 +16,8 @@
 - Platform Contract target is 0.4.
 - A bounded GLAZE UI V1.6 / 1.6.0 Android presentation source mapping pins accepted Stable release source `a7180679ea851389e0f3004515f9a25f420e716d` and uses only local Android presentation signals. Full application-level Glaze/rendered/device acceptance remains false.
 - Production acceptance and runtime connection are false.
-- JVM tests cover capability/governance truthfulness and bounded V1.6 presentation policy/context; an additional static source boundary validator remains required.
+- JVM tests cover capability/governance truthfulness, bounded V1.6 presentation policy/context and Mail-native session metadata readiness. Separate static source validators must pass for the native, V1.6 and session boundaries.
+- Session-binding metadata checking is SOURCE_READY only against GoreeCloud Identity's source-only `goreecloud.identity.native-application-session/v1` Development candidate; actual Identity runtime acceptance, concrete Mail native registration and Mail runtime session authorization remain false.
 - PR #70 exact-head CI passed unit tests, lint, Development APK assembly, APK identity verification, authority-boundary checks and source-bound artifact upload. The PR-head artifact was independently checksum-verified; new-main push evidence has not yet been independently verified.
 
 ## Open gates

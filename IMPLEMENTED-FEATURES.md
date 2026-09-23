@@ -18,6 +18,7 @@ Authoritative `main` includes the repository-native governance migration at `9e0
 ## Implemented Development foundations
 
 ### Disconnected native Android Development source
+- A pure SOURCE_READY Mail-side Android session-binding metadata policy now checks exact non-secret principal/audience/Mail account/client instance, issue time and exclusive expiry against the verified GoreeCloud Identity `goreecloud.identity.native-application-session/v1` Development contract candidate `b010bcc3610c3898f108340b8c978bb783418980`; Identity contract runtime acceptance and concrete Mail native registration remain false, therefore `runtimeReady=false` even when metadata is structurally consistent. No credentials, transport or mailbox authority is added.
 - A bounded repository-local GLAZE UI V1.6 / `1.6.0` Android presentation source mapping is pinned to accepted Stable release source `a7180679ea851389e0f3004515f9a25f420e716d`. It reads only current local Android font scale, animation enablement and touch exploration to resolve source-level reduced-motion, screen gutter, radius and interaction-floor policy.
 - Fail-closed optical/privacy constants prohibit mail-domain and security-state sampling, external telemetry, remote context and automatic authority; the optical adapter is not accepted or activated. JVM and static validator coverage establish source behavior, not rendered/device or whole-product V1.6 acceptance.
 - PR #70 integrated a Kotlin/Jetpack Compose Android Development build root, launcher shell and five-capability fail-closed status model.

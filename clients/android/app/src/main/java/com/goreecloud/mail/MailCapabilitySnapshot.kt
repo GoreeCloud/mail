@@ -2,6 +2,7 @@ package com.goreecloud.mail
 
 enum class MailCapabilityState {
     NOT_IMPLEMENTED,
+    SOURCE_READY,
     UNAVAILABLE,
     AVAILABLE,
 }
@@ -12,6 +13,7 @@ data class MailCapability(
 )
 
 data class MailCapabilitySnapshot(
+    val sessionBindingContract: MailCapability,
     val accountTransport: MailCapability,
     val backgroundSync: MailCapability,
     val pushNotifications: MailCapability,
@@ -25,6 +27,10 @@ data class MailCapabilitySnapshot(
                 explanation = "Not connected in the Android Development foundation",
             )
             return MailCapabilitySnapshot(
+                sessionBindingContract = MailCapability(
+                    state = MailCapabilityState.SOURCE_READY,
+                    explanation = "Exact non-secret session-binding readiness is implemented; Identity runtime contract and Mail native registration remain unaccepted",
+                ),
                 accountTransport = pending,
                 backgroundSync = pending,
                 pushNotifications = pending,

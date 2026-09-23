@@ -42,6 +42,13 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ## Current repository changelog
 
+### September 23, 2026 — Fail-closed Android native session metadata readiness
+
+- Selectively recovered pure Mail-side session metadata validation from historical stacked Draft PR #63 against the independently inspected GoreeCloud Identity Draft PR #9 `goreecloud.identity.native-application-session/v1` Development candidate `b010bcc3610c3898f108340b8c978bb783418980`. Identity native registration remains empty and the Identity session runtime is contract-only.
+- Implemented exact non-secret principal, Mail audience, account/client instance and bounded issue/expiry matching with separate structural-acceptance and always-false runtime-readiness results until independently accepted Identity runtime and native application registration exist. Added JVM/static fail-closed tests and a source-only Development shell prerequisite label.
+- No credentials, Identity transport, authenticated Mail session, native mailbox, provider request, network permission, synchronization, runtime capability, release or production authority is introduced.
+
+
 ### September 23, 2026 — Bounded native Android GLAZE UI V1.6 source mapping
 
 - Selectively recovered the privacy-safe, fail-closed native presentation-only source tranche from historical stacked Draft PR #62 onto current-main-derived disconnected Android Development source, pinned to accepted shared Stable GLAZE UI 1.6.0 release source `a7180679ea851389e0f3004515f9a25f420e716d`.
