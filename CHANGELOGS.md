@@ -13,7 +13,7 @@ This file is the repository-local changelog authority. Historical Mail chronolog
 
 The historical archive preserves all 699 non-empty paragraphs from the retired `Change Log — Mail.docx` in source order. Historical Draft/candidate/lifecycle statements apply only to their original dated context and do not override current authoritative `main`.
 
-Open or unmerged pull requests are not accepted changes. The current direct-main Draft line through PRs #60–#63 and older open Draft stacks remain candidate-only.
+Open or unmerged pull requests are not accepted changes. Platform Contract 0.4 is integrated on current `main` through PRs #68 and #69; the older Android Draft stack #60–#63 and this current-main-derived native foundation Draft remain candidate-only for Android functionality.
 
 ## Historical Drive archive
 
@@ -41,6 +41,13 @@ Migrated repository archive:
 Together these files preserve the complete non-empty Drive chronology, including source milestones, failed/corrected validation attempts, Draft candidate evidence, provider boundaries, Wardveil/Privacy Shield work, GLAZE UI transitions, and release-boundary statements.
 
 ## Current repository changelog
+
+### September 23, 2026 — Current-main Platform Contract 0.4 and validator integration
+
+- PR #68 integrated the canonical `GoreeCloud/mail` Platform Contract 0.4 control plane and all nine Integral Platform Systems without reviving the retired repository roadmap.
+- PR #69 integrated the accepted evaluator revision `e49b9afdea094c96a36a0457b1603f2fa8e8fa6b` on verified authoritative `main` `569a4a4987f8fc2d7e6e52cae68bc5441530842a`; exact-main CI, Platform Contract, and Validate workflows succeeded. Conformance remains nonconformant and Stable-ineligible; no native Android/provider/runtime/release acceptance follows.
+- A new current-main-derived disconnected Android Draft may selectively reuse source from historical PR #61. Its changes are candidate-only until separately authorized merge and verified post-merge readback.
+
 
 ### September 22, 2026 — Drive retirement completed and independently verified
 - Repository migration PR #64 exact head `a9423cb344b392d8f50c4c1a08d5cf086e034c2d` passed Validate GoreeCloud Mail #189 / run `35780212488` and CI #754 / run `35780212577`.

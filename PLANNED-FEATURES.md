@@ -20,7 +20,7 @@ This file carries forward material planned, partial, blocked, deferred, acceptan
 
 The retired legacy roadmap namespace `GoreeCloud/goreecloud-mail` is stale. Current live repository identity is `GoreeCloud/mail`.
 
-Open Draft pull requests remain candidate-only. The current direct-main candidate line through PRs #60–#63 is not implementation authority, and older open stacked Drafts are likewise not accepted current behavior.
+Open Draft pull requests remain candidate-only. Platform Contract 0.4 is already integrated on `main` through PRs #68 and #69; historical Android Draft PRs #60–#63 and this new current-main-derived disconnected Android foundation Draft are not accepted current-main Android behavior.
 
 ## Priority open obligations
 
@@ -31,13 +31,13 @@ Open Draft pull requests remain candidate-only. The current direct-main candidat
 - Establish governed native Mail application registration and native session exchange before any native provider transport is activated.
 
 ### P0 — Native Android authority and current Draft stack
-- The current direct-main Draft line (#60–#63) remains candidate-only: Platform Contract 0.4 reconciliation, disconnected Android foundation, Mail-local GLAZE UI V1.6 source boundary, and fail-closed session-binding readiness are not accepted on `main`.
+- Platform Contract 0.4 control-plane reconciliation is integrated on `main` through PRs #68 and #69; it is no longer a pending Draft change. Historical PRs #61–#63 remain unmerged stacked Android provenance. The new current-main-derived Draft proposes only the disconnected Android shell/build/test foundation; Mail-local GLAZE UI V1.6 source adaptation and fail-closed session-binding readiness require separately bounded restacks and acceptance.
 - Complete exact-field provider-account decoding/transport, authenticated provider access, local protected storage, background synchronization, push/notifications, attachment runtime, provider-backed mailbox operations, and degraded/offline behavior only after their authority prerequisites are accepted.
 - Preserve no-network/fail-closed Development behavior until the required Identity/provider/privacy/security boundaries are independently satisfied.
 
 ### P0 — GLAZE UI V1.6 migration and accessibility
 - Migrate supported Mail surfaces to current Official Stable GLAZE UI V1.6 / `1.6.0`.
-- The accepted `main` control plane still records an older V1.1 source/compatibility plane; Draft PR #62 carries a V1.6 Android source boundary but remains unmerged.
+- The accepted `main` manifest already requires current GLAZE UI V1.6 / `1.6.0` while accurately recording the implemented web presentation as historical V1.1 Development source. Historical Draft PR #62 carries an unmerged Android V1.6 source boundary; app-level migration/rendered acceptance remains open.
 - Complete repository-local rendered, keyboard, screen-reader, large-text/reflow, RTL/localization, Reduced Motion, Reduced Transparency, Increased Contrast, Touch Assistance, form-factor, representative-device/desktop, performance, rollback, and Human Visual Excellence acceptance.
 
 ### P0 — Security, privacy, continuity, and platform-system acceptance

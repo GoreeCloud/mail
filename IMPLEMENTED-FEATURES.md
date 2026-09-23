@@ -13,7 +13,7 @@
 
 This record describes capabilities accepted on authoritative `main`. It does not promote open Draft pull requests, retired Drive roadmap wording, or superseded design-system targets into current implementation state.
 
-Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; exact-main Validate GoreeCloud Mail #190 / run `35780338172` and CI #755 / run `35780338226` passed on that exact revision. The migration changed documentation authority only and did not alter Mail runtime behavior or lifecycle state. The current direct-main Draft control-plane/Android stack (PRs #60–#63) and older open Draft stacks remain candidate-only and are not represented below as accepted implementation.
+Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; exact-main Validate GoreeCloud Mail #190 / run `35780338172` and CI #755 / run `35780338226` passed on that exact revision. The migration changed documentation authority only and did not alter Mail runtime behavior or lifecycle state. The mainline Platform Contract 0.4 correction has since been integrated through PRs #68 and #69, with current authoritative `main` `569a4a4987f8fc2d7e6e52cae68bc5441530842a` and successful exact-main workflow evidence. Historical Draft PRs #60–#63 and this current-main-derived Android foundation Draft remain candidate-only for native Android functionality and are not represented below as accepted implementation.
 
 ## Implemented Development foundations
 
@@ -56,14 +56,14 @@ Authoritative `main` includes the repository-native governance migration at `9e0
 - Provider-backed Development reader actions include archive/delete/move foundations where accepted on `main`.
 
 ### Repository control plane accepted on current main
-- Platform Contract schema 0.2 is accepted on `main` with Development/nonconformant state.
-- Current `main` declares Manager, Privacy Shield, Wardveil Security, Everkeep, GLAZE UI, Mesh, and Identity integration planes, all unresolved or migration-required as recorded by that accepted contract.
-- The live repository identity is now `GoreeCloud/mail`; the accepted Platform Contract file still contains the pre-rename `GoreeCloud/goreecloud-mail` namespace and remains stale until separately reconciled.
+- Platform Contract schema 0.4 is accepted on `main` through PRs #68 and #69, with Development/nonconformant state and all nine Integral Platform Systems still requiring acceptance.
+- Current `main` declares all nine Integral Platform Systems: Manager, Privacy Shield, Wardveil Security, Everkeep, GLAZE UI, Mesh, Identity, Policy, and Observability. All remain blocked or migration-required as recorded by the current contract.
+- The accepted Platform Contract now uses canonical `GoreeCloud/mail`, requires GLAZE UI V1.6 / `1.6.0`, and pins central evaluator `e49b9afdea094c96a36a0457b1603f2fa8e8fa6b`. The implemented web presentation remains historical V1.1 Development source; the manifest target does not establish Mail-local Glaze acceptance.
 
 ## Explicitly not implemented or not accepted on current main
 
 Current authoritative `main` does not establish:
-- accepted native Android application/runtime behavior from Draft PRs #51–#63;
+- accepted native Android application/runtime behavior from historical Draft PRs #51–#63 or this new current-main-derived disconnected foundation Draft;
 - accepted GLAZE UI V1.6 application migration or rendered/accessibility/device acceptance;
 - accepted GoreeCloud Identity native application registration or native session exchange;
 - authenticated Android provider transport, provider-backed Android mailbox reads/writes, or Android network authority;
