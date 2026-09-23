@@ -4,9 +4,9 @@
 
 - Repository lifecycle remains Development; Production Acceptance, Release Candidate, deployment, and Stable qualification are not established.
 - Canonical GitHub repository identity is `GoreeCloud/mail`.
-- Authoritative `main` contains the current web/trusted-backend foundation. The older native Android PR stack is not accepted into `main` and must not be treated as current implementation authority.
+- Authoritative `main` contains the web/trusted-backend foundation and the bounded disconnected Android Development source integrated by PR #70 at `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Historical stacked Android PRs #60–#63 remain unmerged and do not independently confer current implementation authority.
 - Authoritative `main` already contains the canonical `GoreeCloud/mail` Platform Contract 0.4 declaration, all nine Integral Platform Systems and the current accepted validator pin through merged PRs #68 and #69. V1.6 / 1.6.0 remains the required design-system target, not an accepted application migration.
-- This new current-main-derived Draft branch proposes only the disconnected Android Development sidecar recovered selectively from historical PR #61; it adds no provider/session/network or production authority and is not integrated until a separate reviewed merge.
+- PR #70 integrated only the disconnected Android Development sidecar selectively recovered from historical PR #61; no provider/session/network or production authority was added. Its exact-head PR checks passed and the merged source was independently read back. Fresh exact-main push-check and artifact acceptance remain unverified.
 - The implemented web presentation remains historical V1.1 / 1.1.0 Development source; this candidate does not relabel it as V1.6-conformant.
 - External mail providers remain authoritative for mailbox hosting, mailbox content, Internet delivery state, and provider-owned policy except where an approved provider interface explicitly delegates an operation.
 

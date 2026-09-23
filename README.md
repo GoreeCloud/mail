@@ -86,11 +86,11 @@ Mail content, HTML, links, attachments, provider responses, protocol data, sende
 
 Passing source tests does not establish production acceptance for any of these systems.
 
-## Native Android Draft candidate (not integrated)
+## Native Android Development foundation (integrated; disconnected)
 
-A current-`main`-derived Draft branch proposes a first-party Kotlin/Jetpack Compose Android Development sidecar; this source is **not accepted on `main`** until a separately approved merge and post-merge verification. The candidate provides a generic disconnected shell, a five-capability fail-closed status model, JVM tests, and exact-source Android CI with a Development APK evidence check. The manifest deliberately requests **no `INTERNET` permission**, disables Android backup and cleartext traffic, and makes no provider, Identity, synchronization, secure-store, push, attachment, production-signing, or production authority claim. Platform Contract 0.4 is already integrated on `main`; GLAZE UI 1.6.0 remains a separate unaccepted application migration.
+PR #70 was squash-merged to authoritative `main` as `548a21c33318a7ab7cc7e6c43defccf048b065e5` after its exact-head Android Client, CI and repository-validation workflows passed. The integrated first-party Kotlin/Jetpack Compose Android Development sidecar provides a buildable generic shell, a five-capability fail-closed status model, JVM tests and exact-source Android CI with Development APK identity/authority evidence. Its development package is `com.goreecloud.mail.dev` (minimum SDK 29, target SDK 36). The manifest requests **no `INTERNET` permission**, disables Android backup and cleartext traffic, and adds no provider, GoreeCloud Identity, synchronization, secure storage, notifications, attachment or production-signing authority.
 
-The candidate removes the obsolete Groovy `clients/android/settings.gradle` only within its branch so the Kotlin settings file supplies the build's dependency repositories. Historical Draft PR #61 is source provenance, not integration authority. Current-main implementation claims continue to be governed by `IMPLEMENTED-FEATURES.md` and independently verified GitHub state.
+The merged source replaces the obsolete Groovy `clients/android/settings.gradle` with Kotlin `settings.gradle.kts`. Historical Draft PR #61 is selective source provenance, not current integration authority. Contract 0.4 is already integrated on `main`; GLAZE UI V1.6 / `1.6.0` remains an unaccepted full-application migration. Source/build success does not establish a connected mailbox, representative-device acceptance, protected signing, deployment, Release Candidate, Production Acceptance or Stable qualification. Independent post-merge exact-main **push-workflow and artifact** evidence remains to be verified; successful PR-head workflows must not be relabeled as push acceptance.
 
 ## Planned client surfaces
 

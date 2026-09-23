@@ -1,6 +1,6 @@
 # GoreeCloud Mail Android Client
 
-This directory contains the current-main-derived **Draft candidate**, not an integrated `main` implementation, for GoreeCloud Mail's first-party native Android client.
+This directory contains GoreeCloud Mail's first-party **integrated but disconnected Android Development foundation**, merged through PR #70 on verified `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`. It is source/build integration, not connected native-product or device acceptance.
 
 ## Current Development foundation
 
@@ -16,7 +16,7 @@ Current foundation:
 - Explicit Platform Contract 0.4 and GLAZE UI V1.6 / 1.6.0 target status.
 - `glazeUiAccepted=false`, `productionAccepted=false`, and `runtimeConnected=false`.
 - JVM tests proving capability and governance truthfulness.
-- Exact-head CI that builds and verifies the Development APK.
+- Passing exact-head PR #70 CI that built and verified the Development APK and preserved source-bound artifact evidence. Independent exact-main post-merge push workflow and artifact verification remains open.
 
 The current UI is a generic Development shell. It is **not** represented as GLAZE UI V1.6-conformant or application-accepted.
 
