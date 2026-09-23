@@ -11,6 +11,7 @@ version: "0.1.0-dev"
 
 supported_platforms:
   - web
+  - android
 
 api:
   versions: []
@@ -186,6 +187,7 @@ conformance:
     - server/sqlite-state.js
     - server/sqlite-backup.js
     - clients/android/BUILD_STATUS.md
+    - clients/android/README.md
   blockers:
     - Mail's implemented web presentation remains historical V1.1 / 1.1.0 Development source while current mandatory Stable target is GLAZE UI V1.6 / 1.6.0; deliberate migration plus fresh rendered/accessibility/responsive/representative-environment/Human Visual Excellence/rollback/release acceptance remains outstanding.
     - GoreeCloud Manager integration and acceptance are not established.
@@ -198,6 +200,6 @@ conformance:
     - GoreeCloud Observability health, readiness, provider dependency-health, metrics/events, diagnostics, performance, provenance/freshness, alerting, and target-environment acceptance are not established.
     - The trusted Mail API does not yet publish a complete versioned Platform Contract API declaration or accepted health/readiness interfaces.
     - Real Gmail and standards-based IMAP/SMTP provider execution and production interoperability remain unaccepted.
-    - The Linux first-party client and Android Gradle application are not complete; clients/android/BUILD_STATUS.md explicitly records the Android application implementation as pending.
+    - The Linux first-party client remains unimplemented; the Android Gradle/Compose disconnected Development build/shell is integrated through PR #70 but has no accepted provider connection, Identity/session runtime, secure storage, offline synchronization, representative-device, Glaze V1.6 application, protected signing, production or Stable acceptance. The supported-platform declaration recognizes buildable Development Android source only; see clients/android/BUILD_STATUS.md.
     - Complete offline queue/replay, synchronization conflict handling, provider production observability, upgrade/rollback, account-isolation acceptance, and security/privacy failure-mode validation remain incomplete.
     - Production signing, artifact provenance, deployment approval, representative target-environment acceptance, Release Candidate entry, and Stable qualification remain outstanding.

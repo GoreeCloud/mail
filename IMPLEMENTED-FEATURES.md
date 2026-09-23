@@ -5,7 +5,7 @@
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0-dev`  
 **Migration state:** Complete on authoritative `main`; PR #64 merged as `9e0220856782ca4d19ade7fd7ced53507a581b80`, exact-main Validate GoreeCloud Mail #190 and CI #755 passed, and the mapped legacy Drive roadmap/changelog sources were permanently retired and independently verified absent on September 22, 2026.  
-**Current governance baseline:** `9e0220856782ca4d19ade7fd7ced53507a581b80` on `main`.  
+**Current source checkpoint:** PR #70 integrated at `548a21c33318a7ab7cc7e6c43defccf048b065e5` on `main`; the repository-native governance migration baseline remains `9e0220856782ca4d19ade7fd7ced53507a581b80`.  
 **Pre-migration capability baseline:** `096f53da62c92567cd2fe949fe40a4f6e946a68c`; PR #64 changed documentation/governance only.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0.
 
@@ -13,9 +13,15 @@
 
 This record describes capabilities accepted on authoritative `main`. It does not promote open Draft pull requests, retired Drive roadmap wording, or superseded design-system targets into current implementation state.
 
-Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; exact-main Validate GoreeCloud Mail #190 / run `35780338172` and CI #755 / run `35780338226` passed on that exact revision. The migration changed documentation authority only and did not alter Mail runtime behavior or lifecycle state. The mainline Platform Contract 0.4 correction has since been integrated through PRs #68 and #69, with current authoritative `main` `569a4a4987f8fc2d7e6e52cae68bc5441530842a` and successful exact-main workflow evidence. Historical Draft PRs #60–#63 and this current-main-derived Android foundation Draft remain candidate-only for native Android functionality and are not represented below as accepted implementation.
+Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; its exact-main Validate GoreeCloud Mail #190 and CI #755 passed. Platform Contract 0.4 was subsequently integrated through PRs #68 and #69. PR #70 then integrated the bounded disconnected Android foundation as exact `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Its exact-head PR runs passed: Mail Android Client `35894182889`, CI `35894182896`, and Validate GoreeCloud Mail `35894182906`. Post-merge source readback was verified, but independent exact-new-main push-workflow and artifact verification is still open. Historical Draft PRs #60–#63 are unmerged provenance only; no connected Android mailbox or release authority follows.
 
 ## Implemented Development foundations
+
+### Disconnected native Android Development source
+- PR #70 integrated a Kotlin/Jetpack Compose Android Development build root, launcher shell and five-capability fail-closed status model.
+- Development APK identity is `com.goreecloud.mail.dev`; minimum SDK 29, target SDK 36, Java 17. The manifest declares no `INTERNET` permission and disables backup and cleartext traffic.
+- Exact-head PR CI passed JVM unit tests, lint, Development APK build, package/permission checks and retained an independently checksum-verified source-bound artifact. This is source/build evidence only, not physical-device or connected runtime acceptance.
+- Native provider transport, Identity/session exchange, background synchronization, secure local store, notifications, attachments, Glaze application acceptance, protected signing and release approval remain unimplemented or unaccepted.
 
 ### Provider-independent Mail client architecture
 - GoreeCloud Mail is implemented as a first-party client/trusted-backend platform over compatible external mail providers rather than as a GoreeCloud mailbox host or Internet mail-delivery provider.
@@ -63,7 +69,7 @@ Authoritative `main` includes the repository-native governance migration at `9e0
 ## Explicitly not implemented or not accepted on current main
 
 Current authoritative `main` does not establish:
-- accepted native Android application/runtime behavior from historical Draft PRs #51–#63 or this new current-main-derived disconnected foundation Draft;
+- connected, provider-backed or production-accepted native Android application/runtime behavior; PR #70 integrates only a disconnected Development shell, while historical Draft PRs #51–#63 are not accepted current-main runtime capabilities;
 - accepted GLAZE UI V1.6 application migration or rendered/accessibility/device acceptance;
 - accepted GoreeCloud Identity native application registration or native session exchange;
 - authenticated Android provider transport, provider-backed Android mailbox reads/writes, or Android network authority;

@@ -20,7 +20,7 @@ This file carries forward material planned, partial, blocked, deferred, acceptan
 
 The retired legacy roadmap namespace `GoreeCloud/goreecloud-mail` is stale. Current live repository identity is `GoreeCloud/mail`.
 
-Open Draft pull requests remain candidate-only. Platform Contract 0.4 is already integrated on `main` through PRs #68 and #69; historical Android Draft PRs #60–#63 and this new current-main-derived disconnected Android foundation Draft are not accepted current-main Android behavior.
+Open Draft pull requests remain candidate-only. Platform Contract 0.4 is integrated on `main` through PRs #68 and #69; PR #70 subsequently integrated the disconnected Android Development shell at `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Historical Android Draft PRs #60–#63 remain unmerged, and no provider-connected native/runtime/production acceptance follows from the bounded PR #70 source integration.
 
 ## Priority open obligations
 
@@ -30,8 +30,8 @@ Open Draft pull requests remain candidate-only. Platform Contract 0.4 is already
 - Keep GoreeCloud Identity application authentication separate from external-provider authorization.
 - Establish governed native Mail application registration and native session exchange before any native provider transport is activated.
 
-### P0 — Native Android authority and current Draft stack
-- Platform Contract 0.4 control-plane reconciliation is integrated on `main` through PRs #68 and #69; it is no longer a pending Draft change. Historical PRs #61–#63 remain unmerged stacked Android provenance. The new current-main-derived Draft proposes only the disconnected Android shell/build/test foundation; Mail-local GLAZE UI V1.6 source adaptation and fail-closed session-binding readiness require separately bounded restacks and acceptance.
+### P0 — Native Android development beyond the integrated disconnected foundation
+- Platform Contract 0.4 is integrated on `main` through PRs #68 and #69. PR #70 integrates the disconnected Android Development shell/build/test foundation, including the no-network manifest and exact-head build evidence; independent post-merge push-workflow/artifact acceptance remains open. Historical PRs #61–#63 remain unmerged stacked provenance and must not be promoted wholesale. Mail-local GLAZE UI V1.6 source adaptation, fail-closed Identity/session binding and connected provider capabilities require separately bounded implementation and acceptance.
 - Complete exact-field provider-account decoding/transport, authenticated provider access, local protected storage, background synchronization, push/notifications, attachment runtime, provider-backed mailbox operations, and degraded/offline behavior only after their authority prerequisites are accepted.
 - Preserve no-network/fail-closed Development behavior until the required Identity/provider/privacy/security boundaries are independently satisfied.
 
@@ -99,7 +99,7 @@ Every retired legacy Drive roadmap identifier is accounted for below.
 | FR-020 | Remains planned/incremental cross-application integration. |
 | FR-021 | Partial attachment hardening and Wardveil gating exist; full provider/device/production acceptance remains open. |
 | FR-022 | Remains planned; no production Linux desktop client is accepted. |
-| FR-023 | Remains open. Native Android work exists only in unmerged Draft lines and is not accepted current-main behavior. |
+| FR-023 | Remains open. PR #70 integrated the bounded disconnected Android Development build/shell on main; connected runtime, representative-device, Identity/provider, Glaze, signing, release and production acceptance remain unimplemented or unaccepted. |
 | FR-024 | Remains open. Provider-account read/decoder work exists only as Draft candidate history; current direct-main stack has not accepted provider transport. |
 | FR-025 | Remains blocked on Identity/session, provider transport, offline synchronization, storage, privacy, and security prerequisites. |
 | FR-026 | Updated from stale V1.4 wording to current Official Stable GLAZE UI V1.6 / `1.6.0`; full Mail migration and application acceptance remain open. |

@@ -13,7 +13,7 @@ This file is the repository-local changelog authority. Historical Mail chronolog
 
 The historical archive preserves all 699 non-empty paragraphs from the retired `Change Log — Mail.docx` in source order. Historical Draft/candidate/lifecycle statements apply only to their original dated context and do not override current authoritative `main`.
 
-Open or unmerged pull requests are not accepted changes. Platform Contract 0.4 is integrated on current `main` through PRs #68 and #69; the older Android Draft stack #60–#63 and this current-main-derived native foundation Draft remain candidate-only for Android functionality.
+Open or unmerged pull requests are not accepted changes. Platform Contract 0.4 is integrated on `main` through PRs #68 and #69; PR #70 subsequently integrated the bounded disconnected Android Development foundation on `main` at `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Historical Android Draft PRs #60–#63 remain unmerged provenance only. No connected Android runtime, product/release, provider, Identity or Glaze acceptance is implied.
 
 ## Historical Drive archive
 
@@ -42,11 +42,17 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ## Current repository changelog
 
+### September 23, 2026 — Disconnected Android Development foundation integrated
+
+- Approved PR #70 was exact-head squash-merged from `8ec6a8572daaf8a37db2a4785a7c2cd139e1b89b` to independently read-back authoritative `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`.
+- The 19-path merge adds the disconnected Kotlin/Compose Android Development shell, fail-closed five-capability status model, unit/lint/APK CI and aligned build documentation; obsolete Groovy settings are removed. No Android `INTERNET` permission, backup or cleartext authority was introduced.
+- All three exact-head PR workflow families passed and the Development APK evidence artifact was independently checksum-verified. New-main push workflow and artifact outcomes require separate verification; connected-runtime, representative-device, platform-system, release and production acceptance remain open.
+
 ### September 23, 2026 — Current-main Platform Contract 0.4 and validator integration
 
 - PR #68 integrated the canonical `GoreeCloud/mail` Platform Contract 0.4 control plane and all nine Integral Platform Systems without reviving the retired repository roadmap.
 - PR #69 integrated the accepted evaluator revision `e49b9afdea094c96a36a0457b1603f2fa8e8fa6b` on verified authoritative `main` `569a4a4987f8fc2d7e6e52cae68bc5441530842a`; exact-main CI, Platform Contract, and Validate workflows succeeded. Conformance remains nonconformant and Stable-ineligible; no native Android/provider/runtime/release acceptance follows.
-- A new current-main-derived disconnected Android Draft may selectively reuse source from historical PR #61. Its changes are candidate-only until separately authorized merge and verified post-merge readback.
+- Subsequent approved PR #70 selectively recovered the disconnected Android Development foundation from historical PR #61, passed all three exact-head PR workflows and was squash-merged to verified new `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Independent exact-new-main push workflow and artifact verification remains a separate open gate.
 
 
 ### September 22, 2026 — Drive retirement completed and independently verified
