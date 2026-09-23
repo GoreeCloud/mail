@@ -42,6 +42,13 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ## Current repository changelog
 
+### September 23, 2026 — Bounded native Android GLAZE UI V1.6 source mapping
+
+- Selectively recovered the privacy-safe, fail-closed native presentation-only source tranche from historical stacked Draft PR #62 onto current-main-derived disconnected Android Development source, pinned to accepted shared Stable GLAZE UI 1.6.0 release source `a7180679ea851389e0f3004515f9a25f420e716d`.
+- Added local Android font-scale/animation/touch-exploration projection, bounded presentation resolution, static/JVM regression tests and an exact-revision Android CI validator. The optical engine remains inactive, and no mail-content, Identity, provider, network, security-state, telemetry or production authority was granted.
+- This is a source/build milestone only. Full Glaze application migration, rendered accessibility, representative-device, Human Visual Excellence, performance, rollback, deployment, Release Candidate and Stable acceptance remain separate blocked gates.
+
+
 ### September 23, 2026 — Disconnected Android Development foundation integrated
 
 - Approved PR #70 was exact-head squash-merged from `8ec6a8572daaf8a37db2a4785a7c2cd139e1b89b` to independently read-back authoritative `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`.

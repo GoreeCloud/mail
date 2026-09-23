@@ -31,13 +31,13 @@ Open Draft pull requests remain candidate-only. Platform Contract 0.4 is integra
 - Establish governed native Mail application registration and native session exchange before any native provider transport is activated.
 
 ### P0 — Native Android development beyond the integrated disconnected foundation
-- Platform Contract 0.4 is integrated on `main` through PRs #68 and #69. PR #70 integrates the disconnected Android Development shell/build/test foundation, including the no-network manifest and exact-head build evidence; independent post-merge push-workflow/artifact acceptance remains open. Historical PRs #61–#63 remain unmerged stacked provenance and must not be promoted wholesale. Mail-local GLAZE UI V1.6 source adaptation, fail-closed Identity/session binding and connected provider capabilities require separately bounded implementation and acceptance.
+- Platform Contract 0.4 is integrated through PRs #68 and #69, and PR #70 integrates the disconnected Android Development shell/build/test foundation. The Android tree now contains a bounded GLAZE UI V1.6 presentation source mapping and JVM/static governance tests only; no full Android Glaze application acceptance follows. Historical PRs #61–#63 remain unmerged stacked provenance and must not be promoted wholesale. Independent exact-main push-workflow/artifact verification remains open for the already integrated PRs #70/#71; actual Identity/session binding and connected provider capabilities require separate bounded implementation and acceptance.
 - Complete exact-field provider-account decoding/transport, authenticated provider access, local protected storage, background synchronization, push/notifications, attachment runtime, provider-backed mailbox operations, and degraded/offline behavior only after their authority prerequisites are accepted.
 - Preserve no-network/fail-closed Development behavior until the required Identity/provider/privacy/security boundaries are independently satisfied.
 
 ### P0 — GLAZE UI V1.6 migration and accessibility
 - Migrate supported Mail surfaces to current Official Stable GLAZE UI V1.6 / `1.6.0`.
-- The accepted `main` manifest already requires current GLAZE UI V1.6 / `1.6.0` while accurately recording the implemented web presentation as historical V1.1 Development source. Historical Draft PR #62 carries an unmerged Android V1.6 source boundary; app-level migration/rendered acceptance remains open.
+- The accepted manifest requires current GLAZE UI V1.6 / `1.6.0`, while the implemented web presentation is still historical V1.1 Development source. The Android source now contains only a bounded source-level V1.6 presentation mapping selectively recovered from historical stacked Draft PR #62. Full web/native visual, rendered accessibility, TalkBack/keyboard, form-factor, representative-device, optical parity, performance, Human Visual Excellence and rollback acceptance remain open.
 - Complete repository-local rendered, keyboard, screen-reader, large-text/reflow, RTL/localization, Reduced Motion, Reduced Transparency, Increased Contrast, Touch Assistance, form-factor, representative-device/desktop, performance, rollback, and Human Visual Excellence acceptance.
 
 ### P0 — Security, privacy, continuity, and platform-system acceptance
@@ -102,7 +102,7 @@ Every retired legacy Drive roadmap identifier is accounted for below.
 | FR-023 | Remains open. PR #70 integrated the bounded disconnected Android Development build/shell on main; connected runtime, representative-device, Identity/provider, Glaze, signing, release and production acceptance remain unimplemented or unaccepted. |
 | FR-024 | Remains open. Provider-account read/decoder work exists only as Draft candidate history; current direct-main stack has not accepted provider transport. |
 | FR-025 | Remains blocked on Identity/session, provider transport, offline synchronization, storage, privacy, and security prerequisites. |
-| FR-026 | Updated from stale V1.4 wording to current Official Stable GLAZE UI V1.6 / `1.6.0`; full Mail migration and application acceptance remain open. |
+| FR-026 | Official Stable GLAZE UI V1.6 / `1.6.0` is the governing target; only a bounded Android presentation source mapping exists, and full web/native migration, rendered/device/accessibility and application acceptance remain open. |
 | FR-027 | Remains open across monitoring, security/privacy, continuity, signing/provenance, rollback, release, production, and Stable gates. |
 | FR-028 | Remains long-term product direction only; no accepted iOS implementation is claimed. |
 

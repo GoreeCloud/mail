@@ -18,10 +18,12 @@ Authoritative `main` includes the repository-native governance migration at `9e0
 ## Implemented Development foundations
 
 ### Disconnected native Android Development source
+- A bounded repository-local GLAZE UI V1.6 / `1.6.0` Android presentation source mapping is pinned to accepted Stable release source `a7180679ea851389e0f3004515f9a25f420e716d`. It reads only current local Android font scale, animation enablement and touch exploration to resolve source-level reduced-motion, screen gutter, radius and interaction-floor policy.
+- Fail-closed optical/privacy constants prohibit mail-domain and security-state sampling, external telemetry, remote context and automatic authority; the optical adapter is not accepted or activated. JVM and static validator coverage establish source behavior, not rendered/device or whole-product V1.6 acceptance.
 - PR #70 integrated a Kotlin/Jetpack Compose Android Development build root, launcher shell and five-capability fail-closed status model.
 - Development APK identity is `com.goreecloud.mail.dev`; minimum SDK 29, target SDK 36, Java 17. The manifest declares no `INTERNET` permission and disables backup and cleartext traffic.
 - Exact-head PR CI passed JVM unit tests, lint, Development APK build, package/permission checks and retained an independently checksum-verified source-bound artifact. This is source/build evidence only, not physical-device or connected runtime acceptance.
-- Native provider transport, Identity/session exchange, background synchronization, secure local store, notifications, attachments, Glaze application acceptance, protected signing and release approval remain unimplemented or unaccepted.
+- Native provider transport, Identity/session exchange, background synchronization, secure local store, notifications, attachments, full Glaze application acceptance (beyond the bounded Android source mapping), protected signing and release approval remain unimplemented or unaccepted.
 
 ### Provider-independent Mail client architecture
 - GoreeCloud Mail is implemented as a first-party client/trusted-backend platform over compatible external mail providers rather than as a GoreeCloud mailbox host or Internet mail-delivery provider.
