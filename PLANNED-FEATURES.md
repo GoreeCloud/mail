@@ -28,7 +28,7 @@ Open Draft pull requests remain candidate-only. Platform Contract 0.4 is integra
 - Preserve external providers as authoritative for mailbox hosting, mailbox contents, delivery state, provider policy, and Internet mail transport unless a future explicit architecture decision changes that boundary.
 - Complete real-provider Gmail and standards-based IMAP/SMTP authorization, credential custody, account isolation, provider transport, failure-mode, and production interoperability acceptance.
 - Keep GoreeCloud Identity application authentication separate from external-provider authorization.
-- Establish governed native Mail application registration and native session exchange before any native provider transport is activated.
+- Complete governed native Mail application registration and actual accepted GoreeCloud Identity runtime/session exchange before any native provider transport is activated. The Mail-side Android non-secret metadata validator is SOURCE_READY only; current GoreeCloud Identity Draft PR #9 remains contract-only with an empty native registration registry and no authenticated user or mailbox authorization authority.
 
 ### P0 — Native Android development beyond the integrated disconnected foundation
 - Platform Contract 0.4 is integrated through PRs #68 and #69, and PR #70 integrates the disconnected Android Development shell/build/test foundation. The Android tree now contains a bounded GLAZE UI V1.6 presentation source mapping and JVM/static governance tests only; no full Android Glaze application acceptance follows. Historical PRs #61–#63 remain unmerged stacked provenance and must not be promoted wholesale. Independent exact-main push-workflow/artifact verification remains open for the already integrated PRs #70/#71; actual Identity/session binding and connected provider capabilities require separate bounded implementation and acceptance.
@@ -89,7 +89,7 @@ Every retired legacy Drive roadmap identifier is accounted for below.
 | FR-010 | Continues as the provider-independent product boundary. No GoreeCloud mailbox-hosting/MX/Internet-delivery provider authority is accepted. |
 | FR-011 | Partial Development foundation is implemented on `main`; production provider capability acceptance remains open. |
 | FR-012 | Gmail and IMAP/SMTP adapter foundations exist on `main`; real-provider production execution remains open. |
-| FR-013 | Trusted application identity boundaries exist on `main`; native registration/session work remains open. PRs #59/#63 are candidate-only and do not establish runtime registration. |
+| FR-013 | Trusted application identity boundaries exist on `main`; the Mail-side native session metadata validator is SOURCE_READY only. Current GoreeCloud Identity Draft PR #9 is contract-only with no accepted Mail native registration or runtime session; native OIDC, session exchange and full acceptance remain open. |
 | FR-014 | Remains blocked. No accepted Android provider network transport exists on authoritative `main`. |
 | FR-015 | Partial web/Gmail Development foundations exist; full provider-backed mailbox/message/compose/attachment/notification workflow acceptance remains open. |
 | FR-016 | Partial Wardveil Development and controlled-provider evidence exists; complete real-provider and production acceptance remains open. |
@@ -99,7 +99,7 @@ Every retired legacy Drive roadmap identifier is accounted for below.
 | FR-020 | Remains planned/incremental cross-application integration. |
 | FR-021 | Partial attachment hardening and Wardveil gating exist; full provider/device/production acceptance remains open. |
 | FR-022 | Remains planned; no production Linux desktop client is accepted. |
-| FR-023 | Remains open. PR #70 integrated the bounded disconnected Android Development build/shell on main; connected runtime, representative-device, Identity/provider, Glaze, signing, release and production acceptance remain unimplemented or unaccepted. |
+| FR-023 | Remains open. The Android Development build/shell, bounded Glaze source presentation mapping and SOURCE_READY Mail-side session metadata validation exist, but connected runtime, accepted Identity registration/session, providers, representative devices, full Glaze application, signing, release and production acceptance remain unimplemented or unaccepted. |
 | FR-024 | Remains open. Provider-account read/decoder work exists only as Draft candidate history; current direct-main stack has not accepted provider transport. |
 | FR-025 | Remains blocked on Identity/session, provider transport, offline synchronization, storage, privacy, and security prerequisites. |
 | FR-026 | Official Stable GLAZE UI V1.6 / `1.6.0` is the governing target; only a bounded Android presentation source mapping exists, and full web/native migration, rendered/device/accessibility and application acceptance remain open. |
