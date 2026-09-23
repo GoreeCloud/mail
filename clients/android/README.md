@@ -13,12 +13,12 @@ Current foundation:
 - No `INTERNET` permission and no provider/session transport.
 - Android backup disabled and cleartext traffic disabled.
 - Explicit fail-closed capability state for account transport, background synchronization, push notifications, secure local storage, and attachment handling.
-- Explicit Platform Contract 0.4 and GLAZE UI V1.6 / 1.6.0 target status.
-- `glazeUiAccepted=false`, `productionAccepted=false`, and `runtimeConnected=false`.
-- JVM tests proving capability and governance truthfulness.
+- Explicit Platform Contract 0.4 and bounded GLAZE UI V1.6 / 1.6.0 Android presentation source mapping pinned to accepted release source `a7180679ea851389e0f3004515f9a25f420e716d`.
+- `glazeUiAccepted=false`, `productionAccepted=false`, and `runtimeConnected=false`; no source mapping can change these acceptance flags.
+- JVM tests for capability/governance truthfulness and the bounded V1.6 presentation/context policy, with separate fail-closed source validation.
 - Passing exact-head PR #70 CI that built and verified the Development APK and preserved source-bound artifact evidence. Independent exact-main post-merge push workflow and artifact verification remains open.
 
-The current UI is a generic Development shell. It is **not** represented as GLAZE UI V1.6-conformant or application-accepted.
+The disconnected Development shell now consumes a bounded local V1.6 presentation policy for local font-scale/reflow, reduced-motion, touch-assistance interaction floors, screen gutters, and card corner radii. It is **not** represented as full GLAZE UI V1.6-conformant or application-accepted: physical-device rendering, TalkBack and keyboard behavior, performance, current-optics parity, responsive form factors, Human Visual Excellence and rollback acceptance remain open. The optical adapter is deliberately not enabled.
 
 ## Authority boundary
 
