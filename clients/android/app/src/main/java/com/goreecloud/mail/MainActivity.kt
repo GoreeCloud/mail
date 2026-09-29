@@ -59,6 +59,9 @@ class MainActivity : ComponentActivity() {
                 var contextualHintsEnabled by remember {
                     mutableStateOf(guidanceStore.areContextualHintsEnabled())
                 }
+                var contextualHintDismissed by remember {
+                    mutableStateOf(guidanceStore.isMainContextualHintDismissed())
+                }
                 var showStartupGuide by remember {
                     mutableStateOf(!firstUseComplete)
                 }
@@ -70,7 +73,15 @@ class MainActivity : ComponentActivity() {
                     capabilities = MailCapabilitySnapshot.developmentShell(),
                     status = MailAndroidFoundationStatus.development(),
                     presentation = glazePresentation,
-                    showContextualHint = firstUseComplete && contextualHintsEnabled,
+                    showContextualHint = MailGuidancePolicy.shouldShowContextualHint(
+                        firstUseComplete = firstUseComplete,
+                        hintsEnabled = contextualHintsEnabled,
+                        hintDismissed = contextualHintDismissed,
+                    ),
+                    onDismissContextualHint = {
+                        guidanceStore.dismissMainContextualHint()
+                        contextualHintDismissed = true
+                    },
                     onGuidanceClick = { showGuidanceMenu = true },
                 )
 
@@ -110,6 +121,7 @@ class MainActivity : ComponentActivity() {
                 if (showGuidanceMenu) {
                     MailGuidanceMenu(
                         contextualHintsEnabled = contextualHintsEnabled,
+                        contextualHintDismissed = contextualHintDismissed,
                         onDismiss = { showGuidanceMenu = false },
                         onReplay = {
                             guidanceStore.restartGuide()
@@ -121,6 +133,10 @@ class MainActivity : ComponentActivity() {
                             val enabled = !contextualHintsEnabled
                             guidanceStore.setContextualHintsEnabled(enabled)
                             contextualHintsEnabled = enabled
+                        },
+                        onResetDismissedHints = {
+                            guidanceStore.resetDismissedContextualHints()
+                            contextualHintDismissed = false
                         },
                     )
                 }
@@ -135,6 +151,7 @@ private fun MailDevelopmentFoundation(
     status: MailAndroidFoundationStatus,
     presentation: MailGlazeResolvedPresentation,
     showContextualHint: Boolean,
+    onDismissContextualHint: () -> Unit,
     onGuidanceClick: () -> Unit,
 ) {
     val unavailableCount = listOf(
@@ -170,10 +187,20 @@ private fun MailDevelopmentFoundation(
                 Text("Help & guidance")
             }
             if (showContextualHint) {
-                Text(
-                    text = "Tip: Provider sign-in, mailbox transport, sync, push, secure storage, and attachments remain unavailable until their separate authorities are accepted.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(presentation.surfaceRadiusDp.dp),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Tip: Provider sign-in, mailbox transport, sync, push, secure storage, and attachments remain unavailable until their separate authorities are accepted.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        TextButton(onClick = onDismissContextualHint) {
+                            Text("Dismiss tip")
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(18.dp))
@@ -314,9 +341,11 @@ private fun MailStartupGuide(
 @Composable
 private fun MailGuidanceMenu(
     contextualHintsEnabled: Boolean,
+    contextualHintDismissed: Boolean,
     onDismiss: () -> Unit,
     onReplay: () -> Unit,
     onToggleHints: () -> Unit,
+    onResetDismissedHints: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -338,6 +367,11 @@ private fun MailGuidanceMenu(
                             "Turn contextual hints on"
                         },
                     )
+                }
+                if (contextualHintDismissed) {
+                    TextButton(onClick = onResetDismissedHints) {
+                        Text("Show dismissed tips again")
+                    }
                 }
             }
         },
