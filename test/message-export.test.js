@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  copyMessagePlainText,
   formatMessagePlainText,
   messagePlainTextFilename,
 } from '../web/message-export.js';
@@ -39,4 +40,36 @@ test('filename is local-safe and bounded', () => {
 
 test('invalid message input fails closed', () => {
   assert.throws(() => formatMessagePlainText(null), /message must be an object/);
+});
+
+
+test('copies the exact bounded plain-text representation through an explicit clipboard capability', async () => {
+  const writes = [];
+  const message = {
+    subject: 'Copy me',
+    sender: 'Sender',
+    address: 'sender@example.test',
+    receivedAt: '2026-09-29T20:00:00Z',
+    body: 'Local body',
+    attachments: [{ filename: 'private.pdf', contentBase64: 'SECRET' }],
+  };
+
+  const payload = await copyMessagePlainText(message, {
+    async writeText(value) {
+      writes.push(value);
+    },
+  });
+
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0], payload);
+  assert.equal(payload, formatMessagePlainText(message));
+  assert.equal(payload.includes('private.pdf'), false);
+  assert.equal(payload.includes('SECRET'), false);
+});
+
+test('copy fails closed when the clipboard capability is unavailable', async () => {
+  await assert.rejects(
+    () => copyMessagePlainText({ subject: 'No clipboard' }, null),
+    /Clipboard API is unavailable/,
+  );
 });
