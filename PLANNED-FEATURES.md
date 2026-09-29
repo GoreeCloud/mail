@@ -9,6 +9,10 @@
 **Current GLAZE UI target:** Official Stable V1.6 / `1.6.0`, published from source `a7180679ea851389e0f3004515f9a25f420e716d`.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0.
 
+## 2026-09-29 selected-message export continuation
+
+The active browser candidate now adds an explicit local **Export text** action for the currently loaded message. It produces a plain-text file containing subject, sender/address, received timestamp, and body plus only an attachment-count notice; attachment bytes and filenames are deliberately excluded. The action does not call the provider, does not mutate mailbox state, and does not establish full mailbox/folder export, backup, recovery, or Everkeep acceptance. Fresh exact-head validation and browser/accessibility acceptance remain open.
+
 ## Purpose and migration sources
 
 This file carries forward material planned, partial, blocked, deferred, acceptance-gated, or future capability obligations from:
