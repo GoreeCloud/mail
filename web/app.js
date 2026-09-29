@@ -47,6 +47,7 @@ const readerAttachments = document.querySelector('#readerAttachments');
 const readerAttachmentStatus = document.querySelector('#readerAttachmentStatus');
 const replyButton = document.querySelector('#replyButton');
 const forwardButton = document.querySelector('#forwardButton');
+const copyMessageButton = document.querySelector('#copyMessageButton');
 const exportMessageButton = document.querySelector('#exportMessageButton');
 const moveControl = document.querySelector('#moveControl');
 const moveMailboxSelect = document.querySelector('#moveMailboxSelect');
@@ -185,6 +186,7 @@ function syncReaderActions() {
   deleteButton.disabled = !hasSelection || !deleteAvailable;
   flagButton.hidden = !flagAvailable;
   flagButton.disabled = !hasSelection || !flagAvailable;
+  copyMessageButton.disabled = !hasSelection;
   exportMessageButton.disabled = !hasSelection;
 }
 
@@ -538,6 +540,22 @@ forwardButton.addEventListener('click', () => {
   });
 });
 
+copyMessageButton.addEventListener('click', async () => {
+  if (!selectedMessage) return;
+
+  try {
+    const payload = formatMessagePlainText(selectedMessage);
+    if (!navigator.clipboard?.writeText) {
+      throw new Error('Clipboard API is unavailable');
+    }
+    await navigator.clipboard.writeText(payload);
+    providerStatus.textContent = `${runtime.label} · message text copied locally`;
+  } catch (error) {
+    providerStatus.textContent = `${runtime.label} · local message copy failed`;
+    console.error('Unable to copy the selected GoreeCloud Mail message locally.', error);
+  }
+});
+
 exportMessageButton.addEventListener('click', () => {
   if (!selectedMessage) return;
 
@@ -674,6 +692,7 @@ initialize().catch((error) => {
   composeSendButton.disabled = true;
   replyButton.disabled = true;
   forwardButton.disabled = true;
+  copyMessageButton.disabled = true;
   exportMessageButton.disabled = true;
   moveMailboxSelect.disabled = true;
   moveButton.disabled = true;
