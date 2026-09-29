@@ -27,6 +27,7 @@ The target inventory below defines GoreeCloud Mail product scope. It must not be
 | Fail-closed HTML rendering boundary | Source-validated policy; maintained production sanitizer pending |
 | Attachment byte inspection, private object storage, owner-bound delivery, durable metadata and cleanup | Source-validated development foundation |
 | Wardveil Scan signed transport, exact-byte binding, delivery enforcement, and durable clean-scan provenance | Source-validated; production Wardveil runtime acceptance pending |
+| Browser selected-message plain-text export | Implemented on the active candidate; explicit local download of the currently loaded message only, excluding attachment bytes and making no mailbox-backup or provider-mutation claim; fresh exact-head validation pending |
 
 ## Core email and inbox — Target
 
