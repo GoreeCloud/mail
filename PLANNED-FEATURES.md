@@ -11,7 +11,7 @@
 
 ## 2026-09-29 selected-message export continuation
 
-The active browser candidate now adds an explicit local **Export text** action for the currently loaded message. It produces a plain-text file containing subject, sender/address, received timestamp, and body plus only an attachment-count notice; attachment bytes and filenames are deliberately excluded. The action does not call the provider, does not mutate mailbox state, and does not establish full mailbox/folder export, backup, recovery, or Everkeep acceptance. Fresh exact-head validation and browser/accessibility acceptance remain open.
+The active browser candidate now adds explicit local **Copy text** and **Export text** actions for the currently loaded message. Both use the same bounded plain-text representation containing subject, sender/address, received timestamp, and body plus only an attachment-count notice; attachment bytes and filenames are deliberately excluded. Copy requires the browser Clipboard API and fails closed when unavailable. Neither action calls the provider or mutates mailbox state, and neither establishes full mailbox/folder export, backup, recovery, or Everkeep acceptance. Fresh exact-head validation and browser/accessibility acceptance remain open.
 
 ## Purpose and migration sources
 
