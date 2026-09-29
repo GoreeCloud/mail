@@ -17,7 +17,7 @@ Authoritative `main` includes the repository-native governance migration at `9e0
 
 ## Candidate-only Development capability on this branch
 
-The current Draft Android onboarding candidate adds mandatory three-step first-use guidance, persisted interruption/resume state, replayable **Help & guidance**, and a global contextual-hints preference to the disconnected native shell. Its language keeps provider sign-in, mailbox transport, synchronization, push, local mailbox storage, attachments, Identity runtime, and production acceptance explicitly unavailable. This is unmerged candidate evidence only and does not alter the authoritative-main interpretation below.
+The current candidate adds mandatory three-step first-use guidance, persisted interruption/resume state, replayable **Help & guidance**, and a global contextual-hints preference to the disconnected native shell. The browser reader also exposes user-initiated **Copy text** and **Export text** actions for the currently loaded message through the same bounded plain-text formatter; both exclude attachment bytes and filenames and perform no provider mutation. Provider sign-in, mailbox transport, synchronization, push, local mailbox storage, Identity runtime, and production acceptance remain explicitly unavailable. This is unmerged candidate evidence only and does not alter the authoritative-main interpretation below.
 
 ## Implemented Development foundations
 
