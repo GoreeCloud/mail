@@ -12,4 +12,11 @@ object MailGuidancePolicy {
         val current = normalizeStep(step)
         return if (current >= STEP_COUNT - 1) null else current + 1
     }
+
+    fun shouldShowContextualHint(
+        firstUseComplete: Boolean,
+        hintsEnabled: Boolean,
+        hintDismissed: Boolean,
+    ): Boolean =
+        firstUseComplete && hintsEnabled && !hintDismissed
 }
