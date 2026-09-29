@@ -6,6 +6,7 @@ import {
 } from './mail-provider.js';
 import { mailboxName, filterLoadedMailboxMessages } from './mailbox-view.js';
 import { moveDestinationMailboxes } from './message-move.js';
+import { formatMessagePlainText, messagePlainTextFilename } from './message-export.js';
 import { readMailProviderRuntime } from './provider-runtime.js';
 import { presentAttachmentSecurity } from './security/attachment-security-presentation.js';
 
@@ -46,6 +47,7 @@ const readerAttachments = document.querySelector('#readerAttachments');
 const readerAttachmentStatus = document.querySelector('#readerAttachmentStatus');
 const replyButton = document.querySelector('#replyButton');
 const forwardButton = document.querySelector('#forwardButton');
+const exportMessageButton = document.querySelector('#exportMessageButton');
 const moveControl = document.querySelector('#moveControl');
 const moveMailboxSelect = document.querySelector('#moveMailboxSelect');
 const moveButton = document.querySelector('#moveButton');
@@ -183,6 +185,7 @@ function syncReaderActions() {
   deleteButton.disabled = !hasSelection || !deleteAvailable;
   flagButton.hidden = !flagAvailable;
   flagButton.disabled = !hasSelection || !flagAvailable;
+  exportMessageButton.disabled = !hasSelection;
 }
 
 function clearReader() {
@@ -535,6 +538,28 @@ forwardButton.addEventListener('click', () => {
   });
 });
 
+exportMessageButton.addEventListener('click', () => {
+  if (!selectedMessage) return;
+
+  try {
+    const payload = formatMessagePlainText(selectedMessage);
+    const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = messagePlainTextFilename(selectedMessage);
+    download.hidden = true;
+    document.body.append(download);
+    download.click();
+    download.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    providerStatus.textContent = `${runtime.label} · message exported locally`;
+  } catch (error) {
+    providerStatus.textContent = `${runtime.label} · local message export failed`;
+    console.error('Unable to export the selected GoreeCloud Mail message locally.', error);
+  }
+});
+
 moveButton.addEventListener('click', () => {
   void runSelectedMessageMove();
 });
@@ -649,6 +674,7 @@ initialize().catch((error) => {
   composeSendButton.disabled = true;
   replyButton.disabled = true;
   forwardButton.disabled = true;
+  exportMessageButton.disabled = true;
   moveMailboxSelect.disabled = true;
   moveButton.disabled = true;
   archiveButton.disabled = true;
