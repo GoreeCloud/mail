@@ -544,11 +544,7 @@ copyMessageButton.addEventListener('click', async () => {
   if (!selectedMessage) return;
 
   try {
-    const payload = formatMessagePlainText(selectedMessage);
-    if (!navigator.clipboard?.writeText) {
-      throw new Error('Clipboard API is unavailable');
-    }
-    await navigator.clipboard.writeText(payload);
+    await copyMessagePlainText(selectedMessage, navigator.clipboard);
     providerStatus.textContent = `${runtime.label} · message text copied locally`;
   } catch (error) {
     providerStatus.textContent = `${runtime.label} · local message copy failed`;
