@@ -9,6 +9,10 @@
 **Current GLAZE UI target:** Official Stable V1.6 / `1.6.0`, published from source `a7180679ea851389e0f3004515f9a25f420e716d`.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0.
 
+## 2026-09-29 selected-message export continuation
+
+The active browser candidate now adds explicit local **Copy text** and **Export text** actions for the currently loaded message. Both use the same bounded plain-text representation containing subject, sender/address, received timestamp, and body plus only an attachment-count notice; attachment bytes and filenames are deliberately excluded. Copy requires the browser Clipboard API and fails closed when unavailable. Neither action calls the provider or mutates mailbox state, and neither establishes full mailbox/folder export, backup, recovery, or Everkeep acceptance. Fresh exact-head validation and browser/accessibility acceptance remain open.
+
 ## Purpose and migration sources
 
 This file carries forward material planned, partial, blocked, deferred, acceptance-gated, or future capability obligations from:
@@ -31,6 +35,7 @@ Open Draft pull requests remain candidate-only. Platform Contract 0.4 is integra
 - Complete governed native Mail application registration and actual accepted GoreeCloud Identity runtime/session exchange before any native provider transport is activated. The Mail-side Android non-secret metadata validator is SOURCE_READY only; current GoreeCloud Identity Draft PR #9 remains contract-only with an empty native registration registry and no authenticated user or mailbox authorization authority.
 
 ### P0 — Native Android development beyond the integrated disconnected foundation
+- Independently review and integrate the current first-use-guidance candidate only after exact-head validation, then complete representative-device, TalkBack/keyboard, form-factor, interruption/recovery, protected Development signing/update-in-place, and release acceptance for onboarding.
 - Platform Contract 0.4 is integrated through PRs #68 and #69, and PR #70 integrates the disconnected Android Development shell/build/test foundation. The Android tree now contains a bounded GLAZE UI V1.6 presentation source mapping and JVM/static governance tests only; no full Android Glaze application acceptance follows. Historical PRs #61–#63 remain unmerged stacked provenance and must not be promoted wholesale. Independent exact-main push-workflow/artifact verification remains open for the already integrated PRs #70/#71; actual Identity/session binding and connected provider capabilities require separate bounded implementation and acceptance.
 - Complete exact-field provider-account decoding/transport, authenticated provider access, local protected storage, background synchronization, push/notifications, attachment runtime, provider-backed mailbox operations, and degraded/offline behavior only after their authority prerequisites are accepted.
 - Preserve no-network/fail-closed Development behavior until the required Identity/provider/privacy/security boundaries are independently satisfied.

@@ -42,6 +42,21 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ## Current repository changelog
 
+### September 29, 2026 — selected-message plain-text export candidate
+
+- Added explicit browser **Copy text** and **Export text** actions for the currently loaded message.
+- Both actions use the same bounded plain-text representation containing subject, sender/address, received time, and message body; attachment bytes and filenames are not copied, and only the attachment count is disclosed.
+- Copy uses the browser Clipboard API and fails closed when unavailable. Copy/export are local user actions and perform no provider mutation, send/draft operation, mailbox-wide read, backup, recovery, or Everkeep operation.
+- Added deterministic formatter/filename tests, including a regression that attachment payload bytes never enter the text export.
+
+**Acceptance boundary:** active candidate only. Fresh exact-head CI plus browser/accessibility acceptance remain required before integration.
+
+### September 28, 2026 — Draft Android first-use guidance candidate
+
+- Added a mandatory, resumable three-step first-use guide to the disconnected Compose shell, plus replayable **Help & guidance** and a globally disableable contextual hint.
+- Guidance explicitly separates source-ready Mail session metadata from unaccepted GoreeCloud Identity runtime/registration and from external provider/mailbox authority; the Android artifact still declares no `INTERNET` permission and keeps backup/cleartext disabled.
+- The initial candidate exact head passed Mail Android Client, CI, and Validate GoreeCloud Mail workflows. The candidate remains unmerged Development evidence; provider connectivity, representative-device/accessibility/recovery, protected signing, Release Candidate, production, and Stable acceptance remain open.
+
 ### September 23, 2026 — Fail-closed Android native session metadata readiness
 
 - Selectively recovered pure Mail-side session metadata validation from historical stacked Draft PR #63 against the independently inspected GoreeCloud Identity Draft PR #9 `goreecloud.identity.native-application-session/v1` Development candidate `b010bcc3610c3898f108340b8c978bb783418980`. Identity native registration remains empty and the Identity session runtime is contract-only.

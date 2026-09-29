@@ -25,7 +25,9 @@ The web shell now treats its mailbox rail as provider-driven navigation rather t
 - The Development demo provider currently supplies example Inbox and Starred behavior. Other demo mailboxes can legitimately be empty.
 - Real gateway/provider environments remain authoritative for which mailboxes exist and which messages belong to each mailbox.
 
-The current Gmail foundation supports authenticated mailbox listing and normalized message reading through trusted backend boundaries. Provider HTML is untrusted; production HTML rendering remains gated until a maintained sanitizer is accepted. Remote-content privacy controls are governed by Privacy Shield.
+The current Gmail foundation supports authenticated mailbox listing and normalized message reading through trusted backend boundaries. In the browser reader, **Copy text** copies a bounded plain-text representation of the selected message to the browser clipboard when that API is available, and **Export text** downloads the same representation as a local text file. These actions include subject, sender/address, received time, body, and only an attachment-count notice; they do not copy attachment filenames or bytes and do not mutate the provider.
+
+Provider HTML is untrusted; production HTML rendering remains gated until a maintained sanitizer is accepted. Remote-content privacy controls are governed by Privacy Shield.
 
 ## Browser composition
 

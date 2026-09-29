@@ -15,6 +15,10 @@ This record describes capabilities accepted on authoritative `main`. It does not
 
 Authoritative `main` includes the repository-native governance migration at `9e0220856782ca4d19ade7fd7ced53507a581b80`; its exact-main Validate GoreeCloud Mail #190 and CI #755 passed. Platform Contract 0.4 was subsequently integrated through PRs #68 and #69. PR #70 then integrated the bounded disconnected Android foundation as exact `main` `548a21c33318a7ab7cc7e6c43defccf048b065e5`. Its exact-head PR runs passed: Mail Android Client `35894182889`, CI `35894182896`, and Validate GoreeCloud Mail `35894182906`. Post-merge source readback was verified, but independent exact-new-main push-workflow and artifact verification is still open. Historical Draft PRs #60–#63 are unmerged provenance only; no connected Android mailbox or release authority follows.
 
+## Candidate-only Development capability on this branch
+
+The current candidate adds mandatory three-step first-use guidance, persisted interruption/resume state, replayable **Help & guidance**, and a global contextual-hints preference to the disconnected native shell. The browser reader also exposes user-initiated **Copy text** and **Export text** actions for the currently loaded message through the same bounded plain-text formatter; both exclude attachment bytes and filenames and perform no provider mutation. Provider sign-in, mailbox transport, synchronization, push, local mailbox storage, Identity runtime, and production acceptance remain explicitly unavailable. This is unmerged candidate evidence only and does not alter the authoritative-main interpretation below.
+
 ## Implemented Development foundations
 
 ### Disconnected native Android Development source

@@ -15,6 +15,7 @@ The repository currently includes:
 - responsive Glaze UI web/client foundations with provider-driven browser mailbox navigation and a message reader;
 - browser mailbox switching that uses `listMessages(mailboxId)`, generation-guards stale reads, and scopes local search to the currently loaded mailbox snapshot;
 - browser composition with multiple To recipients, optional Cc/Bcc, local Reply/Forward plain-text context, and no automatic forwarding of original attachments;
+- an active-candidate explicit **Export text** action that downloads only the currently loaded message as local plain text, excludes attachment bytes, and does not mutate provider state or represent full mailbox backup/export;
 - provider-independent Mail contracts and same-origin provider gateway boundaries;
 - Gmail and standards-based IMAP/SMTP adapter foundations;
 - trusted session-derived GoreeCloud user identity and user-scoped provider-account handling;
