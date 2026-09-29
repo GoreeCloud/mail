@@ -44,9 +44,9 @@ Together these files preserve the complete non-empty Drive chronology, including
 
 ### September 29, 2026 — selected-message plain-text export candidate
 
-- Added an explicit browser **Export text** action for the currently loaded message.
-- The generated local file contains subject, sender/address, received time, and plain-text body only; attachment bytes and filenames are not copied, and only the attachment count is disclosed in the export.
-- Export is a local user action and performs no provider mutation, send/draft operation, mailbox-wide read, backup, recovery, or Everkeep operation.
+- Added explicit browser **Copy text** and **Export text** actions for the currently loaded message.
+- Both actions use the same bounded plain-text representation containing subject, sender/address, received time, and message body; attachment bytes and filenames are not copied, and only the attachment count is disclosed.
+- Copy uses the browser Clipboard API and fails closed when unavailable. Copy/export are local user actions and perform no provider mutation, send/draft operation, mailbox-wide read, backup, recovery, or Everkeep operation.
 - Added deterministic formatter/filename tests, including a regression that attachment payload bytes never enter the text export.
 
 **Acceptance boundary:** active candidate only. Fresh exact-head CI plus browser/accessibility acceptance remain required before integration.
