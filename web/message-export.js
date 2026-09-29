@@ -27,6 +27,17 @@ export function formatMessagePlainText(message) {
   return lines.join('\n');
 }
 
+
+export async function copyMessagePlainText(message, clipboard) {
+  if (!clipboard || typeof clipboard.writeText !== 'function') {
+    throw new Error('Clipboard API is unavailable');
+  }
+
+  const payload = formatMessagePlainText(message);
+  await clipboard.writeText(payload);
+  return payload;
+}
+
 export function messagePlainTextFilename(message) {
   const subject = text(message?.subject)
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
