@@ -13,6 +13,7 @@ export const REQUIRED_MAIL_PROVIDER_METHODS = Object.freeze([
   'archive',
   'remove',
   'flag',
+  'setReadState',
   'sync',
   'capabilities',
 ]);

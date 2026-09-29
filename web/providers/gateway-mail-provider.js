@@ -76,6 +76,13 @@ export class GatewayMailProvider {
     });
   }
 
+  setReadState(id, read = true) {
+    return this.gateway.request(this.path(`/messages/${encodeURIComponent(id)}/read-state`), {
+      method: 'PUT',
+      body: { read: Boolean(read) },
+    });
+  }
+
   sync() {
     return this.gateway.request(this.path('/sync'), { method: 'POST' });
   }
