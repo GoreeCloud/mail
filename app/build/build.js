@@ -214,7 +214,7 @@ function buildPackagerOptions() {
       linux: undefined,
     }[platform],
     name: { darwin: 'GoreeCloud Mail', win32: 'GoreeCloud Mail', linux: 'goreecloud-mail' }[platform],
-    appCopyright: `Copyright (C) 2014-${new Date().getFullYear()} Foundry 376, LLC. All rights reserved.`,
+    appCopyright: 'Copyright (C) 2026 GoreeCloud. Portions Copyright (C) Foundry 376, LLC and upstream contributors; see NOTICE.md.',
     derefSymlinks: false,
     asar: {
       unpack:
@@ -325,7 +325,7 @@ function buildPackagerOptions() {
     win32metadata: {
       CompanyName: 'GoreeCloud',
       FileDescription: 'GoreeCloud Mail',
-      LegalCopyright: `Copyright (C) 2014-${new Date().getFullYear()} Foundry 376, LLC. All rights reserved.`,
+      LegalCopyright: 'Copyright (C) 2026 GoreeCloud. Upstream portions retain their original copyright notices.',
       ProductName: 'GoreeCloud Mail',
     },
     // NOTE: The following plist keys can NOT be set in the extra.plist since
