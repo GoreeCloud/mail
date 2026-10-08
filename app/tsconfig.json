@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "jsx": "react",
+    "target": "es2024",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "outDir": "lib",
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "paths": {
+      "*": ["node_modules/*", "src/global/*"]
+    }
+  },
+  "include": ["src/**/*", "internal_packages/**/*", "spec/**/*"],
+  "exclude": ["spec/spec-runner/jasmine.js"]
+}

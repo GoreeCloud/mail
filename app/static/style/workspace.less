@@ -1,0 +1,720 @@
+@import 'ui-variables';
+@import 'ui-mixins';
+
+:root {
+  --font-weight-semi-bold: 600;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: @font-family;
+  font-size: @font-size;
+  line-height: @line-height-base;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+mailspring-workspace {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  font-family: @font-family;
+
+  // Important: This attribute is used in the theme-manager-specs to check that
+  // themes load and override each other correctly. Do not remove!
+  background-color: @background-primary;
+}
+
+.sheet-container {
+  height: 100%;
+}
+
+.sheet {
+  background-color: @background-primary;
+}
+
+.sheet-stack-enter {
+  left: 30px;
+  opacity: 0;
+  transition: all 0.125s ease-out;
+}
+
+.sheet-stack-enter.sheet-stack-enter-active {
+  left: 0;
+  opacity: 1;
+}
+
+.sheet-stack-exit {
+  left: 0;
+  opacity: 1;
+  transition: all 0.125s ease-in;
+}
+
+.sheet-stack-exit.sheet-stack-exit-active {
+  left: 30px;
+  opacity: 0;
+}
+
+.toolbar-menu-control {
+  display: none;
+}
+
+.toolbar-window-controls {
+  margin-top: 7px;
+  margin-left: @spacing-half /*rtl:ignore */;
+  order: -1000 /*rtl: 1000*/;
+  min-width: 72px;
+  width: 72px;
+  flex-grow: 0;
+  flex-shrink: 0;
+
+  button {
+    -webkit-app-region: no-drag;
+    padding: 0;
+    width: 12px;
+    height: 12px;
+    margin: 4px;
+    float: left /*rtl:left */;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    border: 0;
+  }
+}
+
+body.is-blurred {
+  .sheet-toolbar-container {
+    background-image: linear-gradient(
+      to bottom,
+      lighten(@toolbar-background-color, 14%),
+      lighten(@toolbar-background-color, 14%)
+    );
+
+    .btn.btn-toolbar {
+      background: none;
+      box-shadow: 0 0.5px 0 @btn-border-color, 0 -0.5px 0 @btn-border-color,
+        0.5px 0 0 @btn-border-color, -0.5px 0 0 @btn-border-color;
+      img {
+        opacity: 0.5;
+      }
+    }
+    .item-container {
+      .window-title {
+        opacity: 0.5;
+      }
+    }
+  }
+}
+
+.sheet-toolbar-container {
+  background-image: -webkit-linear-gradient(
+    lighten(@toolbar-background-color, 10%) 0%,
+    lighten(@toolbar-background-color, 10%) 1.9%,
+    lighten(@toolbar-background-color, 9%) 2%,
+    @toolbar-background-color 100%
+  );
+  color: @text-color-heading;
+}
+
+// The nav rail shares the toolbar's surface; each platform block below sets both together.
+.nav-rail-frame {
+  background: @toolbar-background-color;
+}
+
+.sheet-toolbar {
+  position: relative;
+  -webkit-app-region: drag;
+  border-bottom: 1px solid darken(@toolbar-background-color, 9%);
+  width: 100%;
+  height: 34px;
+
+  // prevent flexbox from ever, ever resizing toolbars, no matter
+  // how much it thinks other content is being squished
+  min-height: 34px;
+  max-height: 34px;
+
+  // cover up the vertical resizing separators, so the toolbar appears
+  // to be one continuous bar.
+  z-index: 10;
+
+  .item-container > * {
+    -webkit-app-region: no-drag;
+  }
+  .item-spacer {
+    -webkit-app-region: drag;
+  }
+
+  .item-compose {
+    order: 101;
+  }
+
+  .item-container {
+    .window-title {
+      position: absolute;
+      text-align: center;
+      left: 50%;
+      transform: translateX(-50%);
+      -webkit-app-region: drag;
+      line-height: 34px;
+      &:hover {
+        cursor: default;
+      }
+    }
+  }
+
+  .item-back {
+    order: -999;
+    img.content-mask {
+      background-color: @text-color-heading;
+    }
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    .item-back-title {
+      cursor: default;
+      color: @text-color-heading;
+      margin: 0;
+      font-size: @font-size-h4;
+      font-weight: @font-weight-normal;
+      vertical-align: middle;
+      display: inline-block;
+    }
+    &:active {
+      .item-back-title {
+        color: mix(@text-color-heading, @black, 30%);
+      }
+      img.content-mask {
+        background-color: mix(@text-color-heading, @black, 30%);
+      }
+    }
+  }
+
+  .btn-toolbar {
+    margin-top: 5px;
+    margin-left: @spacing-three-quarters;
+    margin-right: 0;
+    flex-shrink: 0;
+    line-height: 1.75em;
+    height: 1.75em;
+    box-shadow: 0 0.5px 0.05px rgba(0, 0, 0, 0.4), 0 -0.5px 0 rgba(0, 0, 0, 0.12);
+    img.content-mask {
+      background-color: fade(@text-color-heading, 80%);
+    }
+  }
+  .btn-toolbar:active {
+    img.content-mask {
+      background-color: fade(@text-color-heading, 90%);
+    }
+  }
+  .btn-toolbar:only-of-type {
+    margin-right: 6px;
+  }
+
+  .button-group {
+    display: flex;
+    margin-left: @spacing-three-quarters;
+    .btn.btn-toolbar {
+      margin-left: 0;
+      margin-right: 0;
+
+      // Using these (slower) selectors to avoid redeclaring any constants
+      // like default-case border radius that themes might be overriding.
+      &:not(:last-child) {
+        border-right: 0;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      &:not(:first-child) {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      &:last-child {
+        border-left: 0;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+  }
+}
+
+.opacity-125ms-enter {
+  opacity: 0;
+  transition: opacity 0.125s ease-out;
+}
+
+.opacity-125ms-enter.opacity-125ms-enter-active {
+  opacity: 1;
+}
+
+.opacity-125ms-exit {
+  opacity: 1;
+  transition: opacity 0.125s ease-in;
+}
+
+.opacity-125ms-exit.opacity-125ms-exit-active {
+  opacity: 0;
+}
+
+.flexbox-handle-horizontal {
+  width: 8px;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  position: absolute;
+  cursor: col-resize;
+  div {
+    height: 100%;
+    box-shadow: 0.5px 0 0 @border-color-divider;
+  }
+
+  &.flexbox-handle-right {
+    right: -4px;
+    padding-right: 4px;
+  }
+  &.flexbox-handle-left {
+    left: -4px;
+    padding-right: 4px;
+  }
+}
+
+.flexbox-handle-vertical {
+  width: 100%;
+  height: 6px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  position: absolute;
+  cursor: row-resize;
+  div {
+    width: 100%;
+  }
+  &.flexbox-handle-top {
+    top: -3px;
+    padding-right: 3px;
+  }
+  &.flexbox-handle-bottom {
+    bottom: 0;
+    padding-right: 2px;
+  }
+}
+
+.display-deferrable {
+  opacity: 1;
+  transition: opacity 220ms;
+  &.deferred {
+    opacity: 0;
+  }
+}
+
+.injected-region-visible {
+  border: 1px dashed rgba(255, 0, 0, 0.5);
+  margin: 2px;
+  position: relative;
+  min-height: 1.5em;
+  > .name {
+    background-color: rgba(255, 180, 180, 0.9);
+    position: absolute;
+    color: black;
+    font-size: 13px;
+    top: 50%;
+    left: 50%;
+    white-space: nowrap;
+    z-index: 100;
+    -webkit-transform: translate(-50%, -50%);
+    user-select: text;
+  }
+  &:hover {
+    border: 1px dashed rgba(255, 0, 0, 1);
+  }
+}
+
+// MACOS
+// Match the macOS 26+ unified toolbar: a taller bar with capsule-shaped,
+// translucent buttons. Grouped buttons share one capsule and are separated by
+// hairlines rather than rendered as adjoining rectangles.
+
+// Focused windows get the "glass" treatment: buttons sit slightly brighter than
+// the bar, with a light rim inset along the top and bottom edges and a barely
+// visible shadow. Blurred windows flatten to a translucent tint with a hairline edge.
+@toolbar-btn-fill-darwin: fade(@background-primary, 85%);
+@toolbar-btn-fill-hover-darwin: @background-primary;
+@toolbar-btn-fill-active-darwin: mix(@text-color, @background-primary, 10%);
+@toolbar-btn-edge-darwin: inset 0 1px 0 lighten(@background-primary, 10%),
+  inset 0 -1px 0 lighten(@background-primary, 10%), 0 0 0 0.5px fade(@black, 7%),
+  0 1px 4px fade(@black, 5%);
+@toolbar-btn-fill-blurred-darwin: fade(@text-color, 4%);
+@toolbar-btn-edge-blurred-darwin: inset 0 0 0 0.5px fade(@text-color, 12%);
+@toolbar-btn-radius-darwin: (@toolbar-btn-height-darwin / 2);
+
+// Traffic-light glyphs shown on hover, drawn as inline SVG so they scale with
+// the display and pick up no bitmap blur. Colors are baked in because the
+// glyph sits on a fixed-color gumdrop, not on the theme.
+@gumdrop-glyph-close: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.6 3.6l4.8 4.8M8.4 3.6l-4.8 4.8' stroke='rgba(0,0,0,0.55)' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+@gumdrop-glyph-minimize: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='rgba(0,0,0,0.55)' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+@gumdrop-glyph-fullscreen: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 3v4.8L7.8 3zM9 9V4.2L4.2 9z' fill='rgba(0,0,0,0.55)'/%3E%3C/svg%3E");
+@gumdrop-glyph-maximize: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 3v6M3 6h6' stroke='rgba(0,0,0,0.55)' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+
+// `:where()` adds no specificity, so these platform rules rank exactly like the
+// base rules they refine and win only by source order. Themes can then override
+// them with ordinary selectors, as they already do for the win32/linux rules.
+:where(body.platform-darwin) {
+  // macOS 26+ toolbars are a flat surface continuous with the sidebar, with a
+  // hairline separating them from content, rather than a gradient bar.
+  .sheet-toolbar-container {
+    background-image: none;
+    background: @panel-background-color;
+  }
+  .nav-rail-frame {
+    background: @panel-background-color;
+  }
+  .sheet-toolbar {
+    border-bottom: 1px solid fade(@text-color, 10%);
+  }
+
+  .toolbar-window-controls {
+    margin-top: ((@toolbar-height-darwin - 20px) / 2);
+    // Size to the buttons rather than stretching to the bar, so the strip
+    // below them still drags the window.
+    align-self: flex-start;
+
+    // macOS 26+ gumdrops: 14px circles on a 23px pitch.
+    button {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      margin: 3px 4.5px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 0.5px fade(@black, 15%);
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-repeat: no-repeat;
+        background-size: 14px 14px;
+        opacity: 0;
+      }
+      &:active {
+        filter: brightness(0.8);
+      }
+    }
+    // Colors sit in :where() so a theme's plain `.close` rule outranks them
+    // while still ranking above the base `button` rule's transparent fill.
+    button:where(.close) {
+      background-color: #ff5f57;
+    }
+    button:where(.minimize) {
+      background-color: #febc2e;
+    }
+    button:where(.maximize) {
+      background-color: #28c840;
+    }
+    .close::after {
+      background-image: @gumdrop-glyph-close;
+    }
+    .minimize::after {
+      background-image: @gumdrop-glyph-minimize;
+    }
+    .maximize::after {
+      background-image: @gumdrop-glyph-fullscreen;
+    }
+    &.alt-true .maximize::after {
+      background-image: @gumdrop-glyph-maximize;
+    }
+    &:hover button::after {
+      opacity: 1;
+    }
+  }
+
+  &.is-blurred {
+    .sheet-toolbar-container {
+      background-image: none;
+      background: @panel-background-color;
+    }
+    .toolbar-window-controls button {
+      background-color: fade(@text-color, 15%);
+      box-shadow: inset 0 0 0 0.5px fade(@black, 8%);
+    }
+  }
+
+  .toolbar-activity {
+    padding-top: ((@toolbar-height-darwin - 36px) / 2);
+  }
+
+  .sheet-toolbar {
+    height: @toolbar-height-darwin;
+    min-height: @toolbar-height-darwin;
+    max-height: @toolbar-height-darwin;
+
+    .item-container .window-title {
+      line-height: @toolbar-height-darwin;
+    }
+
+    // Let column toolbars fill the bar so items without a fixed height can be
+    // centered with flexbox instead of a line-height tied to the bar height.
+    // Scoped to the columns: nested toolbars such as the traffic lights would
+    // otherwise overhang the bar and block window dragging below it.
+    .sheet-toolbar-container > [role='toolbar'] {
+      height: 100%;
+    }
+    .item-back,
+    .message-toolbar-arrow {
+      display: flex;
+      align-items: center;
+      line-height: normal;
+    }
+
+    .btn-toolbar {
+      // Flex-center the icon: with line-height alone, `vertical-align: middle`
+      // lands the glyph about a pixel below the button's center.
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: ((@toolbar-height-darwin - @toolbar-btn-height-darwin) / 2);
+      height: @toolbar-btn-height-darwin;
+      line-height: @toolbar-btn-height-darwin;
+      padding: 0 13px;
+      border-radius: @toolbar-btn-radius-darwin;
+      background: @toolbar-btn-fill-darwin;
+      box-shadow: @toolbar-btn-edge-darwin;
+      transition: background 120ms ease-out;
+      &.narrow {
+        padding: 0 10px;
+      }
+      &:hover {
+        background: @toolbar-btn-fill-hover-darwin;
+      }
+      &:active {
+        background: @toolbar-btn-fill-active-darwin;
+      }
+      &.btn-disabled:hover {
+        background: @toolbar-btn-fill-darwin;
+      }
+    }
+
+    .button-group {
+      // Explicit height: as a flex item of a full-height toolbar column the
+      // group would otherwise stretch and its outline would hang below the buttons.
+      height: @toolbar-btn-height-darwin;
+      border-radius: @toolbar-btn-radius-darwin;
+      box-shadow: @toolbar-btn-edge-darwin;
+      margin-top: ((@toolbar-height-darwin - @toolbar-btn-height-darwin) / 2);
+      .btn.btn-toolbar {
+        margin-top: 0;
+        box-shadow: none;
+        &:not(:first-child) {
+          border-left: 1px solid fade(@text-color, 10%);
+        }
+        // Set both ends explicitly: a lone button is also :last-child, which
+        // the base rules use to square off the left corners.
+        &:first-child {
+          border-top-left-radius: @toolbar-btn-radius-darwin;
+          border-bottom-left-radius: @toolbar-btn-radius-darwin;
+        }
+        &:last-child {
+          border-top-right-radius: @toolbar-btn-radius-darwin;
+          border-bottom-right-radius: @toolbar-btn-radius-darwin;
+        }
+      }
+    }
+  }
+
+}
+
+// Kept at the specificity of the generic `body.is-blurred` rule above (which it
+// must outrank), so it deliberately does not use the zero-specificity :where().
+body:where(.platform-darwin).is-blurred .sheet-toolbar-container {
+  .btn.btn-toolbar {
+    background: @toolbar-btn-fill-blurred-darwin;
+    box-shadow: @toolbar-btn-edge-blurred-darwin;
+  }
+  .button-group {
+    box-shadow: @toolbar-btn-edge-blurred-darwin;
+    .btn.btn-toolbar {
+      box-shadow: none;
+    }
+  }
+}
+
+// WINDOWS / LINUX
+// Toolbar Window Control
+
+body.platform-linux,
+body.platform-win32.window-type-default {
+  .toolbar-menu-control {
+    display: inherit;
+    order: 10000 /*rtl: -10000 */;
+    .btn-toolbar {
+      margin-left: 0;
+      padding: 0 17px;
+      line-height: 36px;
+      img.content-mask {
+        vertical-align: middle;
+      }
+    }
+  }
+}
+
+// LINUX
+
+body.platform-linux {
+  .item-compose {
+    order: -101;
+  }
+
+  .toolbar-menu-control {
+    .btn-toolbar {
+      padding: 0 12px;
+      line-height: 17px;
+    }
+  }
+
+  // Flat headerbar in the libadwaita / Yaru style: the toolbar shares the
+  // window background, buttons are tinted rather than gradient-filled, and a
+  // hairline separates the bar from content.
+  .sheet-toolbar-container {
+    background-image: none;
+    background: @background-primary;
+  }
+  .nav-rail-frame {
+    background: @background-primary;
+  }
+  .sheet-toolbar {
+    border-bottom: 1px solid fade(@text-color, 12%);
+
+    .btn-toolbar {
+      background: fade(@text-color, 8%);
+      box-shadow: none;
+      border-radius: 6px;
+      &:hover {
+        background: fade(@text-color, 12%);
+      }
+      &:active {
+        background: fade(@text-color, 18%);
+      }
+    }
+    .button-group .btn.btn-toolbar:not(:first-child) {
+      border-left: 1px solid fade(@text-color, 10%);
+    }
+  }
+
+  // linux gumdrops are bigger (15px) and hover states are per-button
+  // instead of for the entire set.
+  .toolbar-window-controls {
+    button {
+      width: 15px;
+      height: 15px;
+      margin: 4px;
+      background-size: 15px 60px;
+      &:hover {
+        background-position: 0 -15px;
+      }
+      &:active {
+        background-position: 0 -30px;
+      }
+    }
+    .close {
+      background-image: url('images/application-frame/close-linux.png');
+    }
+    .minimize {
+      background-image: url('images/application-frame/minimize-linux.png');
+    }
+    .maximize {
+      background-image: url('images/application-frame/maximize-linux.png');
+    }
+    &.alt-true {
+      .maximize {
+        background-image: url('images/application-frame/maximize-linux.png');
+      }
+    }
+  }
+
+  &.is-blurred {
+    .toolbar-window-controls {
+      button {
+        background-position: 0 -45px;
+      }
+    }
+
+    .sheet-toolbar-container {
+      background-image: none;
+      background: @background-primary;
+      .btn-toolbar {
+        background: fade(@text-color, 5%);
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+// WINDOWS
+// Make things a bit more square
+
+body.platform-win32 {
+  .item-compose {
+    order: -101;
+  }
+
+  .toolbar-window-controls {
+    display: none;
+  }
+
+  .btn {
+    border-radius: 0;
+  }
+
+  .flexbox-handle-vertical {
+    cursor: ns-resize;
+  }
+  .flexbox-handle-horizontal {
+    cursor: ew-resize;
+  }
+
+  .nav-rail-frame {
+    background: @background-primary;
+  }
+  .sheet-toolbar-container {
+    background-image: none;
+    background: @background-primary;
+    .btn-toolbar {
+      transition: background 300ms;
+      margin: 0 0 0 1px;
+      height: 33px;
+      padding: 0 14px;
+      padding-bottom: 2px;
+      border: 0;
+      box-shadow: none;
+      background: none;
+      &:hover {
+        background: darken(@list-hover-bg, 5%);
+      }
+    }
+  }
+
+  &.is-blurred {
+    .sheet-toolbar-container {
+      background-image: none;
+      background: @background-primary;
+      .btn-toolbar {
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+// WINDOWS
+// The custom font looks blurry, system-ui looks better.
+// Segoe UI (system-ui on Windows) doesn't render font-weight: 600 (semi-bold)
+// with enough visual distinction from 400 (normal), so we bump to 700 (bold).
+
+body.platform-win32 {
+  --font-weight-semi-bold: 700;
+  font-family: system-ui;
+
+  mailspring-workspace {
+    font-family: system-ui;
+  }
+}

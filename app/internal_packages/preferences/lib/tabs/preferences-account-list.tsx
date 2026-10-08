@@ -1,0 +1,112 @@
+import React, { Component, CSSProperties } from 'react';
+import { localized, Account } from 'mailspring-exports';
+import { RetinaImg, Flexbox, EditableList } from 'mailspring-component-kit';
+import classnames from 'classnames';
+
+interface PreferencesAccountListProps {
+  accounts: Account[];
+  selected: Account;
+  offlineAccountIds: string[];
+  onAddAccount: () => void;
+  onReorderAccount: (account: Account, oldIndex: number, newIndex: number) => void;
+  onSelectAccount: (account: Account) => void;
+  onRemoveAccount: (account: Account) => void;
+}
+
+class PreferencesAccountList extends Component<PreferencesAccountListProps> {
+  _renderAccountStateIcon(account: Account) {
+    if (account.syncState !== 'running') {
+      return (
+        <div className="sync-error-icon">
+          <RetinaImg
+            className="sync-error-icon"
+            name="ic-settings-account-error.png"
+            mode={RetinaImg.Mode.ContentIsMask}
+          />
+        </div>
+      );
+    }
+    return null;
+  }
+
+  _renderAccountStatus(account: Account) {
+    if (account.syncState === Account.SYNC_STATE_AUTH_FAILED) {
+      return <div className="account-status error">{localized('Cannot authenticate')}</div>;
+    }
+    if (account.hasSyncStateError()) {
+      return <div className="account-status error">{localized('Sync error')}</div>;
+    }
+    if (this.props.offlineAccountIds.includes(account.id)) {
+      return (
+        <div className="account-status offline">
+          {localized('Offline')} - {localized('Retrying...')}
+        </div>
+      );
+    }
+    return null;
+  }
+
+  _renderAccount = (account: Account) => {
+    const label = account.label;
+    const accountSub = `${account.name || localized('No name provided')} <${account.emailAddress}>`;
+    const syncError = account.hasSyncStateError();
+    let style: CSSProperties = {};
+    if (account.color) {
+      style = { borderLeftColor: account.color, borderLeftWidth: '8px', borderLeftStyle: 'solid' };
+    } else {
+      style = { marginLeft: '8px' };
+    }
+
+    return (
+      <div
+        style={style}
+        className={classnames({ account: true, 'sync-error': syncError })}
+        key={account.id}
+      >
+        <Flexbox direction="row" style={{ alignItems: 'middle' }}>
+          <div style={{ textAlign: 'center' }}>
+            <RetinaImg
+              style={{ width: 50, height: 50 }}
+              name={
+                syncError
+                  ? 'ic-settings-account-error.png'
+                  : `ic-settings-account-${account.provider}.png`
+              }
+              fallback="ic-settings-account-imap.png"
+              mode={RetinaImg.Mode.ContentPreserve}
+            />
+          </div>
+          <div style={{ flex: 1, marginLeft: 10, marginRight: 10 }}>
+            <div className="account-name" dir="auto">
+              {label}
+            </div>
+            <div className="account-subtext" dir="auto">
+              {accountSub} ({account.displayProvider()})
+            </div>
+            {this._renderAccountStatus(account)}
+          </div>
+        </Flexbox>
+      </div>
+    );
+  };
+
+  render() {
+    if (!this.props.accounts) {
+      return <div className="account-list" />;
+    }
+    return (
+      <EditableList
+        className="account-list"
+        items={this.props.accounts}
+        itemContent={this._renderAccount}
+        selected={this.props.selected}
+        onReorderItem={this.props.onReorderAccount}
+        onCreateItem={this.props.onAddAccount}
+        onSelectItem={this.props.onSelectAccount}
+        onDeleteItem={this.props.onRemoveAccount}
+      />
+    );
+  }
+}
+
+export default PreferencesAccountList;

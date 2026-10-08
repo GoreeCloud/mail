@@ -1,0 +1,600 @@
+import {
+  Contact,
+  Message,
+  Thread,
+  Folder,
+  CategoryStore,
+  DatabaseStore,
+  AccountStore,
+  SoundRegistry,
+  NativeNotifications,
+} from 'mailspring-exports';
+
+import { Notifier } from '../lib/main';
+
+function getObjectsRawJson(ids: string[]) {
+  return ids.map(id => {
+    return { headersSyncComplete: true, id }
+  })
+}
+
+describe('UnreadNotifications', function UnreadNotifications() {
+  beforeEach(() => {
+    this.notifier = new Notifier();
+
+    const inbox = new Folder({ id: 'l1', role: 'inbox', path: 'Inbox' });
+    const archive = new Folder({ id: 'l2', role: 'archive', path: 'Archive' });
+
+    spyOn(CategoryStore, 'getCategoryByRole').andReturn(inbox);
+
+    const account = AccountStore.accounts()[0];
+
+    this.threadA = new Thread({
+      id: 'A',
+      accountId: 'a',
+      folders: [inbox],
+    });
+    this.threadB = new Thread({
+      id: 'B',
+      accountId: 'a',
+      folders: [archive],
+    });
+
+    this.msg1 = new Message({
+      id: '1',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Ben', email: 'benthis.example.com' })],
+      subject: 'Hello World',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgNoSender = new Message({
+      id: 'no',
+      unread: true,
+      date: new Date(),
+      from: [],
+      accountId: 'a',
+      subject: 'Hello World',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msg2 = new Message({
+      id: '2',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Mark', email: 'markthis.example.com' })],
+      subject: 'Hello World 2',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msg3 = new Message({
+      id: '3',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Ben', email: 'benthis.example.com' })],
+      subject: 'Hello World 3',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msg4 = new Message({
+      id: '4',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Ben', email: 'benthis.example.com' })],
+      subject: 'Hello World 4',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msg5 = new Message({
+      id: '5',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Ben', email: 'benthis.example.com' })],
+      subject: 'Hello World 5',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgUnreadButArchived = new Message({
+      id: 'uba',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Mark', email: 'markthis.example.com' })],
+      subject: 'Hello World 2',
+      threadId: 'B',
+      version: 1,
+    });
+    this.msgRead = new Message({
+      id: 'read',
+      unread: false,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Mark', email: 'markthis.example.com' })],
+      subject: 'Hello World Read Already',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgOld = new Message({
+      id: 'old',
+      unread: true,
+      date: new Date(2000, 1, 1),
+      accountId: 'a',
+      from: [new Contact({ name: 'Mark', email: 'markthis.example.com' })],
+      subject: 'Hello World Old',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgFromMeSameAccount = new Message({
+      id: 'from-me',
+      unread: true,
+      date: new Date(),
+      accountId: account.id,
+      from: [account.me()],
+      subject: 'A Sent Mail!',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgFromMeDiffAccount = new Message({
+      id: 'from-me-diff',
+      unread: true,
+      date: new Date(),
+      accountId: 'other',
+      from: [account.me()],
+      subject: 'A Sent Mail!',
+      threadId: 'A',
+      version: 1,
+    });
+    this.msgHigherVersion = new Message({
+      id: 'hv',
+      unread: true,
+      date: new Date(),
+      accountId: 'a',
+      from: [new Contact({ name: 'Ben', email: 'benthis.example.com' })],
+      subject: 'Hello World',
+      threadId: 'A',
+      version: 2,
+    });
+
+    spyOn(DatabaseStore, 'find').andCallFake((klass, id) => {
+      if (id === 'A') {
+        return Promise.resolve(this.threadA);
+      }
+      if (id === 'B') {
+        return Promise.resolve(this.threadB);
+      }
+      return Promise.resolve(null);
+    });
+
+    spyOn(DatabaseStore, 'findAll').andCallFake(() => {
+      return Promise.resolve([this.threadA, this.threadB]);
+    });
+
+    this.notification = jasmine.createSpyObj('notification', ['close']);
+    spyOn(NativeNotifications, 'displayNotification').andReturn(this.notification);
+    spyOn(NativeNotifications, 'displaySummaryNotification').andReturn(Promise.resolve(null));
+
+    spyOn(Promise, 'props').andCallFake(dict => {
+      const dictOut = {};
+      for (const key of Object.keys(dict)) {
+        const val = dict[key];
+        if (val.value !== undefined) {
+          dictOut[key] = val.value();
+        } else {
+          dictOut[key] = val;
+        }
+      }
+      return Promise.resolve(dictOut);
+    });
+  });
+
+  afterEach(() => {
+    this.notifier.unlisten();
+  });
+
+  it('should create a Notification if there is one unread message', () => {
+    waitsForPromise(async () => {
+
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgRead, this.msg1],
+        objectsRawJSON: getObjectsRawJson([this.msgRead.id, '1'])
+      });
+      expect(NativeNotifications.displayNotification).toHaveBeenCalled();
+      const options = NativeNotifications.displayNotification.mostRecentCall.args[0];
+      delete options.onActivate;
+      delete options.playSound;
+      expect(options).toEqual({
+        title: 'Ben',
+        subtitle: 'Hello World',
+        body: undefined,
+        tag: 'thread-A',
+        threadId: 'A',
+        messageId: '1',
+        canReply: true,
+        replyPlaceholder: 'Reply to Ben...',
+        actions: [
+          { type: 'button', text: 'Mark as Read' },
+          { type: 'button', text: 'Archive' },
+        ],
+      });
+    });
+  });
+
+  it('should create multiple Notifications if there is more than one but less than five unread messages', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1, this.msg2, this.msg3],
+        objectsRawJSON: getObjectsRawJson(['1', '2', '3'])
+      });
+      // msg1 is already notified; drain microtasks so _notifyMessages registers
+      // the setTimeout for msg2, then advance the clock to fire it.
+      await Promise.resolve();
+      await Promise.resolve();
+      advanceClock(2000); // fires → msg2 notified
+      await Promise.resolve();
+      await Promise.resolve();
+      advanceClock(2000); // fires → msg3 notified
+      expect(NativeNotifications.displayNotification.callCount).toEqual(3);
+    });
+  });
+
+  it('should create Notifications in the order of messages received', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1, this.msg2],
+        objectsRawJSON: getObjectsRawJson(['1', '2'])
+      });
+      // Drain microtasks so _notifyMessages registers the setTimeout for msg2
+      await Promise.resolve();
+      await Promise.resolve();
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg3, this.msg4],
+        objectsRawJSON: getObjectsRawJson(['3', '4'])
+      });
+      // msg3 and msg4 are now queued; fire the pending setTimeout for msg2
+      advanceClock(2000); // fires → msg2 notified
+      await Promise.resolve();
+      await Promise.resolve();
+      advanceClock(2000); // fires → msg3 notified
+      await Promise.resolve();
+      await Promise.resolve();
+      advanceClock(2000); // fires → msg4 notified
+      expect(NativeNotifications.displayNotification.callCount).toEqual(4);
+      const subjects = NativeNotifications.displayNotification.calls.map(call => {
+        return call.args[0].subtitle;
+      });
+      const expected = [this.msg1, this.msg2, this.msg3, this.msg4].map(msg => msg.subject);
+      expect(subjects).toEqual(expected);
+    });
+  });
+
+  it('should create a summary Notification if there are five or more unread messages', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1, this.msg2, this.msg3, this.msg4, this.msg5],
+        objectsRawJSON: getObjectsRawJson(['1', '2', '3', '4', '5'])
+      });
+      advanceClock(2000);
+      expect(NativeNotifications.displaySummaryNotification).toHaveBeenCalled();
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+      const options = NativeNotifications.displaySummaryNotification.mostRecentCall.args[0];
+      expect(options.count).toEqual(5);
+      expect(options.senders).toContain('Ben');
+      expect(options.senders).toContain('Mark');
+    });
+  });
+
+  it('should keep notifying after a notification fails to display', () => {
+    spyOn(AppEnv, 'reportError');
+    NativeNotifications.displayNotification.andCallFake(() => Promise.reject(new Error('boom')));
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1],
+        objectsRawJSON: getObjectsRawJson(['1'])
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(AppEnv.reportError).toHaveBeenCalled();
+      expect(this.notifier.hasScheduledNotify).toBe(false);
+
+      NativeNotifications.displayNotification.andReturn(this.notification);
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg2],
+        objectsRawJSON: getObjectsRawJson(['2'])
+      });
+      expect(NativeNotifications.displayNotification.callCount).toEqual(2);
+    });
+  });
+
+  it('should not retry a summary Notification that fails to display', () => {
+    spyOn(AppEnv, 'reportError');
+    NativeNotifications.displaySummaryNotification.andCallFake(() =>
+      Promise.reject(new Error('boom'))
+    );
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1, this.msg2, this.msg3, this.msg4, this.msg5],
+        objectsRawJSON: getObjectsRawJson(['1', '2', '3', '4', '5'])
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(AppEnv.reportError).toHaveBeenCalled();
+      expect(this.notifier.unnotifiedQueue.length).toEqual(0);
+      expect(this.notifier.hasScheduledNotify).toBe(false);
+    });
+  });
+
+  it('should create a Notification correctly, even if new mail has no sender', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgNoSender],
+        objectsRawJSON: getObjectsRawJson([this.msgNoSender.id])
+      });
+      expect(NativeNotifications.displayNotification).toHaveBeenCalled();
+
+      const options = NativeNotifications.displayNotification.mostRecentCall.args[0];
+      delete options.onActivate;
+      delete options.playSound;
+      expect(options).toEqual({
+        title: 'Unknown',
+        subtitle: 'Hello World',
+        body: undefined,
+        tag: 'thread-A',
+        threadId: 'A',
+        messageId: 'no',
+        canReply: true,
+        replyPlaceholder: 'Reply to Unknown...',
+        actions: [
+          { type: 'button', text: 'Mark as Read' },
+          { type: 'button', text: 'Archive' },
+        ],
+      });
+    });
+  });
+
+  it('should not create a Notification if there are no new messages', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [],
+        objectsRawJSON: []
+      });
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+      await this.notifier._onDatabaseChanged({});
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should not notify about unread messages that are outside the inbox', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgUnreadButArchived, this.msg1],
+        objectsRawJSON: getObjectsRawJson([this.msgUnreadButArchived.id, '1'])
+      });
+      expect(NativeNotifications.displayNotification).toHaveBeenCalled();
+      const options = NativeNotifications.displayNotification.mostRecentCall.args[0];
+      delete options.onActivate;
+      delete options.playSound;
+      expect(options).toEqual({
+        title: 'Ben',
+        subtitle: 'Hello World',
+        body: undefined,
+        tag: 'thread-A',
+        threadId: 'A',
+        messageId: '1',
+        canReply: true,
+        replyPlaceholder: 'Reply to Ben...',
+        actions: [
+          { type: 'button', text: 'Mark as Read' },
+          { type: 'button', text: 'Archive' },
+        ],
+      });
+    });
+  });
+
+  it('should not create a Notification if the new messages are read', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgRead],
+        objectsRawJSON: getObjectsRawJson([this.msgRead.id])
+      });
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  // TODO(flotwig): figure out why this is failing, what is the desired behavior?
+  xit('should not create a Notification if the message model is being updated', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgHigherVersion],
+        objectsRawJSON: getObjectsRawJson([this.msgHigherVersion.id])
+      });
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should not create a Notification if the new messages are actually old ones', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgOld],
+        objectsRawJSON: getObjectsRawJson([this.msgOld.id])
+      });
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should not create a Notification if the new message is one I sent from the same account', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgFromMeSameAccount],
+        objectsRawJSON: getObjectsRawJson([this.msgFromMeSameAccount.id])
+      });
+      expect(NativeNotifications.displayNotification).not.toHaveBeenCalled();
+    });
+  });
+
+  it('should xcreate a Notification if the new message is one I sent from a different linked account', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msgFromMeDiffAccount],
+        objectsRawJSON: getObjectsRawJson([this.msgFromMeDiffAccount.id])
+      });
+      expect(NativeNotifications.displayNotification).toHaveBeenCalled();
+    });
+  });
+
+  it('clears notifications when a thread is read', () => {
+    waitsForPromise(async () => {
+      await this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: [this.msg1],
+        objectsRawJSON: getObjectsRawJson([this.msg1.id])
+      });
+      // Drain the microtask queue so that the async _onMessagesChanged chain
+      // (which stores the notification in activeNotifications) fully completes
+      // before we check/clear notifications via _onThreadsChanged below.
+      await Promise.resolve();
+      expect(NativeNotifications.displayNotification).toHaveBeenCalled();
+      expect(this.notification.close).not.toHaveBeenCalled();
+
+      const read = this.threadA.clone();
+      read.unread = false;
+      await this.notifier._onDatabaseChanged({
+        objectClass: Thread.name,
+        objects: [read],
+      });
+      expect(this.notification.close).toHaveBeenCalled();
+    });
+  });
+
+  describe('new mail sound', () => {
+    let playsSoundWithNotification;
+
+    beforeEach(() => {
+      playsSoundWithNotification = NativeNotifications.playsSoundWithNotification;
+      spyOn(SoundRegistry, 'playSound');
+      spyOn(AppEnv.config, 'get').andCallFake(config => {
+        if (config === 'core.notifications.enabled') return true;
+        if (config === 'core.notifications.sounds') return this.soundsEnabled;
+        return undefined;
+      });
+      this.soundsEnabled = true;
+    });
+
+    afterEach(() => {
+      NativeNotifications.playsSoundWithNotification = playsSoundWithNotification;
+    });
+
+    const receive = ids =>
+      this.notifier._onDatabaseChanged({
+        objectClass: Message.name,
+        objects: ids.map(id => this[`msg${id}`]),
+        objectsRawJSON: getObjectsRawJson(ids),
+      });
+
+    describe('when the app plays the sound', () => {
+      beforeEach(() => {
+        NativeNotifications.playsSoundWithNotification = false;
+      });
+
+      it('should play a sound when it gets new mail', () => {
+        waitsForPromise(async () => {
+          await receive(['1']);
+          expect(SoundRegistry.playSound).toHaveBeenCalledWith('new-mail');
+          expect(NativeNotifications.displayNotification.mostRecentCall.args[0].playSound).toBe(
+            false
+          );
+        });
+      });
+
+      it('should not play a sound if the config is off', () => {
+        this.soundsEnabled = false;
+        waitsForPromise(async () => {
+          await receive(['1']);
+          expect(SoundRegistry.playSound).not.toHaveBeenCalled();
+        });
+      });
+
+      it('should not play a sound if other notifications are still in flight', () => {
+        waitsForPromise(async () => {
+          await receive(['1', '2']);
+          expect(SoundRegistry.playSound).toHaveBeenCalled();
+          SoundRegistry.playSound.reset();
+          await receive(['3']);
+          expect(SoundRegistry.playSound).not.toHaveBeenCalled();
+        });
+      });
+    });
+
+    describe('when the notification carries the sound (macOS)', () => {
+      beforeEach(() => {
+        NativeNotifications.playsSoundWithNotification = true;
+      });
+
+      it('should attach the sound to the first notification instead of playing it', () => {
+        waitsForPromise(async () => {
+          await receive(['1']);
+          expect(SoundRegistry.playSound).not.toHaveBeenCalled();
+          expect(NativeNotifications.displayNotification.mostRecentCall.args[0].playSound).toBe(
+            true
+          );
+        });
+      });
+
+      it('should not attach the sound if the config is off', () => {
+        this.soundsEnabled = false;
+        waitsForPromise(async () => {
+          await receive(['1']);
+          expect(NativeNotifications.displayNotification.mostRecentCall.args[0].playSound).toBe(
+            false
+          );
+        });
+      });
+
+      it('should not attach the sound again for mail arriving within the quiet period', () => {
+        waitsForPromise(async () => {
+          await receive(['1']);
+          // drain microtasks so _notifyMessages finishes and msg2 starts a new burst
+          await Promise.resolve();
+          await Promise.resolve();
+          await receive(['2']);
+          const calls = NativeNotifications.displayNotification.calls;
+          expect(calls.map(c => c.args[0].playSound)).toEqual([true, false]);
+        });
+      });
+
+      it('should attach the sound again once the quiet period has passed', () => {
+        waitsForPromise(async () => {
+          await receive(['1']);
+          await Promise.resolve();
+          await Promise.resolve();
+          this.notifier.lastNewMailSoundRequest = Date.now() - 6000;
+          await receive(['2']);
+          const calls = NativeNotifications.displayNotification.calls;
+          expect(calls.map(c => c.args[0].playSound)).toEqual([true, true]);
+        });
+      });
+    });
+  });
+});

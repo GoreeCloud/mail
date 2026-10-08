@@ -1,0 +1,369 @@
+@import 'ui-variables';
+
+@report-gutter: 20px;
+// Space between the tab bar (feed.less) and each panel's content. The tab bar
+// has no bottom margin of its own; the panels supply the gap.
+@tabs-gap: 14px;
+@report-gap: 16px;
+@card-radius: 8px;
+@chart-height: 120px;
+@chart-fill: rgb(from @accent-primary r g b / 15%);
+@axis-label-height: 16px;
+
+@keyframes indicator-animation {
+  0% {
+    background-position-x: 200px;
+  }
+  100% {
+    background-position-x: 760px;
+  }
+}
+
+.activity-dashboard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: @text-color;
+
+  // All tabs stay mounted so Reports doesn't recompute on every switch; the
+  // inactive ones are hidden. Each tab scrolls its own content.
+  .activity-tab-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding-top: @tabs-gap;
+    &[hidden] {
+      display: none;
+    }
+    // Reports scrolls, so its gap is padding on .activity-reports instead: it
+    // then scrolls with the content rather than clipping it under the divider.
+    &.reports {
+      padding-top: 0;
+    }
+  }
+  .activity-reports-scroll {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .header {
+    margin: 20px;
+    margin-bottom: 6px;
+    display: flex;
+    .accounts {
+      font-size: @font-size-base;
+      color: @text-color-very-subtle;
+    }
+    h2 {
+      margin: 0;
+    }
+    .timespan-selector {
+      display: flex;
+      align-items: baseline;
+      .timespan-text {
+        color: @text-color-very-subtle;
+      }
+      .dropdown-menu {
+        margin-left: @padding-base-horizontal * 2;
+      }
+    }
+    .dropdown-menu .menu {
+      width: 160px;
+    }
+  }
+
+  .usage-note {
+    color: mix(@color-warning, @text-color-subtle, 20%);
+    padding: @padding-base-vertical @padding-base-horizontal;
+    background: mix(@color-warning, @background-primary, 10%);
+    border-left: 4px solid mix(@color-warning, @border-color-divider, 20%);
+    border-radius: @border-radius-base;
+    margin: 0 @report-gutter @report-gap @report-gutter;
+  }
+
+  .loading-cover {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-color: fade(@background-primary, 82%);
+    transition: opacity 200ms linear;
+    z-index: 5;
+
+    &.active {
+      pointer-events: auto;
+      opacity: 1;
+      .loading-indicator img {
+        animation: indicator-animation 1s linear infinite;
+      }
+    }
+  }
+
+  .loading-indicator {
+    position: absolute;
+    top: 30vh;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    img {
+      background-image: linear-gradient(
+        105deg,
+        @background-primary 0%,
+        @background-primary 15%,
+        @accent-primary 45%,
+        @background-primary 49%,
+        @background-primary 100%
+      );
+      background-position-x: 200px;
+      background-size: 590px;
+    }
+  }
+
+  .activity-reports {
+    position: relative;
+    padding: @tabs-gap @report-gutter @report-gutter @report-gutter;
+  }
+
+  .section-title {
+    font-size: @font-size-large;
+    font-weight: @font-weight-medium;
+    color: @text-color;
+    margin: @report-gap * 1.5 0 @report-gap 0;
+    &:first-of-type {
+      margin-top: @report-gap * 0.75;
+    }
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: @report-gap;
+    & + .metric-grid {
+      margin-top: @report-gap;
+    }
+  }
+
+  .metric-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: @report-gap;
+    background: @background-primary;
+    border: 1px solid @border-color-divider;
+    border-radius: @card-radius;
+
+    &.full {
+      grid-column: 1 / -1;
+    }
+  }
+  .metric-card-title {
+    font-size: @font-size-small;
+    font-weight: @font-weight-medium;
+    color: @text-color-subtle;
+    line-height: 1.3;
+  }
+  .metric-card-value {
+    font-size: @font-size-h1 * 1.25;
+    font-weight: @font-weight-medium;
+    color: @text-color;
+    line-height: 1.2;
+    margin-top: 6px;
+  }
+  .metric-card-detail {
+    font-size: @font-size-smaller;
+    color: @text-color-very-subtle;
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+  // Pinned to the bottom so chart baselines line up across a row even when
+  // a neighbouring card has a headline value and this one does not.
+  .metric-card-body {
+    margin-top: auto;
+    padding-top: @report-gap;
+    min-width: 0;
+  }
+
+  .metric-empty-note {
+    color: @text-color-very-subtle;
+    text-align: center;
+    max-width: 500px;
+    margin: @report-gap auto @report-gap * 1.5 auto;
+  }
+
+  .axis-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: @font-size-smaller;
+    color: @text-color-very-subtle;
+    line-height: @axis-label-height;
+    padding-top: 4px;
+    border-top: 1px solid @border-color-divider;
+  }
+
+  .metric-graph {
+    // Only the plot is mirrored for RTL; the axis labels are text and reflow
+    // via flexbox instead.
+    .plot {
+      position: relative;
+      transform: scaleX(1) /*rtl: scaleX(-1) */;
+    }
+    // Revealed by clipping; stroke-dashoffset would need the measured path length.
+    svg {
+      display: block;
+      width: 100%;
+      height: @chart-height;
+      overflow: visible;
+      clip-path: inset(-4px 100% -4px 0);
+    }
+    .area {
+      fill: @chart-fill;
+    }
+    .line {
+      fill: none;
+      stroke: @accent-primary;
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+    .marker {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      margin: -4px 0 0 -4px /*rtl:ignore */;
+      border-radius: 50%;
+      background: @accent-primary;
+      box-shadow: 0 0 0 2px @background-primary;
+      opacity: 0;
+    }
+    &.visible {
+      svg {
+        clip-path: inset(-4px 0 -4px 0);
+        transition: clip-path 900ms ease-out;
+      }
+      .marker {
+        opacity: 1;
+        transition: opacity 225ms ease-out 825ms;
+      }
+    }
+  }
+
+  .metric-buckets {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: @chart-height;
+
+    .bucket {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .value,
+    .label {
+      font-size: @font-size-smaller;
+      color: @text-color-very-subtle;
+      text-align: center;
+      line-height: @axis-label-height;
+      white-space: nowrap;
+    }
+    .value {
+      padding-bottom: 2px;
+    }
+    // Labels may be wider than a bucket (24 hourly bars); neighbours are blank
+    // in that case, so let the text spill rather than clip it. The fixed height
+    // keeps blank labels from shifting their bucket's baseline.
+    .label {
+      height: @axis-label-height + 5px;
+      padding-top: 4px;
+      border-top: 1px solid @border-color-divider;
+      overflow: visible;
+    }
+    .bar-area {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+    }
+    .column {
+      width: 100%;
+      background: @chart-fill;
+      border-top: 2px solid @accent-primary;
+      border-radius: 3px 3px 0 0;
+      transform-origin: bottom;
+      transform: scaleY(0.2);
+      opacity: 0;
+      &.empty {
+        border-top-color: transparent;
+      }
+    }
+    &.visible .column {
+      transform: scaleY(1);
+      opacity: 1;
+      transition:
+        opacity 750ms ease-out,
+        transform 750ms ease-out;
+    }
+  }
+
+  .metric-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+
+    th {
+      text-align: left;
+      font-size: @font-size-smaller;
+      font-weight: @font-weight-medium;
+      color: @text-color-very-subtle;
+      padding: 0 @padding-base-horizontal 8px 0;
+      border-bottom: 1px solid @border-color-divider;
+      &.numeric {
+        width: 120px;
+        text-align: right;
+      }
+    }
+    td {
+      padding: 0 @padding-base-horizontal 0 0;
+      line-height: 34px;
+      border-bottom: 1px solid fade(@border-color-divider, 50%);
+      &.numeric {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      &.ellipsis {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .empty {
+        color: @text-color-very-subtle;
+      }
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+
+  .report-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: @report-gap * 2;
+    .btn {
+      text-align: center;
+    }
+    .share-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      input {
+        width: 300px;
+      }
+    }
+  }
+}

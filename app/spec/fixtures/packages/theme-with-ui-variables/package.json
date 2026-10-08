@@ -1,0 +1,5 @@
+{
+  "name": "theme-with-ui-variables",
+  "theme": "ui",
+  "styleSheets": ["editor.less"]
+}

@@ -1,0 +1,330 @@
+import {
+  Message,
+  Contact,
+  Thread,
+  File,
+  DatabaseStore,
+  TaskQueue,
+  Actions,
+  CategoryStore,
+  Folder,
+} from 'mailspring-exports';
+
+const MailRulesProcessor = require('../src/mail-rules-processor').default;
+
+const Tests = [
+  {
+    rule: {
+      id: 'local-ac7f1671-ba03',
+      name: 'conditionMode Any, contains, equals',
+      conditions: [
+        {
+          templateKey: 'from',
+          comparatorKey: 'contains',
+          value: '@mailspring.com',
+        },
+        {
+          templateKey: 'from',
+          comparatorKey: 'equals',
+          value: 'oldschool@nilas.com',
+        },
+      ],
+      conditionMode: 'any',
+      actions: [
+        {
+          templateKey: 'markAsRead',
+        },
+      ],
+      accountId: 'b5djvgcuhj6i3x8nm53d0vnjm',
+    },
+    good: [
+      new Message({ from: [new Contact({ email: 'ben@mailspring.com' })] }),
+      new Message({ from: [new Contact({ email: 'ben@mailspring.com.jp' })] }),
+      new Message({ from: [new Contact({ email: 'oldschool@nilas.com' })] }),
+    ],
+    bad: [
+      new Message({ from: [new Contact({ email: 'ben@other.com' })] }),
+      new Message({ from: [new Contact({ email: 'ben@nilas.com' })] }),
+      new Message({ from: [new Contact({ email: 'twooldschool@nilas.com' })] }),
+    ],
+  },
+  {
+    rule: {
+      id: 'local-ac7f1671-ba03',
+      name: 'conditionMode all, ends with, begins with',
+      conditions: [
+        {
+          templateKey: 'cc',
+          comparatorKey: 'endsWith',
+          value: '.com',
+        },
+        {
+          templateKey: 'subject',
+          comparatorKey: 'beginsWith',
+          value: '[TEST] ',
+        },
+      ],
+      conditionMode: 'any',
+      actions: [
+        {
+          templateKey: 'applyLabel',
+          value: '51a0hb8d6l78mmhy19ffx4txs',
+        },
+      ],
+      accountId: 'b5djvgcuhj6i3x8nm53d0vnjm',
+    },
+    good: [
+      new Message({ cc: [new Contact({ email: 'ben@mailspring.org' })], subject: '[TEST] ABCD' }),
+      new Message({ cc: [new Contact({ email: 'ben@mailspring.org' })], subject: '[test] ABCD' }),
+      new Message({ cc: [new Contact({ email: 'ben@mailspring.com' })], subject: 'Whatever' }),
+      new Message({ cc: [new Contact({ email: 'a@test.com' })], subject: 'Whatever' }),
+      new Message({ cc: [new Contact({ email: 'a@hasacom.com' })], subject: '[test] Whatever' }),
+      new Message({
+        cc: [new Contact({ email: 'a@hasacom.org' }), new Contact({ email: 'b@mailspring.com' })],
+        subject: 'Whatever',
+      }),
+    ],
+    bad: [
+      new Message({ cc: [new Contact({ email: 'a@hasacom.org' })], subject: 'Whatever' }),
+      new Message({ cc: [new Contact({ email: 'a@hasacom.org' })], subject: '[test]Whatever' }),
+      new Message({
+        cc: [new Contact({ email: 'a.com@hasacom.org' })],
+        subject: 'Whatever [test] ',
+      }),
+    ],
+  },
+  {
+    rule: {
+      id: 'local-ac7f1671-ba03',
+      name: 'Any attachment name endsWith, anyRecipient equals',
+      conditions: [
+        {
+          templateKey: 'anyAttachmentName',
+          comparatorKey: 'endsWith',
+          value: '.pdf',
+        },
+        {
+          templateKey: 'anyRecipient',
+          comparatorKey: 'equals',
+          value: 'files@mailspring.com',
+        },
+      ],
+      conditionMode: 'any',
+      actions: [
+        {
+          templateKey: 'changeFolder',
+          value: '51a0hb8d6l78mmhy19ffx4txs',
+        },
+      ],
+      accountId: 'b5djvgcuhj6i3x8nm53d0vnjm',
+    },
+    good: [
+      new Message({
+        files: [new File({ filename: 'bengotow.pdf' })],
+        to: [new Contact({ email: 'ben@mailspring.org' })],
+      }),
+      new Message({ to: [new Contact({ email: 'files@mailspring.com' })] }),
+      new Message({
+        to: [new Contact({ email: 'ben@mailspring.com' })],
+        cc: [
+          new Contact({ email: 'ben@test.com' }),
+          new Contact({ email: 'files@mailspring.com' }),
+        ],
+      }),
+    ],
+    bad: [
+      new Message({ to: [new Contact({ email: 'ben@mailspring.org' })] }),
+      new Message({
+        files: [new File({ filename: 'bengotow.pdfz' })],
+        to: [new Contact({ email: 'ben@mailspring.org' })],
+      }),
+      new Message({
+        files: [new File({ filename: 'bengotowpdf' })],
+        to: [new Contact({ email: 'ben@mailspring.org' })],
+      }),
+      new Message({ to: [new Contact({ email: 'afiles@mailspring.com' })] }),
+      new Message({ to: [new Contact({ email: 'files@mailspring.coma' })] }),
+    ],
+  },
+];
+
+describe('MailRulesProcessor', function () {
+  describe('_checkRuleForMessage', function () {
+    it('should correctly filter sample messages', () =>
+      Tests.forEach(({ rule, good, bad }) => {
+        let idx, message;
+        for (idx = 0; idx < good.length; idx++) {
+          message = good[idx];
+          message.accountId = rule.accountId;
+          if (MailRulesProcessor._checkRuleForMessage(rule, message) !== true) {
+            expect(`${idx} (${rule.name})`).toBe(true);
+          }
+        }
+        return (() => {
+          const result = [];
+          for (idx = 0; idx < bad.length; idx++) {
+            message = bad[idx];
+            message.accountId = rule.accountId;
+            if (MailRulesProcessor._checkRuleForMessage(rule, message) !== false) {
+              result.push(expect(`${idx} (${rule.name})`).toBe(false));
+            } else {
+              result.push(undefined);
+            }
+          }
+          return result;
+        })();
+      }));
+
+    it('should check the account id', function () {
+      const { rule, good } = Tests[0];
+      const message = good[0];
+      message.accountId = 'not the same!';
+      expect(MailRulesProcessor._checkRuleForMessage(rule, message)).toBe(false);
+    });
+  });
+
+  describe('_applyRuleToMessage', () =>
+    it('should queue tasks for messages', function () {
+      spyOn(TaskQueue, 'waitForPerformLocal');
+      spyOn(Actions, 'queueTasks');
+      spyOn(DatabaseStore, 'findBy').andReturn(Promise.resolve({}));
+      Tests.forEach(({ rule }) => {
+        (TaskQueue.waitForPerformLocal as jasmine.Spy).reset();
+        (Actions.queueTasks as unknown as jasmine.Spy).reset();
+
+        const message = new Message({ accountId: rule.accountId });
+        const thread = new Thread({ accountId: rule.accountId });
+        const response = MailRulesProcessor._applyRuleToMessage(rule, message, thread);
+        expect(response instanceof Promise).toBe(true);
+
+        waitsForPromise(() => {
+          return response.then(() => {
+            expect(TaskQueue.waitForPerformLocal).toHaveBeenCalled();
+            expect(Actions.queueTasks).toHaveBeenCalled();
+          });
+        });
+      });
+    }));
+
+  describe('_applyRuleToMessage ordering', function () {
+    it("does not finish until the rule's tasks have run locally", async function () {
+      let resolveLocal;
+      spyOn(TaskQueue, 'waitForPerformLocal').andReturn(new Promise((r) => (resolveLocal = r)));
+      spyOn(Actions, 'queueTasks');
+      const rule = Tests[0].rule;
+      const thread = new Thread({ accountId: rule.accountId, unread: true });
+
+      let finished = false;
+      const done = MailRulesProcessor._applyRuleToMessage(
+        rule,
+        new Message({ accountId: rule.accountId }),
+        thread
+      ).then(() => (finished = true));
+
+      await new Promise((r) => window.originalSetTimeout(r, 0));
+      expect(Actions.queueTasks).toHaveBeenCalled();
+      expect(finished).toBe(false);
+
+      resolveLocal();
+      await done;
+      expect(finished).toBe(true);
+    });
+
+    it('stops waiting for an engine that never runs the tasks', async function () {
+      spyOn(TaskQueue, 'waitForPerformLocal').andReturn(new Promise(() => {}));
+      spyOn(Actions, 'queueTasks');
+      const rule = Tests[0].rule;
+
+      let finished = false;
+      MailRulesProcessor._applyRuleToMessage(
+        rule,
+        new Message({ accountId: rule.accountId }),
+        new Thread({ accountId: rule.accountId, unread: true })
+      ).then(() => (finished = true));
+
+      await new Promise((r) => window.originalSetTimeout(r, 0));
+      expect(finished).toBe(false);
+      advanceClock(10001);
+      await new Promise((r) => window.originalSetTimeout(r, 0));
+      expect(finished).toBe(true);
+    });
+  });
+
+  describe('category resolution', function () {
+    const accountId = 'b5djvgcuhj6i3x8nm53d0vnjm';
+    const folder = new Folder({ id: 'new-id', accountId, path: 'INBOX/Receipts' });
+
+    beforeEach(function () {
+      spyOn(TaskQueue, 'waitForPerformLocal');
+      spyOn(Actions, 'queueTasks');
+      spyOn(Actions, 'disableMailRule');
+      spyOn(CategoryStore, 'byId').andCallFake((aid, id) => (id === 'new-id' ? folder : undefined));
+      spyOn(CategoryStore, 'categories').andReturn([folder]);
+    });
+
+    const ruleFor = (action) => ({
+      id: 'rule-1',
+      name: 'Receipts',
+      accountId,
+      conditions: [{ templateKey: 'subject', comparatorKey: 'contains', value: 'receipt' }],
+      conditionMode: 'any',
+      actions: [action],
+    });
+
+    it('falls back to the display name when the id is gone', function () {
+      const rule = ruleFor({
+        templateKey: 'changeFolder',
+        value: 'stale-id',
+        valueName: 'Receipts',
+      });
+      waitsForPromise(() =>
+        MailRulesProcessor._applyRuleToMessage(
+          rule,
+          new Message({ accountId }),
+          new Thread({ accountId })
+        ).then(() => {
+          expect(Actions.queueTasks).toHaveBeenCalled();
+          expect(Actions.disableMailRule).not.toHaveBeenCalled();
+          expect(rule.actions[0].value).toBe('stale-id');
+        })
+      );
+    });
+
+    it('disables the rule when neither the id nor the name resolves', function () {
+      const rule = ruleFor({ templateKey: 'changeFolder', value: 'stale-id', valueName: 'Nope' });
+      waitsForPromise(() =>
+        MailRulesProcessor._applyRuleToMessage(
+          rule,
+          new Message({ accountId }),
+          new Thread({ accountId })
+        ).then(() => {
+          expect(Actions.queueTasks).not.toHaveBeenCalled();
+          expect(Actions.disableMailRule).toHaveBeenCalledWith(
+            'rule-1',
+            'Error: The folder could not be found.'
+          );
+        })
+      );
+    });
+
+    it('disables the rule when the name matches more than one category', function () {
+      const twin = new Folder({ id: 'twin-id', accountId, path: 'Receipts' });
+      (CategoryStore.categories as jasmine.Spy).andReturn([folder, twin]);
+      const rule = ruleFor({
+        templateKey: 'changeFolder',
+        value: 'stale-id',
+        valueName: 'Receipts',
+      });
+      waitsForPromise(() =>
+        MailRulesProcessor._applyRuleToMessage(
+          rule,
+          new Message({ accountId }),
+          new Thread({ accountId })
+        ).then(() => {
+          expect(Actions.queueTasks).not.toHaveBeenCalled();
+          expect(Actions.disableMailRule).toHaveBeenCalled();
+        })
+      );
+    });
+  });
+});

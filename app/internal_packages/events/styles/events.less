@@ -1,0 +1,185 @@
+@import 'ui-variables';
+@import 'ui-mixins';
+
+.event-wrapper {
+  cursor: default;
+  position: relative;
+  font-size: @font-size-small;
+  margin-top: @spacing-standard;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  display: inline-block;
+  border-radius: @border-radius-base;
+  border: 1px solid @border-color-divider;
+
+  .event-header {
+    border-bottom: 1px solid @border-color-divider;
+    padding: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    img {
+      margin-right: 20px;
+    }
+
+    .event-title-text {
+      color: @text-color-very-subtle;
+    }
+
+    .event-title {
+      color: @text-color;
+    }
+    .event-download {
+      float: right;
+      border-radius: @border-radius-base;
+      border: 1px solid @border-color-divider;
+      padding: 0 4px;
+      img {
+        background: @text-color-very-subtle;
+        margin: 0;
+      }
+    }
+  }
+
+  .event-body {
+    padding: @padding-small-horizontal;
+    color: @text-color;
+
+    .event-location {
+      user-select: text;
+    }
+
+    .event-date {
+      display: inline-block;
+      width: 100%;
+
+      // Not .event-conflicts red: a meeting with no conflicts must not look as though it has one.
+      .event-day {
+        color: @text-color-subtle;
+        display: block;
+        font-size: @font-size-large;
+      }
+
+      .event-time {
+        display: inline-block;
+        font-size: @font-size-h3;
+        font-weight: @font-weight-blond;
+      }
+    }
+
+    .event-conflicts {
+      margin-top: 6px;
+      color: @color-error;
+
+      .event-conflicts-title {
+        font-weight: @font-weight-semi-bold;
+      }
+
+      .event-conflict {
+        opacity: 0.85;
+      }
+    }
+
+    .event-actions {
+      display: flex;
+      // Column so the "where this is going" line sits under the buttons, not beside them.
+      flex-direction: column;
+      align-items: flex-start;
+
+      .btn-rsvp {
+        margin-right: 10.5px;
+        margin-top: 5px;
+        min-width: 85px;
+        text-align: center;
+
+        &:hover {
+          background: mix(@background-primary, @text-color, 95%);
+        }
+        &:active {
+          background: mix(@background-primary, @text-color, 92%);
+        }
+
+        &.DECLINED {
+          background: @color-error;
+          color: @white;
+        }
+
+        &.ACCEPTED {
+          background: @color-success;
+          color: @white;
+        }
+
+        &.TENTATIVE {
+          background: @gray-light;
+          color: @white;
+        }
+      }
+
+      &.event-cancelled {
+        .cancelled-notice {
+          color: @color-error;
+          font-weight: @font-weight-semi-bold;
+          margin-top: 5px;
+        }
+      }
+
+      &.event-counter .event-counter-notice {
+        font-weight: @font-weight-semi-bold;
+        margin-top: 5px;
+      }
+
+      &.event-no-rsvp {
+        color: @text-color-subtle;
+        margin-top: 5px;
+      }
+
+      .event-rsvp-buttons {
+        display: flex;
+        flex-direction: row;
+      }
+
+      .event-rsvp-destination {
+        align-items: center;
+        color: @text-color-subtle;
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.9em;
+        gap: 4px;
+        margin-top: 6px;
+
+        .event-rsvp-calendar-picker {
+          background: @background-primary;
+          border: 1px solid @border-color-divider;
+          border-radius: @border-radius-base;
+          color: @text-color;
+          font-size: inherit;
+          max-width: 240px;
+          padding: 2px 6px;
+
+          &:hover {
+            background: @background-secondary;
+          }
+
+          &:focus {
+            border-color: @accent-primary;
+            outline: none;
+          }
+        }
+      }
+    }
+  }
+}
+body.platform-win32 {
+  .event-wrapper {
+    border-radius: 0;
+    .event-body {
+      .event-actions {
+        .btn-rsvp {
+          border-radius: 0;
+        }
+      }
+    }
+  }
+}

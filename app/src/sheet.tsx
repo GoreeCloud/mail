@@ -1,0 +1,258 @@
+import React, { CSSProperties } from 'react';
+
+import { localized, Utils, ComponentRegistry, WorkspaceStore } from 'mailspring-exports';
+import { InjectedComponentSet } from './components/injected-component-set';
+import { ResizableRegion } from './components/resizable-region';
+import { Flexbox } from './components/flexbox';
+import { SheetDeclaration } from './flux/stores/workspace-store';
+import { SheetDepthContext } from './sheet-context';
+
+const FLEX = 10000;
+
+const COLUMN_META: Record<string, { role: string; label: () => string }> = {
+  RootSidebar: { role: 'complementary', label: () => localized('Account sidebar') },
+  ThreadList: { role: 'region', label: () => localized('Thread list') },
+  MessageList: { role: 'region', label: () => localized('Messages') },
+  MessageListSidebar: { role: 'complementary', label: () => localized('Contact panel') },
+  CalendarSidebar: { role: 'complementary', label: () => localized('Calendar sidebar') },
+  CalendarContent: { role: 'region', label: () => localized('Calendar') },
+};
+
+// Mail and Calendar share one sidebar width, so switching sections leaves the toolbar in place.
+const COLUMN_WIDTH_KEYS: Record<string, string> = { CalendarSidebar: 'RootSidebar' };
+const columnWidthKey = (id: string) => COLUMN_WIDTH_KEYS[id] || id;
+
+interface SheetLocation {
+  id: string;
+}
+
+interface SheetProps {
+  data: SheetDeclaration;
+  depth: number;
+  onColumnSizeChanged?: (sheet: Sheet) => void;
+}
+
+interface SheetColumn {
+  maxWidth: number;
+  minWidth: number;
+  handle: any;
+  location: SheetLocation;
+  width: number;
+}
+
+interface SheetState {
+  mode: string;
+  columns: SheetColumn[];
+}
+
+export default class Sheet extends React.Component<SheetProps, SheetState> {
+  static displayName = 'Sheet';
+
+  static defaultProps = {
+    onColumnSizeChanged: () => {},
+  };
+
+  private unlisteners = [];
+
+  constructor(props) {
+    super(props);
+    this.state = this._buildState();
+  }
+
+  componentDidMount() {
+    this.unlisteners = [
+      ComponentRegistry.listen(() => this.setState(this._buildState())),
+      WorkspaceStore.listen(() => this.setState(this._buildState())),
+    ];
+  }
+
+  // Not Utils.isEqualReact: it ignores `id` keys, and SheetDeclarations differ from each
+  // other almost entirely by ids. Drafts and Activity are structurally identical apart from
+  // ids, so isEqualReact treats switching between them as a no-op and the root sheet keeps
+  // rendering the previous sheet's columns.
+  shouldComponentUpdate(nextProps: SheetProps, nextState: SheetState) {
+    return (
+      !Utils.isEqual(nextProps, this.props, { functionsAreEqual: true }) ||
+      !Utils.isEqual(nextState, this.state)
+    );
+  }
+
+  componentDidUpdate(prevProps: SheetProps) {
+    if (prevProps.data !== this.props.data || prevProps.depth !== this.props.depth) {
+      this.setState(this._buildState());
+    }
+    this.props.onColumnSizeChanged(this);
+    const minWidth = this.state.columns.reduce((sum, col) => sum + col.minWidth, 0);
+    AppEnv.setMinimumWidth(minWidth);
+  }
+
+  componentWillUnmount() {
+    this.unlisteners.forEach((u) => u());
+    this.unlisteners = [];
+  }
+
+  _columnFlexboxElements() {
+    return this.state.columns.map((column, idx) => {
+      const { maxWidth, minWidth, handle, location, width } = column;
+      const meta = COLUMN_META[location.id];
+      const ariaRole = meta ? meta.role : undefined;
+      const ariaLabel = meta ? meta.label() : undefined;
+
+      if (minWidth !== maxWidth && maxWidth < FLEX) {
+        return (
+          <ResizableRegion
+            key={idx}
+            name={`${this.props.data.id}:${idx}`}
+            className={`column-${location.id}`}
+            style={{ height: '100%' }}
+            data-column={idx}
+            role={ariaRole}
+            aria-label={ariaLabel}
+            onResize={(w) => this._onColumnResize(column, w)}
+            initialWidth={width}
+            minWidth={minWidth}
+            maxWidth={maxWidth}
+            handle={handle}
+          >
+            <InjectedComponentSet
+              direction="column"
+              matching={{ location: location, mode: this.state.mode }}
+            />
+          </ResizableRegion>
+        );
+      }
+
+      const style: CSSProperties = {
+        height: '100%',
+        minWidth: minWidth,
+        overflow: 'hidden',
+      };
+      if (maxWidth < FLEX) {
+        style.width = maxWidth;
+      } else {
+        style.flex = 1;
+      }
+      return (
+        <InjectedComponentSet
+          direction="column"
+          key={idx}
+          name={`${this.props.data.id}:${idx}`}
+          className={`column-${location.id}`}
+          data-column={idx}
+          style={style}
+          role={ariaRole}
+          aria-label={ariaLabel}
+          matching={{ location: location, mode: this.state.mode }}
+        />
+      );
+    });
+  }
+
+  _onColumnResize = (column: SheetColumn, width: number) => {
+    AppEnv.storeColumnWidth({ id: columnWidthKey(column.location.id), width: width });
+    this.props.onColumnSizeChanged(this);
+  };
+
+  _buildState(props: SheetProps = this.props) {
+    const state = {
+      mode: WorkspaceStore.layoutMode(),
+      columns: [],
+    };
+
+    let widest = -1;
+    let widestWidth = -1;
+
+    const data = props.data;
+
+    if (data && data.columns[state.mode]) {
+      data.columns[state.mode].forEach((location, idx) => {
+        if (WorkspaceStore.isLocationHidden(location)) {
+          return;
+        }
+        const entries = ComponentRegistry.findComponentsMatching({
+          location: location,
+          mode: state.mode,
+        });
+
+        const maxWidth = entries.reduce((m, { containerStyles }) => {
+          if (
+            containerStyles &&
+            containerStyles.maxWidth !== undefined &&
+            containerStyles.maxWidth < m
+          ) {
+            return containerStyles.maxWidth;
+          }
+          return m;
+        }, 10000);
+
+        const minWidth = entries.reduce((m, { containerStyles }) => {
+          if (
+            containerStyles &&
+            containerStyles.minWidth !== undefined &&
+            containerStyles.minWidth > m
+          ) {
+            return containerStyles.minWidth;
+          }
+          return m;
+        }, 0);
+
+        const width = AppEnv.getColumnWidth(columnWidthKey(location.id));
+        const col = { maxWidth, minWidth, location, width };
+        state.columns.push(col);
+
+        if (maxWidth > widestWidth) {
+          widestWidth = maxWidth;
+          widest = idx;
+        }
+      });
+    }
+
+    if (state.columns.length > 0) {
+      // Once we've accumulated all the React components for the columns,
+      // ensure that at least one column has a huge max-width so that the columns
+      // expand to fill the window. This may make items in the column unhappy, but
+      // we pick the column with the highest max-width so the effect is minimal.
+      state.columns[widest].maxWidth = FLEX;
+
+      // Assign flexible edges based on whether items are to the left or right
+      // of the flexible column (which has no edges)
+      for (let i = 0; i < widest; i++) {
+        state.columns[i].handle = ResizableRegion.Handle.Right;
+      }
+      for (let i = widest; i < state.columns.length; i++) {
+        state.columns[i].handle = ResizableRegion.Handle.Left;
+      }
+    }
+    return state;
+  }
+
+  render() {
+    const style: CSSProperties = {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      zIndex: 1,
+    };
+
+    // Note - setting the z-index of the sheet is important, even though it's
+    // always 1. Assigning a z-index creates a "stacking context" in the browser,
+    // so z-indexes inside the sheet are relative to each other, but something in
+    // one sheet cannot be on top of something in another sheet.
+    // http://philipwalton.com/articles/what-no-one-told-you-about-z-index/
+
+    return (
+      <SheetDepthContext.Provider value={this.props.depth}>
+        <div
+          data-role="Sheet"
+          style={style}
+          className={`sheet mode-${this.state.mode}`}
+          data-id={this.props.data.id}
+        >
+          <Flexbox direction="row" style={{ overflow: 'hidden' }}>
+            {this._columnFlexboxElements()}
+          </Flexbox>
+        </div>
+      </SheetDepthContext.Provider>
+    );
+  }
+}

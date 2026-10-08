@@ -1,0 +1,696 @@
+import classNames from 'classnames';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import {
+  localized,
+  Utils,
+  Actions,
+  MessageStore,
+  Message,
+  Thread,
+  TaskQueue,
+  GetMessageRFC2822Task,
+  SyncbackDraftTask,
+  DraftFactory,
+  AccountStore,
+  EmlUtils,
+  SearchableComponentStore,
+  SearchableComponentMaker,
+} from 'mailspring-exports';
+
+import {
+  Spinner,
+  RetinaImg,
+  MailLabelSet,
+  ScrollRegion,
+  ScrollPosition,
+  MailImportantIcon,
+  KeyCommandsRegion,
+  InjectedComponentSet,
+} from 'mailspring-component-kit';
+
+import FindInThread from './find-in-thread';
+import MessageItemContainer from './message-item-container';
+import { MessageListScrollTooltip } from './message-list-scroll-tooltip';
+import { SubjectLineIcons } from './subject-line-icons';
+
+type MinifiedBundle = { type: 'minifiedBundle'; messages: Message[] };
+type MessageOrBundle = Message | MinifiedBundle;
+
+function isMinifiedBundle(item: MessageOrBundle): item is MinifiedBundle {
+  return 'type' in item && item.type === 'minifiedBundle';
+}
+
+interface MessageListState {
+  messages: Message[];
+  messagesExpandedState: {
+    [messageId: string]: 'explicit' | 'default';
+  };
+  canCollapse: boolean;
+  hasCollapsedItems: boolean;
+  currentThread: Thread | null;
+  loading: boolean;
+  minified: boolean;
+  focusedMessageIndex: number;
+}
+
+const { Menu, MenuItem } = require('@electron/remote');
+const PREF_REPLY_TYPE = 'core.sending.defaultReplyType';
+const PREF_RESTRICT_WIDTH = 'core.reading.restrictMaxWidth';
+const PREF_DESCENDING_ORDER = 'core.reading.descendingOrderMessageList';
+
+class MessageList extends React.Component<Record<string, unknown>, MessageListState> {
+  static displayName = 'MessageList';
+  static containerStyles = {
+    minWidth: 480,
+    maxWidth: 999999,
+  };
+
+  _unsubscribers = [];
+  _messageWrapEl: ScrollRegion;
+  _draftScrollInProgress = false;
+  MINIFY_THRESHOLD = 3;
+
+  _messageListEl: HTMLElement;
+
+  constructor(props) {
+    super(props);
+    this.state = Object.assign(this._getStateFromStores(), {
+      minified: true,
+      focusedMessageIndex: 0,
+    });
+  }
+
+  componentDidMount() {
+    this._unsubscribers = [];
+    this._unsubscribers.push(MessageStore.listen(this._onChange));
+  }
+
+  shouldComponentUpdate(nextProps: Record<string, unknown>, nextState: MessageListState) {
+    return !Utils.isEqualReact(nextProps, this.props) || !Utils.isEqualReact(nextState, this.state);
+  }
+
+  componentDidUpdate() {
+    // cannot remove
+  }
+
+  componentWillUnmount() {
+    for (const unsubscribe of this._unsubscribers) {
+      unsubscribe();
+    }
+  }
+
+  _globalKeymapHandlers() {
+    const handlers = {
+      'core:reply': () =>
+        Actions.composeReply({
+          thread: this.state.currentThread,
+          message: this._lastMessage(),
+          type: 'reply',
+          behavior: 'prefer-existing',
+        }),
+      'core:reply-all': () =>
+        Actions.composeReply({
+          thread: this.state.currentThread,
+          message: this._lastMessage(),
+          type: 'reply-all',
+          behavior: 'prefer-existing',
+        }),
+      'core:forward': () => this._onForward(),
+      'core:forward-as-attachment': () => this._onForwardAsAttachment(),
+      'core:save-as-eml': () => this._onSaveAsEml(),
+      'core:print-thread': () => this._onPrintThread(),
+      'core:messages-page-up': () => this._onScrollByPage(-1),
+      'core:messages-page-down': () => this._onScrollByPage(1),
+    };
+
+    if (this.state.canCollapse) {
+      handlers['message-list:toggle-expanded'] = () => this._onToggleAllMessagesExpanded();
+    }
+
+    return handlers;
+  }
+
+  _getMessageContainer(headerMessageId: string) {
+    return this.refs[`message-container-${headerMessageId}`];
+  }
+
+  _onForward = () => {
+    if (!this.state.currentThread) {
+      return;
+    }
+    Actions.composeForward({
+      thread: this.state.currentThread,
+      message: this._lastMessage(),
+    });
+  };
+
+  _onForwardAsAttachment = async () => {
+    const message = this._lastMessage();
+    if (!message || !this.state.currentThread) {
+      return;
+    }
+    const staged = await EmlUtils.stageMessageAsEml(message, {
+      filename: 'Forwarded Message.eml',
+    });
+
+    // The fetch is remote and can fail without writing anything
+    if (!staged) {
+      AppEnv.showErrorDialog(
+        localized('Could not download the original message. Please try again.')
+      );
+      return;
+    }
+
+    const account = AccountStore.accountForId(message.accountId);
+    const draft = await DraftFactory.createDraft({
+      subject: `Fwd: ${message.subject || ''}`,
+      from: [account.defaultMe()],
+      accountId: message.accountId,
+    });
+
+    const syncTask = new SyncbackDraftTask({ draft });
+    Actions.queueTask(syncTask);
+    await TaskQueue.waitForPerformLocal(syncTask);
+
+    Actions.addAttachment({
+      filePath: staged.filePath,
+      headerMessageId: draft.headerMessageId,
+      onCreated: () => {
+        EmlUtils.discardStagedEml(staged.filePath);
+        Actions.composePopoutDraft(draft.headerMessageId);
+      },
+    });
+  };
+
+  _onSaveAsEml = () => {
+    const message = this._lastMessage();
+    if (!message) {
+      return;
+    }
+    const defaultFilename = EmlUtils.defaultEmlFilename(message.subject);
+
+    AppEnv.showSaveDialog(
+      { defaultPath: defaultFilename, title: localized('Save Email') },
+      async (savePath: string) => {
+        if (!savePath) return;
+        const task = new GetMessageRFC2822Task({
+          messageId: message.id,
+          accountId: message.accountId,
+          filepath: savePath,
+        });
+        Actions.queueTask(task);
+      }
+    );
+  };
+
+  _lastMessage() {
+    return (this.state.messages || []).filter((m) => !m.draft).pop();
+  }
+
+  // Returns either "reply" or "reply-all"
+  _replyType() {
+    const defaultReplyType = AppEnv.config.get(PREF_REPLY_TYPE);
+    const lastMessage = this._lastMessage();
+    if (!lastMessage) {
+      return 'reply';
+    }
+
+    if (lastMessage.canReplyAll()) {
+      return defaultReplyType === 'reply-all' ? 'reply-all' : 'reply';
+    }
+    return 'reply';
+  }
+
+  _onToggleAllMessagesExpanded = () => {
+    Actions.toggleAllMessagesExpanded();
+  };
+
+  _onPrintThread = () => {
+    const node = ReactDOM.findDOMNode(this) as HTMLElement;
+    Actions.printThread(this.state.currentThread, node.innerHTML);
+  };
+
+  _onPopThreadIn = () => {
+    if (!this.state.currentThread) {
+      return;
+    }
+    Actions.focusThreadMainWindow(this.state.currentThread);
+    AppEnv.close();
+  };
+
+  _onPopoutThread = () => {
+    if (!this.state.currentThread) {
+      return;
+    }
+    Actions.popoutThread(this.state.currentThread);
+    // This returns the single-pane view to the inbox, and does nothing for
+    // double-pane view because we're at the root sheet.
+    Actions.popSheet();
+  };
+
+  _onClickReplyArea = () => {
+    if (!this.state.currentThread) {
+      return;
+    }
+    Actions.composeReply({
+      thread: this.state.currentThread,
+      message: this._lastMessage(),
+      type: this._replyType(),
+      behavior: 'prefer-existing-if-pristine',
+    });
+  };
+
+  _onMessageListKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!this._messageListEl) return;
+
+    const listItems = Array.from(
+      this._messageListEl.querySelectorAll<HTMLElement>('[role="listitem"]')
+    );
+    const focused = document.activeElement as HTMLElement;
+    const isNavigating = listItems.includes(focused);
+
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      if (!isNavigating) return;
+
+      const allItems = this._messagesWithMinification(this.state.messages);
+      if (!allItems.length) return;
+
+      event.preventDefault();
+
+      const delta = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = Math.max(
+        0,
+        Math.min(allItems.length - 1, this.state.focusedMessageIndex + delta)
+      );
+
+      if (nextIndex !== this.state.focusedMessageIndex) {
+        this.setState({ focusedMessageIndex: nextIndex }, () => {
+          const items = this._messageListEl.querySelectorAll<HTMLElement>('[role="listitem"]');
+          if (items[nextIndex]) {
+            items[nextIndex].focus();
+          }
+        });
+      }
+    } else if (event.key === ' ' || event.key === 'Enter') {
+      if (!isNavigating) return;
+
+      event.preventDefault();
+
+      const allItems = this._messagesWithMinification(this.state.messages);
+      const item = allItems[this.state.focusedMessageIndex];
+      if (!item) return;
+
+      if (isMinifiedBundle(item)) {
+        this.setState({ minified: false });
+      } else {
+        // Click the MessageItem root to toggle collapsed state
+        const firstChild = focused.firstElementChild as HTMLElement;
+        if (firstChild) firstChild.click();
+      }
+    }
+  };
+
+  _messageElements() {
+    const { messagesExpandedState, currentThread } = this.state;
+    const elements = [];
+
+    let messages = this._messagesWithMinification(this.state.messages);
+    const mostRecentMessage = messages[messages.length - 1];
+    const hasReplyArea =
+      mostRecentMessage && !isMinifiedBundle(mostRecentMessage) && !mostRecentMessage.draft;
+
+    // Invert the message list if the descending option is set
+    if (AppEnv.config.get(PREF_DESCENDING_ORDER)) {
+      messages = [...messages].reverse();
+    }
+
+    // Index across all rendered items (messages + minified bundles) for roving tabindex
+    let itemIndex = 0;
+
+    messages.forEach((message) => {
+      if (isMinifiedBundle(message)) {
+        elements.push(this._renderMinifiedBundle(message, itemIndex++));
+        return;
+      }
+
+      const collapsed = !messagesExpandedState[message.id];
+      const isMostRecent = message === mostRecentMessage;
+      const isBeforeReplyArea = isMostRecent && hasReplyArea;
+      const idx = itemIndex++;
+      const isFocused = idx === this.state.focusedMessageIndex;
+
+      // Build accessible label: sender + date
+      const senderName =
+        message.from && message.from[0]
+          ? message.from[0].displayName({ compact: true })
+          : localized('Unknown');
+      const dateStr = message.date ? message.date.toLocaleDateString() : '';
+      const ariaLabel = collapsed
+        ? localized('%@ on %@: %@', senderName, dateStr, message.snippet || '')
+        : localized('Message from %@ on %@', senderName, dateStr);
+
+      elements.push(
+        <div
+          key={message.id}
+          role="listitem"
+          tabIndex={isFocused ? 0 : -1}
+          aria-label={ariaLabel}
+          onFocus={() => {
+            if (idx !== this.state.focusedMessageIndex) {
+              this.setState({ focusedMessageIndex: idx });
+            }
+          }}
+        >
+          <MessageItemContainer
+            ref={`message-container-${message.headerMessageId}`}
+            thread={currentThread}
+            message={message}
+            messages={this.state.messages}
+            collapsed={collapsed}
+            isMostRecent={isMostRecent}
+            isBeforeReplyArea={isBeforeReplyArea}
+            scrollTo={this._scrollTo}
+          />
+        </div>
+      );
+
+      if (isBeforeReplyArea) {
+        elements.push(
+          <MessageListReplyArea
+            key="reply-area"
+            onClick={this._onClickReplyArea}
+            replyType={this._replyType()}
+          />
+        );
+      }
+    });
+
+    return elements;
+  }
+
+  _messagesWithMinification(allMessages: Message[] = []): MessageOrBundle[] {
+    if (!this.state.minified) {
+      return allMessages;
+    }
+
+    const messages: MessageOrBundle[] = [...allMessages];
+    const minifyRanges = [];
+    let consecutiveCollapsed = 0;
+
+    allMessages.forEach((message, idx) => {
+      // Never minify the 1st message
+      if (idx === 0) {
+        return;
+      }
+
+      const expandState = this.state.messagesExpandedState[message.id];
+
+      if (!expandState) {
+        consecutiveCollapsed += 1;
+      } else {
+        // We add a +1 because we don't minify the last collapsed message,
+        // but the MINIFY_THRESHOLD refers to the smallest N that can be in
+        // the "N older messages" minified block.
+        const minifyOffset = expandState === 'default' ? 1 : 0;
+
+        if (consecutiveCollapsed >= this.MINIFY_THRESHOLD + minifyOffset) {
+          minifyRanges.push({
+            start: idx - consecutiveCollapsed,
+            length: consecutiveCollapsed - minifyOffset,
+          });
+        }
+        consecutiveCollapsed = 0;
+      }
+    });
+
+    let indexOffset = 0;
+    for (const range of minifyRanges) {
+      const start = range.start - indexOffset;
+      const minified: MinifiedBundle = {
+        type: 'minifiedBundle',
+        messages: messages.slice(start, start + range.length) as Message[],
+      };
+      messages.splice(start, range.length, minified);
+
+      // While we removed `range.length` items, we also added 1 back in.
+      indexOffset += range.length - 1;
+    }
+    return messages;
+  }
+
+  // Some child components (like the composer) might request that we scroll
+  // to a given location. If `selectionTop` is defined that means we should
+  // scroll to that absolute position.
+  //
+  // If messageId and location are defined, that means we want to scroll
+  // smoothly to the top of a particular message.
+  _scrollTo = ({
+    headerMessageId,
+    rect,
+    position,
+  }: {
+    headerMessageId?: string;
+    rect?: ClientRect;
+    position?: ScrollPosition;
+  } = {}) => {
+    if (this._draftScrollInProgress) {
+      return;
+    }
+    if (headerMessageId) {
+      const messageElement = this._getMessageContainer(headerMessageId);
+      if (!messageElement) return;
+
+      this._messageWrapEl.scrollTo(messageElement, {
+        position: position !== undefined ? position : ScrollPosition.Visible,
+      });
+    } else if (rect) {
+      this._messageWrapEl.scrollToRect(rect, {
+        position: ScrollPosition.CenterIfInvisible,
+      });
+    } else {
+      throw new Error('onChildScrollRequest: expected id or rect');
+    }
+  };
+
+  _onScrollByPage = (direction: number) => {
+    const height = (ReactDOM.findDOMNode(this._messageWrapEl) as HTMLElement).clientHeight;
+    this._messageWrapEl.scrollTop += height * direction;
+  };
+
+  _onChange = () => {
+    const newState: any = this._getStateFromStores();
+    const threadId = this.state.currentThread && this.state.currentThread.id;
+    const nextThreadId = newState.currentThread && newState.currentThread.id;
+    if (threadId !== nextThreadId) {
+      newState.minified = true;
+      newState.focusedMessageIndex = 0;
+    }
+    this.setState(newState);
+  };
+
+  _getStateFromStores() {
+    return {
+      messages: MessageStore.items() || [],
+      messagesExpandedState: MessageStore.itemsExpandedState(),
+      canCollapse: MessageStore.items().length > 1,
+      hasCollapsedItems: MessageStore.hasCollapsedItems(),
+      currentThread: MessageStore.thread(),
+      loading: MessageStore.itemsLoading(),
+    };
+  }
+
+  _renderSubject() {
+    let subject = this.state.currentThread.subject;
+    if (!subject || subject.length === 0) {
+      subject = localized('(No Subject)');
+    }
+
+    return (
+      <header className="message-subject-wrap">
+        <MailImportantIcon thread={this.state.currentThread} />
+        <div style={{ flex: 1 }}>
+          <span className="message-subject" onContextMenu={() => _onSubjectContextMenu()}>
+            {subject}
+          </span>
+          <MailLabelSet
+            removable
+            includeCurrentCategories
+            messages={this.state.messages}
+            thread={this.state.currentThread}
+          />
+        </div>
+        <SubjectLineIcons
+          canCollapse={this.state.canCollapse}
+          hasCollapsedItems={this.state.hasCollapsedItems}
+          onPrint={this._onPrintThread}
+          onPopIn={this._onPopThreadIn}
+          onPopOut={this._onPopoutThread}
+          onToggleAllExpanded={this._onToggleAllMessagesExpanded}
+        />
+      </header>
+    );
+
+    function _onSubjectContextMenu() {
+      if (window.getSelection()?.type == 'Range') {
+        const menu = new Menu();
+        menu.append(new MenuItem({ role: 'copy' }));
+        menu.popup({});
+      }
+    }
+  }
+
+  _renderMinifiedBundle(
+    bundle: { type: 'minifiedBundle'; messages: Message[] },
+    bundleIndex: number
+  ) {
+    const isFocused = bundleIndex === this.state.focusedMessageIndex;
+    const BUNDLE_HEIGHT = 36;
+    const lines = bundle.messages.slice(0, 10);
+    const h = Math.round(BUNDLE_HEIGHT / lines.length);
+
+    return (
+      <div
+        className="minified-bundle"
+        role="listitem"
+        tabIndex={isFocused ? 0 : -1}
+        aria-label={localized('%@ older messages', bundle.messages.length)}
+        onClick={() => this.setState({ minified: false })}
+        onFocus={() => {
+          if (bundleIndex !== this.state.focusedMessageIndex) {
+            this.setState({ focusedMessageIndex: bundleIndex });
+          }
+        }}
+        key={Utils.generateTempId()}
+      >
+        <div className="num-messages">{`${bundle.messages.length} ${localized(
+          'older messages'
+        )}`}</div>
+        <div className="msg-lines" style={{ height: h * lines.length }}>
+          {lines.map((msg, i) => (
+            <div key={msg.id} style={{ height: h * 2, top: -h * i }} className="msg-line" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  render() {
+    if (!this.state.currentThread) {
+      return <span />;
+    }
+
+    const wrapClass = classNames({
+      'messages-wrap': true,
+      ready: !this.state.loading,
+    });
+
+    return (
+      <KeyCommandsRegion globalHandlers={this._globalKeymapHandlers()}>
+        <FindInThread />
+        <section
+          id="message-list"
+          aria-label={this.state.currentThread?.subject || localized('Messages')}
+          className={classNames({
+            'message-list': true,
+            'restrict-width': AppEnv.config.get(PREF_RESTRICT_WIDTH),
+            'height-fix': SearchableComponentStore.searchTerm !== null,
+          })}
+        >
+          <ScrollRegion
+            tabIndex={-1}
+            className={wrapClass}
+            scrollbarTickProvider={SearchableComponentStore}
+            scrollTooltipComponent={MessageListScrollTooltip}
+            ref={(el) => {
+              this._messageWrapEl = el;
+            }}
+          >
+            {this._renderSubject()}
+            <div className="headers" style={{ position: 'relative' }}>
+              <InjectedComponentSet
+                className="message-list-headers"
+                matching={{ role: 'MessageListHeaders' }}
+                exposedProps={{
+                  thread: this.state.currentThread,
+                  messages: this.state.messages,
+                }}
+                direction="column"
+              />
+            </div>
+            <div
+              role="list"
+              data-usesarrowkeys={true}
+              aria-label={localized('Messages')}
+              onKeyDown={this._onMessageListKeyDown}
+              ref={(el) => {
+                this._messageListEl = el;
+              }}
+            >
+              {this._messageElements()}
+            </div>
+          </ScrollRegion>
+          <Spinner visible={this.state.loading} />
+        </section>
+      </KeyCommandsRegion>
+    );
+  }
+}
+
+class MessageListReplyArea extends React.Component<{ onClick: () => void; replyType: string }> {
+  state = {
+    forcePlaintext: AppEnv.keymaps.getIsAltKeyDown(),
+  };
+
+  componentDidMount() {
+    document.addEventListener(AppEnv.keymaps.EVENT_ALT_KEY_STATE_CHANGE, this.onAltStateChange);
+  }
+  componentWillUnmount() {
+    document.removeEventListener(AppEnv.keymaps.EVENT_ALT_KEY_STATE_CHANGE, this.onAltStateChange);
+  }
+
+  onAltStateChange = () => {
+    this.setState({ forcePlaintext: AppEnv.keymaps.getIsAltKeyDown() });
+  };
+
+  _onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.props.onClick();
+    }
+  };
+
+  // Prevent the click from moving focus to this placeholder. Otherwise focus
+  // briefly lands here, the placeholder unmounts when the composer mounts in
+  // its place, and the first keystrokes hit `<body>` before the composer's
+  // requestAnimationFrame focus restore can run — firing global shortcuts.
+  _onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
+  render() {
+    return (
+      <div
+        className="footer-reply-area-wrap"
+        role="button"
+        tabIndex={0}
+        onClick={this.props.onClick}
+        onMouseDown={this._onMouseDown}
+        onKeyDown={this._onKeyDown}
+      >
+        <div className="footer-reply-area">
+          <RetinaImg
+            name={`${this.props.replyType}-footer.png`}
+            mode={RetinaImg.Mode.ContentIsMask}
+          />
+          <span className="reply-text">
+            {this.state.forcePlaintext
+              ? localized('Write a plain text reply…')
+              : localized('Write a reply…')}
+          </span>
+        </div>
+      </div>
+    );
+  }
+}
+export default SearchableComponentMaker.extend(MessageList);
