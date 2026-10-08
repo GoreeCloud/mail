@@ -39,5 +39,12 @@ const courier = JSON.parse(read('docs/courier.identity.json'));
 if (courier.repository !== 'GoreeCloud/mail' || courier.separateApplication || courier.separateRepository) fail('Courier boundary invalid');
 else pass('Courier boundary valid');
 
+const legacyApi = read('app/src/flux/mailspring-api-request.ts');
+if (!legacyApi.includes('if (!legacyServicesEnabled)')) fail('legacy Mailspring API must be blocked by default');
+else pass('legacy Mailspring API fails closed by default');
+const packageManager = read('app/src/package-manager.ts');
+if (!packageManager.includes('this.identityPresent = false')) fail('legacy identity-required packages must remain disabled');
+else pass('legacy identity-required packages remain disabled');
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
