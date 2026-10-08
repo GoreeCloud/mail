@@ -105,7 +105,7 @@ export default class Application extends EventEmitter {
         console.error('GoreeCloud Mail specs: mailsync migration failed; exiting without modal.');
         console.error(
           'GoreeCloud Mail specs: sanitized migration error code:',
-          (err as any)?.code || 'unknown'
+          (err as any)?.engineExitStatus ?? (err as any)?.code ?? 'unknown'
         );
         app.exit(1);
         return;
