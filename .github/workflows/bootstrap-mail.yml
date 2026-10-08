@@ -24,4 +24,5 @@ jobs:
           git config user.email "295260680+GoreeCloud@users.noreply.github.com"
       - name: Import upstream foundation
         run: bash scripts/goreecloud-bootstrap.sh
-# Triggered after deterministic bootstrap script landed.
+
+# Rerun with pinned upstream revision and reviewed workflow exclusion.
