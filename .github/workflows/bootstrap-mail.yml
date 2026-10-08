@@ -5,6 +5,7 @@ on:
       - feat/mailspring-fork-to-native-foundation
     paths:
       - .github/workflows/bootstrap-mail.yml
+      - scripts/goreecloud-bootstrap.sh
   workflow_dispatch:
 permissions:
   contents: write
