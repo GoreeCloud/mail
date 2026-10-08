@@ -44,24 +44,9 @@ export default class PackageManager {
 
     this.discoverPackages();
 
-    // If the user starts without a Mailspring ID and then links one, immediately turn on the
-    // packages that require it. (Note: When you log OUT we currently just reboot the app, so
-    // this only goes one way, which is also convenient because unloading the built-in packages
-    // hasn't been tested much.)
+    // Legacy Mailspring cloud identity packages remain disabled. Provider
+    // account setup is separate and must not activate cloud-only packages.
 
-    // Note: Ideally we'd use the IdentityStore here but we can't load it this early in app
-    // launch without introducing a circular import.
-    AppEnv.config.onDidChange('identity', () => {
-      if (false) { // Inherited Mailspring identity activation remains disabled
-        this.identityPresent = true;
-        // Config IPC can arrive re-entrantly mid-boot; skip until AppEnv is
-        // ready. startWindow()/populateHotWindow() will activate packages
-        // again once boot finishes.
-        if (AppEnv.bootComplete) {
-          this.activatePackages(AppEnv.getLoadSettings().windowType);
-        }
-      }
-    });
   }
 
   discoverPackages() {
