@@ -1118,9 +1118,9 @@ export default class Application extends EventEmitter {
       );
     }
 
-    // Important: Use .mailspring-spec instead of .mailspring-mail to avoid overwriting the
-    // user's real email config!
-    const configDirPath = path.join(app.getPath('home'), '.mailspring-spec');
+    // Keep GoreeCloud Mail test data separate from personal mail profiles
+    // and legacy Mailspring installations; never reuse a real mailbox path.
+    const configDirPath = path.join(app.getPath('home'), '.goreecloud-mail-spec');
 
     specWindowOptions.resourcePath = resourcePath;
     specWindowOptions.configDirPath = configDirPath;
