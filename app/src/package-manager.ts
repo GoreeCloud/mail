@@ -46,7 +46,6 @@ export default class PackageManager {
 
     // Legacy Mailspring cloud identity packages remain disabled. Provider
     // account setup is separate and must not activate cloud-only packages.
-
   }
 
   discoverPackages() {
