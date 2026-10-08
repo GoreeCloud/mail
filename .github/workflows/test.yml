@@ -77,7 +77,8 @@ jobs:
         run: |
           stat -c 'Mailsync mode: %A; size: %s bytes' app/mailsync
           file app/mailsync
-          readelf -h app/mailsync
+          file app/mailsync.bin
+          readelf -h app/mailsync.bin
 
       - name: Run tests
         run: dbus-launch --exit-with-session xvfb-run -a npm test
