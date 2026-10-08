@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+UPSTREAM_REV="6054ff7a2e43b9d8e5ad7931370316e5b35d9a25"
 git remote add mailspring-upstream https://github.com/Foundry376/Mailspring.git
 git fetch --no-tags mailspring-upstream master
-UPSTREAM_REV=$(git rev-parse FETCH_HEAD)
-echo "Upstream revision: $UPSTREAM_REV"
-git merge --allow-unrelated-histories --no-commit FETCH_HEAD || true
+git cat-file -e "$UPSTREAM_REV^{commit}"
+echo "Pinned upstream revision: $UPSTREAM_REV"
+git merge --allow-unrelated-histories --no-commit "$UPSTREAM_REV" || true
 if git ls-files -u | grep -q .; then
   git checkout --ours README.md
   git add README.md
@@ -97,6 +98,13 @@ Status: Active / not production ready.
 - Validate mailbox providers, token protection, account isolation, offline recovery, searches, drafts, sending and migrations.
 - Produce signed and independently verified distribution artifacts only after release gates pass.
 EOF
+# GitHub Actions' repository token cannot create imported workflow files.
+# Preserve upstream workflow history through the merge parent, but do not carry
+# upstream automation into GoreeCloud Mail until it is reviewed and re-added
+# through the GoreeCloud repository connection.
+find .github/workflows -type f ! -name 'bootstrap-mail.yml' -delete
+rm -f .github/bootstrap-mail.sh.gz.b64 scripts/goreecloud-bootstrap.sh
+
 git add -A
 git diff --cached --check -- README.md docs/GOREECLOUD-MAIL-ROADMAP.md app/src/config-schema.ts app/src/error-logger.js app/src/browser/mailspring-window.ts app/src/package-manager.ts app/internal_packages/onboarding/lib/page-welcome.tsx app/internal_packages/onboarding/lib/page-tutorial.tsx app/internal_packages/onboarding/lib/onboarding-store.ts
 git commit -m "feat(mail): import Mailspring with GoreeCloud privacy-first foundation"
