@@ -41,9 +41,9 @@ if (typeof process.setFdLimit === 'function') {
 }
 
 const setupConfigDir = args => {
-  let dirname = 'Mailspring';
+  let dirname = 'GoreeCloud-Mail';
   if (args.devMode) {
-    dirname = 'Mailspring-dev';
+    dirname = 'GoreeCloud-Mail-dev';
   }
   if (args.specMode) {
     dirname = 'GoreeCloud-Mail-spec';
