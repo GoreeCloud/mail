@@ -4,7 +4,7 @@
 
 ## Source and license
 Upstream: [Foundry376/Mailspring](https://github.com/Foundry376/Mailspring).
-Inherited source, assets, and code history retain their upstream licenses and copyright notices. See [LICENSE.md](LICENSE.md).
+Inherited source, assets, and code history retain their upstream licenses and copyright notices. The foundation is pinned to Mailspring revision `6054ff7a2e43b9d8e5ad7931370316e5b35d9a25`. See [LICENSE.md](LICENSE.md), [UPSTREAM.md](UPSTREAM.md), and [NOTICE.md](NOTICE.md).
 The import commit preserves upstream Git ancestry.
 
 ## Direction
@@ -23,3 +23,18 @@ The inherited Electron app renderer currently has privileged Node integration an
 
 ## Work tracking
 See [docs/GOREECLOUD-MAIL-ROADMAP.md](docs/GOREECLOUD-MAIL-ROADMAP.md).
+
+## Architecture and acceptance records
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Fork-to-Native plan](docs/FORK-TO-NATIVE.md)
+- [Feature preservation](docs/FEATURE-PARITY.md)
+- [Privacy baseline](docs/PRIVACY.md)
+- [Glaze adoption](docs/GLAZE.md)
+- [Integral Platform Systems](docs/INTEGRAL-PLATFORM-SYSTEMS.md)
+- [Courier identity](docs/courier.md)
+- [Security](SECURITY.md)
+
+## Development validation
+
+Run `npm ci`, `npm run policy:check`, `npm run lint:check`, `npm run typecheck`, and `npm test` before promotion. The current Glaze acceptance record remains fail-closed until Mail-specific evidence exists.
