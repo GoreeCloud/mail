@@ -1,0 +1,43 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+let failed = false;
+const fail = message => { failed = true; console.error('FAIL: ' + message); };
+const pass = message => console.log('PASS: ' + message);
+const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
+const requireFile = rel => fs.existsSync(path.join(root, rel)) ? pass(rel + ' exists') : fail('missing ' + rel);
+
+[
+  'UPSTREAM.md','NOTICE.md','SECURITY.md','docs/ARCHITECTURE.md','docs/FORK-TO-NATIVE.md',
+  'docs/FEATURE-PARITY.md','docs/PRIVACY.md','docs/GLAZE.md',
+  'docs/INTEGRAL-PLATFORM-SYSTEMS.md','docs/courier.md','docs/courier.identity.json',
+  'docs/acceptance/glaze-v1.7.0.json'
+].forEach(requireFile);
+
+const appPkg = JSON.parse(read('app/package.json'));
+if (appPkg.name !== 'goreecloud-mail' || appPkg.productName !== 'GoreeCloud Mail') fail('app identity metadata is not GoreeCloud Mail');
+else pass('app identity metadata is GoreeCloud Mail');
+if (!String((appPkg.repository || {}).url || '').includes('GoreeCloud/mail')) fail('app repository metadata is not canonical');
+
+const config = read('app/src/config-schema.ts');
+if (!/autoloadImages:\s*\{[\s\S]*?default:\s*false/.test(config)) fail('remote images must default to blocked');
+else pass('remote images default to blocked');
+
+const logger = read('app/src/error-logger.js');
+if (/id\.getmailspring\.com\/report-crash/.test(logger) || /uploadToServer:\s*true/.test(logger)) fail('inherited crash upload remains enabled');
+else pass('inherited crash upload is disabled');
+
+const sentry = read('app/src/error-logger-extensions/sentry-error-reporter.js');
+if (/o70907\.ingest\.us\.sentry\.io/.test(sentry) || /getMac/.test(sentry)) fail('upstream Sentry destination or hardware identifier remains');
+else pass('upstream Sentry destination and hardware identifier removed');
+
+const glaze = JSON.parse(read('docs/acceptance/glaze-v1.7.0.json'));
+if (glaze.accepted || glaze.productionEligible || glaze.status !== 'adoption-required') fail('Glaze acceptance must remain fail-closed');
+else pass('Glaze acceptance remains fail-closed');
+
+const courier = JSON.parse(read('docs/courier.identity.json'));
+if (courier.repository !== 'GoreeCloud/mail' || courier.separateApplication || courier.separateRepository) fail('Courier boundary invalid');
+else pass('Courier boundary valid');
+
+if (failed) process.exit(1);
+console.log('GoreeCloud Mail foundation policy checks passed.');
