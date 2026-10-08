@@ -40,3 +40,11 @@ The root package currently places build and developer tools in `dependencies`. T
 A green audit is not enough on its own. The installed engine is downloaded from an upstream distribution and the existing postinstall does not pin an expected archive digest.
 
 **Verification:** Advisory identity and dependency paths were extracted from CI run 37856853053. No dependency upgrades or Mailsync integrity improvements have yet been verified.
+
+## Development downloader controls (not release acceptance)
+
+The `scripts/postinstall.js` downloader now waits for the downloaded archive file to finish writing and for extraction to complete. Network, HTTP, over-size, interrupted download, and extraction errors fail the install. Downloads use a temporary path before being moved to the archive name.
+
+For candidate releases, set `GOREECLOUD_MAIL_RELEASE_MODE=1` and an independently approved 64-character `GOREECLOUD_MAIL_MAILSYNC_SHA256`; missing or mismatched configured digests fail closed. The SHA-256 value must come from a trusted build/provenance process, not simply from the archive downloaded in the same run.
+
+**Limitations:** This is not a production approval. Archive path traversal, symlink handling, executable trust, target file replacement, platform packaging, and approved publisher attestation remain unverified. Existing development/CI downloads can still use the inherited upstream archive without an expected digest; keep that artifact out of releases until independently verified.
