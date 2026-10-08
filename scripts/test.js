@@ -13,9 +13,24 @@ const child = spawn(electron, ['./app', '--enable-logging', ...process.argv.slic
   env: Object.assign({ TZ: DEFAULT_TZ }, process.env),
 });
 
+if (process.env.CI === 'true') {
+  const startedAt = Date.now();
+  const heartbeat = setInterval(() => {
+    console.error('Electron spec runner still active after ' + Math.round((Date.now() - startedAt) / 1000) + ' seconds');
+  }, 60000);
+  const deadline = setTimeout(() => {
+    console.error('Electron spec runner exceeded 12-minute CI deadline; terminating as a test failure.');
+    child.kill('SIGKILL');
+  }, 720000);
+  child.once('exit', () => {
+    clearInterval(heartbeat);
+    clearTimeout(deadline);
+  });
+}
+
 child.on('exit', (code, signal) => {
   if (signal) {
-    process.kill(process.pid, signal);
+    process.exit(signal === 'SIGKILL' ? 124 : 1);
   } else {
     process.exit(code);
   }
