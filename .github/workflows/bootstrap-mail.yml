@@ -1,39 +1,25 @@
-# One-shot bootstrap workflow; removed by the bootstrap commit.
 name: Bootstrap GoreeCloud Mail
-
 on:
   push:
     branches:
       - feat/mailspring-fork-to-native-foundation
     paths:
-      - .github/bootstrap-mail.sh.gz.b64
       - .github/workflows/bootstrap-mail.yml
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   bootstrap:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Check out GoreeCloud Mail
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: feat/mailspring-fork-to-native-foundation
-
-      - name: Configure GoreeCloud commit identity
+      - name: Configure commit identity
         run: |
           git config user.name "GoreeCloud"
           git config user.email "295260680+GoreeCloud@users.noreply.github.com"
-
-      - name: Run Fork-to-Native bootstrap
-        shell: bash
-        run: |
-          set -euo pipefail
-          base64 -d .github/bootstrap-mail.sh.gz.b64 | gunzip > /tmp/bootstrap-mail.sh
-          chmod +x /tmp/bootstrap-mail.sh
-          rm -f .github/bootstrap-mail.sh.gz.b64
-          bash /tmp/bootstrap-mail.sh
+      - name: Import upstream foundation
+        run: bash scripts/goreecloud-bootstrap.sh
