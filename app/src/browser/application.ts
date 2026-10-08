@@ -103,7 +103,10 @@ export default class Application extends EventEmitter {
         // A modal warning cannot be answered under headless xvfb. A failed
         // migration must fail the test run instead of stalling indefinitely.
         console.error('GoreeCloud Mail specs: mailsync migration failed; exiting without modal.');
-        console.error('GoreeCloud Mail specs: sanitized migration error code:', (err as any)?.code || 'unknown');
+        console.error(
+          'GoreeCloud Mail specs: sanitized migration error code:',
+          (err as any)?.code || 'unknown'
+        );
         app.exit(1);
         return;
       }
