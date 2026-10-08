@@ -46,7 +46,7 @@ const setupConfigDir = args => {
     dirname = 'Mailspring-dev';
   }
   if (args.specMode) {
-    dirname = 'Mailspring-spec';
+    dirname = 'GoreeCloud-Mail-spec';
   }
 
   // Check if a custom config dir was provided via --config-dir-path
