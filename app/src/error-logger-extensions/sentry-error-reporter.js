@@ -1,10 +1,9 @@
 /* eslint global-require: 0 */
-const { getMac } = require('getmac');
 const crypto = require('crypto');
 const https = require('https');
 const { URL } = require('url');
 
-const DSN = 'https://b4e04d8ca1e8f1206aa79db0dee2da16@o70907.ingest.us.sentry.io/4511340571000832';
+const DSN = process.env.GOREECLOUD_MAIL_SENTRY_DSN || '';
 
 function parseDSN(dsn) {
   const u = new URL(dsn);
@@ -126,6 +125,7 @@ function buildEvent({ err, frames, extra, deviceHash, release, tags }) {
 }
 
 function sendEnvelope(event, release) {
+  if (!DSN) return;
   const { publicKey, host, projectId } = parseDSN(DSN);
   const envelopeHeader = JSON.stringify({
     event_id: event.event_id,
@@ -142,7 +142,7 @@ function sendEnvelope(event, release) {
     headers: {
       'Content-Type': 'application/x-sentry-envelope',
       'Content-Length': Buffer.byteLength(body),
-      'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${publicKey}, sentry_client=mailspring/${release}`,
+      'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${publicKey}, sentry_client=goreecloud-mail/${release}`,
     },
   });
   req.on('error', e => {
@@ -169,22 +169,8 @@ module.exports = class SentryErrorReporter {
     this.inSpecMode = inSpecMode;
     this.inDevMode = inDevMode;
     this.resourcePath = resourcePath;
-    this.deviceHash = 'Unknown Device Hash';
-
-    if (!this.inSpecMode) {
-      try {
-        getMac((err, macAddress) => {
-          if (!err && macAddress) {
-            this.deviceHash = crypto
-              .createHash('sha256')
-              .update(macAddress)
-              .digest('hex');
-          }
-        });
-      } catch (err) {
-        safeLog(err);
-      }
-    }
+    // Never derive a durable diagnostics identifier from network hardware.
+    this.deviceHash = crypto.randomBytes(16).toString('hex');
   }
 
   getRelease() {
