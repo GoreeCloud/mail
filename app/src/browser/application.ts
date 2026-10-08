@@ -94,9 +94,18 @@ export default class Application extends EventEmitter {
     });
 
     try {
+      if (this.specMode) console.log('GoreeCloud Mail specs: beginning mailsync migration.');
       const mailsync = new MailsyncProcess(options);
       await mailsync.migrate();
+      if (this.specMode) console.log('GoreeCloud Mail specs: mailsync migration completed.');
     } catch (err) {
+      if (this.specMode) {
+        // A modal warning cannot be answered under headless xvfb. A failed
+        // migration must fail the test run instead of stalling indefinitely.
+        console.error('GoreeCloud Mail specs: mailsync migration failed; exiting without modal.');
+        app.exit(1);
+        return;
+      }
       let message = null;
       let buttons = [localized('Quit')];
       if (err.toString().includes('ENOENT')) {
