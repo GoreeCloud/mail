@@ -5,10 +5,10 @@ const Steps = [
   {
     seen: false,
     id: 'people',
-    title: localized('Compose with context'),
+    title: localized('Work across your accounts'),
     image: 'feature-people@2x.png',
     description: localized(
-      'Mailspring shows you everything about your contacts right inside your inbox. See LinkedIn profiles, Twitter bios, message history, and more.'
+      'Bring multiple providers into one focused inbox while keeping each account and its credentials isolated.'
     ),
     x: 96.6,
     y: 1.3,
@@ -18,10 +18,10 @@ const Steps = [
   {
     seen: false,
     id: 'activity',
-    title: localized('Track opens and clicks'),
+    title: localized('Read with privacy by default'),
     image: 'feature-activity@2x.png',
     description: localized(
-      'With activity tracking, you’ll know as soon as someone reads your message. Sending to a group? Mailspring shows you which recipients opened your email so you can follow up with precision.'
+      'Remote message images are blocked by default so reading email does not silently disclose activity to third-party tracking resources.'
     ),
     x: 12.8,
     y: 1,
@@ -34,7 +34,7 @@ const Steps = [
     title: localized('Send on your own schedule'),
     image: 'feature-snooze@2x.png',
     description: localized(
-      'Snooze emails to return at any time that suits you. Schedule messages to send at the ideal time. Mailspring makes it easy to control the fabric of spacetime!'
+      'Snooze messages and schedule work around your day while GoreeCloud Mail preserves provider-aware and offline-capable behavior.'
     ),
     x: 5.5,
     y: 23.3,
