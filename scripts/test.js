@@ -12,14 +12,14 @@ if (process.env.CI === 'true' && process.platform === 'linux') {
   const path = require('path');
   const { spawnSync } = require('child_process');
   const engine = path.resolve(__dirname, '..', 'app', 'mailsync.bin');
-  const check = spawnSync('ldd', [engine], { encoding: 'utf8', timeout: 5000 });
+  const check = spawnSync('readelf', ['-h', engine], { encoding: 'utf8', timeout: 5000 });
   const output = String(check.stdout || '') + String(check.stderr || '');
   const missing = output.split('\n').filter(line => line.includes('not found'));
   if (check.error || check.status !== 0 || missing.length > 0) {
-    console.error('Mailsync runtime dependency preflight failed:', missing.join('; ') || 'ldd error');
+    console.error('Mailsync ELF format preflight failed:', missing.join('; ') || 'ldd error');
     process.exit(1);
   }
-  console.error('Mailsync runtime dependency preflight passed.');
+  console.error('Mailsync ELF format preflight passed; shared-library availability is not yet established.');
 }
 
 const child = spawn(electron, ['./app', '--enable-logging', ...process.argv.slice(2)], {
