@@ -34,12 +34,17 @@ let IdentityStore = null;
 
 export function rootURLForServer(server: 'identity') {
   const env = AppEnv.config.get('env');
+  const legacyServicesEnabled =
+    process.env.GOREECLOUD_MAIL_ENABLE_LEGACY_MAILSPRING_SERVICES === '1';
 
   if (!['development', 'staging', 'production'].includes(env)) {
     throw new Error(`rootURLForServer: ${env} is not a valid environment.`);
   }
 
   if (server === 'identity') {
+    if (env !== 'development' && !legacyServicesEnabled) {
+      throw new Error('Legacy Mailspring cloud services are disabled in GoreeCloud Mail.');
+    }
     return {
       development: 'http://localhost:5101',
       staging: 'https://id-staging.getmailspring.com',
@@ -105,7 +110,7 @@ export async function makeRequest({
   IdentityStore = IdentityStore || require('./stores/identity-store').IdentityStore;
   const identity = IdentityStore.identity();
   if (!identity) {
-    throw new Error('makeRequest: A Mailspring identity is required.');
+    throw new Error('makeRequest: legacy Mailspring cloud identity is unavailable.');
   }
 
   const init: RequestInit = { ...rest };
