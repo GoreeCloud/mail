@@ -1126,6 +1126,8 @@ export default class Application extends EventEmitter {
     specWindowOptions.configDirPath = configDirPath;
     specWindowOptions.bootstrapScript = bootstrapScript;
 
+    console.log('GoreeCloud Mail specs: opening Jasmine test window.');
     this.windowManager.ensureWindow(WindowManager.SPEC_WINDOW, specWindowOptions);
+    console.log('GoreeCloud Mail specs: Jasmine window creation returned.');
   }
 }
