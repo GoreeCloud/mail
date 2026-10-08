@@ -7,7 +7,7 @@ diff --git a/MailSync/main.cpp b/MailSync/main.cpp
 -// Important do not change these without updating result code 2 check below
  #define USAGE_STRING "USAGE: CONFIG_DIR_PATH=/path IDENTITY_SERVER=https://id.getmailspring.com mailsync [options]\n\nOptions:"
  #define USAGE_IDENTITY "  --identity, -i  \tRequired: Mailspring Identity JSON with credentials."
-@@ -877,14 +876,5 @@
+@@ -877,14 +876,4 @@
      // Note: On Windows, SASL plugin path is configured in libetpan's mailsasl.c
      // It defaults to the executable directory, but can be overridden via SASL_PATH env var.
  
