@@ -59,10 +59,7 @@ function getMailsyncURL(callback) {
   }[distKey];
 
   if (!distDir) {
-    console.error(
-      `\nSorry, a Mailspring Mailsync build for your machine (${distKey}) is not yet available.`
-    );
-    return;
+    throw new Error(`Mailsync build is unavailable for platform ${distKey}.`);
   }
 
   const out = execSync('git submodule status ./mailsync');
