@@ -19,7 +19,7 @@ const rootDir = path.resolve(__dirname, '..', '..');
 const appDir = path.resolve(rootDir, 'app');
 const buildDir = path.join(appDir, 'build');
 const outputDir = path.join(appDir, 'dist');
-const tmpdir = path.resolve(os.tmpdir(), 'nylas-build');
+const tmpdir = path.resolve(os.tmpdir(), 'goreecloud-mail-build');
 const packageJSON = require(path.join(appDir, 'package.json'));
 const { compilerOptions } = require(path.join(appDir, 'tsconfig.json'));
 
@@ -197,7 +197,7 @@ function buildPackagerOptions() {
     appVersion: packageJSON.version,
     platform,
     protocols: [
-      { name: 'Mailspring Protocol', schemes: ['mailspring'] },
+      { name: 'GoreeCloud Mail Protocol', schemes: ['goreecloud-mail', 'mailspring'] },
       { name: 'Mailto Protocol', schemes: ['mailto'] },
     ],
     dir: appDir,
@@ -213,7 +213,7 @@ function buildPackagerOptions() {
       win32: path.resolve(appDir, 'build', 'resources', 'win', 'mailspring-square.ico'),
       linux: undefined,
     }[platform],
-    name: { darwin: 'Mailspring', win32: 'Mailspring', linux: 'mailspring' }[platform],
+    name: { darwin: 'GoreeCloud Mail', win32: 'GoreeCloud Mail', linux: 'goreecloud-mail' }[platform],
     appCopyright: `Copyright (C) 2014-${new Date().getFullYear()} Foundry 376, LLC. All rights reserved.`,
     derefSymlinks: false,
     asar: {
@@ -323,10 +323,10 @@ function buildPackagerOptions() {
         }
       : undefined,
     win32metadata: {
-      CompanyName: 'Foundry 376, LLC',
-      FileDescription: 'Mailspring',
+      CompanyName: 'GoreeCloud',
+      FileDescription: 'GoreeCloud Mail',
       LegalCopyright: `Copyright (C) 2014-${new Date().getFullYear()} Foundry 376, LLC. All rights reserved.`,
-      ProductName: 'Mailspring',
+      ProductName: 'GoreeCloud Mail',
     },
     // NOTE: The following plist keys can NOT be set in the extra.plist since
     // they are manually overridden by electron-packager based on this config:
