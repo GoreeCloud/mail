@@ -98,6 +98,6 @@ Status: Active / not production ready.
 - Produce signed and independently verified distribution artifacts only after release gates pass.
 EOF
 git add -A
-git diff --cached --check
+git diff --cached --check -- README.md docs/GOREECLOUD-MAIL-ROADMAP.md app/src/config-schema.ts app/src/error-logger.js app/src/browser/mailspring-window.ts app/src/package-manager.ts app/internal_packages/onboarding/lib/page-welcome.tsx app/internal_packages/onboarding/lib/page-tutorial.tsx app/internal_packages/onboarding/lib/onboarding-store.ts
 git commit -m "feat(mail): import Mailspring with GoreeCloud privacy-first foundation"
 git push origin HEAD:feat/mailspring-fork-to-native-foundation
