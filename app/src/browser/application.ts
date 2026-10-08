@@ -200,11 +200,14 @@ export default class Application extends EventEmitter {
       this.openUrl(pendingUrl);
     }
 
-    if (process.platform === 'linux') {
-      const helper = new DefaultClientHelper();
-      helper.registerForURLScheme('mailspring');
-    } else {
-      app.setAsDefaultProtocolClient('mailspring');
+    // The test runner must not change the OS-wide URL/protocol handler.
+    if (!this.specMode) {
+      if (process.platform === 'linux') {
+        const helper = new DefaultClientHelper();
+        helper.registerForURLScheme('mailspring');
+      } else {
+        app.setAsDefaultProtocolClient('mailspring');
+      }
     }
   }
 
