@@ -11,7 +11,7 @@ const DEFAULT_TZ = 'America/Chicago';
 if (process.env.CI === 'true' && process.platform === 'linux') {
   const path = require('path');
   const { spawnSync } = require('child_process');
-  const engine = path.resolve(__dirname, '..', 'app', 'mailsync');
+  const engine = path.resolve(__dirname, '..', 'app', 'mailsync.bin');
   const check = spawnSync('ldd', [engine], { encoding: 'utf8', timeout: 5000 });
   const output = String(check.stdout || '') + String(check.stderr || '');
   const missing = output.split('\n').filter(line => line.includes('not found'));
