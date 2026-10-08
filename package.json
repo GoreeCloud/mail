@@ -1,12 +1,12 @@
 {
   "name": "mailspring-root",
   "version": "0.0.1",
-  "description": "Packages required to develop and build Mailspring",
-  "author": "Mailspring",
+  "description": "Development and build dependencies for GoreeCloud Mail",
+  "author": "GoreeCloud",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Foundry376/Mailspring.git"
+    "url": "https://github.com/GoreeCloud/mail.git"
   },
   "engines": {
     "node": ">=16.17",
@@ -82,7 +82,8 @@
     "test-window": "node scripts/test.js --test=window",
     "test:e2e": "npx playwright test --config playwright/playwright.config.ts",
     "tsc-watch": "tsc -w -p ./app --noEmit",
-    "build": "node app/build/build.js"
+    "build": "node app/build/build.js",
+    "policy:check": "node scripts/goreecloud-policy-check.js"
   },
   "overrides": {
     "tar": "7.5.21"
