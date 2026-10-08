@@ -49,7 +49,7 @@ export default {
             note:
               process.platform === 'linux'
                 ? localized(
-                    'On Linux you need to restart Mailspring for the tray icon to disappear.'
+                    'On Linux you need to restart GoreeCloud Mail for the tray icon to disappear.'
                   )
                 : undefined,
           },
