@@ -42,7 +42,7 @@ export function rootURLForServer(server: 'identity') {
   }
 
   if (server === 'identity') {
-    if (env !== 'development' && !legacyServicesEnabled) {
+    if (!legacyServicesEnabled) {
       throw new Error('Legacy Mailspring cloud services are disabled in GoreeCloud Mail.');
     }
     return {
