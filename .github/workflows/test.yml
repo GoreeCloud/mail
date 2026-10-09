@@ -82,6 +82,7 @@ jobs:
           retention-days: 1
 
   test:
+    needs: engine-native-build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
