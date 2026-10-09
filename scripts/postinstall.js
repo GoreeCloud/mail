@@ -3,6 +3,8 @@
 /* eslint quote-props: 0 */
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
+const { pipeline } = require('stream');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const targz = require('targz');
@@ -57,10 +59,7 @@ function getMailsyncURL(callback) {
   }[distKey];
 
   if (!distDir) {
-    console.error(
-      `\nSorry, a Mailspring Mailsync build for your machine (${distKey}) is not yet available.`
-    );
-    return;
+    throw new Error(`Mailsync build is unavailable for platform ${distKey}.`);
   }
 
   const out = execSync('git submodule status ./mailsync');
@@ -71,39 +70,88 @@ function getMailsyncURL(callback) {
 }
 
 function downloadMailsync() {
-  getMailsyncURL(distS3URL => {
-    https.get(distS3URL, response => {
-      if (response.statusCode === 200) {
-        response.pipe(fs.createWriteStream(`app/mailsync.tar.gz`));
-        response.on('end', () => {
-          console.log(
-            `\nDownloaded Mailsync prebuilt binary from ${distS3URL} to ./app/mailsync.tar.gz.`
-          );
-          targz.decompress(
-            {
-              src: `app/mailsync.tar.gz`,
-              dest: 'app/',
-            },
-            err => {
-              if (!err) {
-                console.log(`\nUnpackaged Mailsync into ./app.`);
-              } else {
-                console.error(`\nEncountered an error unpacking: ${err}`);
-              }
-            }
-          );
-        });
-      } else {
-        console.error(
-          `Sorry, an error occurred while fetching the Mailspring Mailsync build for your machine\n(${distS3URL})\n`
-        );
-        if (process.env.CI) {
-          throw new Error('Mailsync build not available.');
+  return new Promise((resolve, reject) => {
+    try {
+      getMailsyncURL(distS3URL => {
+        const archivePath = path.resolve(__dirname, '..', 'app', 'mailsync.tar.gz');
+        const temporaryPath = `${archivePath}.${process.pid}.partial`;
+        const expected = process.env.GOREECLOUD_MAIL_MAILSYNC_SHA256;
+        const releaseMode = process.env.GOREECLOUD_MAIL_RELEASE_MODE === '1';
+        let settled = false;
+
+        const fail = error => {
+          if (settled) return;
+          settled = true;
+          try { fs.unlinkSync(temporaryPath); } catch (_) {}
+          reject(error);
+        };
+
+        if (releaseMode && !expected) {
+          fail(new Error('Production Mailsync download requires a pinned SHA-256 digest.'));
+          return;
         }
-        response.pipe(process.stderr);
-        response.on('end', () => console.error('\n'));
-      }
-    });
+        if (expected && !/^[0-9a-f]{64}$/i.test(expected)) {
+          fail(new Error('Invalid Mailsync SHA-256 digest configuration.'));
+          return;
+        }
+
+        const request = https.get(distS3URL, response => {
+          if (response.statusCode !== 200) {
+            response.resume();
+            fail(new Error(`Mailsync archive fetch failed with HTTP ${response.statusCode}.`));
+            return;
+          }
+
+          const digest = crypto.createHash('sha256');
+          let bytes = 0;
+          response.on('data', chunk => {
+            bytes += chunk.length;
+            if (bytes > 250 * 1024 * 1024) {
+              response.destroy(new Error('Mailsync archive exceeds download size limit.'));
+              return;
+            }
+            digest.update(chunk);
+          });
+
+          const output = fs.createWriteStream(temporaryPath, { flags: 'wx' });
+          pipeline(response, output, err => {
+            if (err) {
+              fail(err);
+              return;
+            }
+
+            const actual = digest.digest('hex');
+            if (expected && !crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'))) {
+              fail(new Error('Mailsync archive digest mismatch.'));
+              return;
+            }
+
+            try {
+              fs.renameSync(temporaryPath, archivePath);
+            } catch (error) {
+              fail(error);
+              return;
+            }
+
+            // Archive extraction and platform-specific verification are separate
+            // release gates. An upstream archive is never production-approved
+            // solely because this development download completed.
+            targz.decompress({ src: archivePath, dest: path.dirname(archivePath) }, err => {
+              if (err) {
+                fail(err);
+                return;
+              }
+              settled = true;
+              console.log('Downloaded and extracted Mailsync development archive.');
+              resolve();
+            });
+          });
+        });
+        request.on('error', fail);
+      });
+    } catch (error) {
+      reject(error);
+    }
   });
 }
 
@@ -165,7 +213,7 @@ async function run() {
   // the binary for their operating system that was shipped to S3.
   if (!fs.existsSync('./mailsync/build.sh')) {
     console.log(`\n-- Downloading the last released version of Mailspring mailsync --`);
-    downloadMailsync();
+    await downloadMailsync();
   } else {
     console.log(
       `\n-- You have the Mailspring mailsync submodule. If you'd prefer ` +
