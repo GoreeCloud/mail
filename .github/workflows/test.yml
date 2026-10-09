@@ -14,6 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  engine-source-patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out pinned GPLv3 engine source
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Verify GoreeCloud Mail engine patch applies cleanly
+        run: bash scripts/prepare-native-mailsync.sh
+
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
