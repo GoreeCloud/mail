@@ -357,6 +357,7 @@ export class MailsyncProcess extends EventEmitter {
     const error = new Error(
       `${localized(`An unknown error has occurred`)} mailsync: ${exitDescription}. ${rawLog}`
     );
+    (error as any).engineExitStatus = code;
     (error as any).rawLog = rawLog;
     return error;
   }

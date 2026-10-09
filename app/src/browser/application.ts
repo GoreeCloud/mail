@@ -103,6 +103,10 @@ export default class Application extends EventEmitter {
         // A modal warning cannot be answered under headless xvfb. A failed
         // migration must fail the test run instead of stalling indefinitely.
         console.error('GoreeCloud Mail specs: mailsync migration failed; exiting without modal.');
+        console.error(
+          'GoreeCloud Mail specs: sanitized migration error code:',
+          (err as any)?.engineExitStatus ?? (err as any)?.code ?? 'unknown'
+        );
         app.exit(1);
         return;
       }
@@ -200,11 +204,14 @@ export default class Application extends EventEmitter {
       this.openUrl(pendingUrl);
     }
 
-    if (process.platform === 'linux') {
-      const helper = new DefaultClientHelper();
-      helper.registerForURLScheme('mailspring');
-    } else {
-      app.setAsDefaultProtocolClient('mailspring');
+    // The test runner must not change the OS-wide URL/protocol handler.
+    if (!this.specMode) {
+      if (process.platform === 'linux') {
+        const helper = new DefaultClientHelper();
+        helper.registerForURLScheme('mailspring');
+      } else {
+        app.setAsDefaultProtocolClient('mailspring');
+      }
     }
   }
 
@@ -1118,9 +1125,9 @@ export default class Application extends EventEmitter {
       );
     }
 
-    // Important: Use .mailspring-spec instead of .mailspring-mail to avoid overwriting the
-    // user's real email config!
-    const configDirPath = path.join(app.getPath('home'), '.mailspring-spec');
+    // Keep GoreeCloud Mail test data separate from personal mail profiles
+    // and legacy Mailspring installations; never reuse a real mailbox path.
+    const configDirPath = path.join(app.getPath('home'), '.goreecloud-mail-spec');
 
     specWindowOptions.resourcePath = resourcePath;
     specWindowOptions.configDirPath = configDirPath;
