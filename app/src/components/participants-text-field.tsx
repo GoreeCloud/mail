@@ -1,0 +1,254 @@
+import React from 'react';
+import { ipcRenderer } from 'electron';
+import {
+  localized,
+  Utils,
+  Contact,
+  ContactStore,
+  RegExpUtils,
+  Message,
+  DraftEditingSession,
+  ContactGroup,
+  DatabaseStore,
+} from 'mailspring-exports';
+import { TokenizingTextField, Menu, InjectedComponentSet } from 'mailspring-component-kit';
+
+const TokenRenderer = (props: { token: object }) => {
+  const contact = props.token as Contact;
+  let chipText = contact.email;
+  if (contact.name && contact.name.length > 0 && contact.name !== contact.email) {
+    chipText = contact.fullName();
+  }
+  return (
+    <div className="participant">
+      <InjectedComponentSet
+        matching={{ role: 'Composer:RecipientChip' }}
+        exposedProps={{ contact: props.token, collapsed: false }}
+        direction="row"
+        inline
+      />
+      <span className="participant-primary">{chipText}</span>
+    </div>
+  );
+};
+
+type ParticipantsTextFieldProps = {
+  field?: string;
+  label?: string;
+  participants: { to: Contact[]; cc: Contact[]; bcc: Contact[]; replyTo: Contact[] };
+  change: (...args: any[]) => any;
+  className?: string;
+  onEmptied?: (...args: any[]) => any;
+  onFocus?: (...args: any[]) => any;
+  draft?: Message;
+  session?: DraftEditingSession;
+};
+
+export default class ParticipantsTextField extends React.Component<ParticipantsTextFieldProps> {
+  static displayName = 'ParticipantsTextField';
+
+  _textfieldEl?: TokenizingTextField<Contact>;
+
+  static defaultProps = {
+    visible: true,
+  };
+
+  shouldComponentUpdate(nextProps: ParticipantsTextFieldProps, nextState: Record<string, unknown>) {
+    return !Utils.isEqualReact(nextProps, this.props) || !Utils.isEqualReact(nextState, this.state);
+  }
+
+  // Public. Can be called by any component that has a ref to this one to
+  // focus the input field.
+  focus = () => {
+    this._textfieldEl.focus();
+  };
+
+  _completionNode = (
+    p: (Contact | ContactGroup) & { customComponent?: React.ComponentType<any> }
+  ) => {
+    const CustomComponent = p.customComponent;
+    if (CustomComponent) return <CustomComponent token={p} />;
+    if (p instanceof Contact) {
+      return <Menu.NameEmailContent name={p.fullName()} email={p.email} key={p.id} />;
+    } else if (p instanceof ContactGroup) {
+      return p.name;
+    }
+  };
+
+  _tokensForString = async (string: string, options: Record<string, unknown> = {}) => {
+    // If the input is a string, parse out email addresses and build
+    // an array of contact objects. For each email address wrapped in
+    // parentheses, look for a preceding name, if one exists.
+    if (string.length === 0) {
+      return [];
+    }
+
+    const contacts = await ContactStore.parseContactsInString(string, options);
+    if (contacts.length > 0) {
+      return contacts;
+    }
+
+    // If no contacts are returned, treat the entire string as a single
+    // (malformed) contact object.
+    return [new Contact({ email: string, name: null })];
+  };
+
+  _remove = (values: (string | Contact)[]) => {
+    const field = this.props.field;
+    const updates = {};
+    updates[field] = this.props.participants[field].filter(
+      (p) =>
+        !(
+          values.includes(p.email) ||
+          values.map((o) => (typeof o === 'string' ? o : o.email)).includes(p.email)
+        )
+    );
+    this.props.change(updates);
+  };
+
+  _edit = async (token: Contact, replacementString: string) => {
+    const field = this.props.field;
+    const tokenIndex = this.props.participants[field].indexOf(token);
+
+    const replacements = await this._tokensForString(replacementString);
+    const updates = {};
+    updates[field] = [...this.props.participants[field]];
+    updates[field].splice(tokenIndex, 1, ...replacements);
+    this.props.change(updates);
+  };
+
+  _add = (values: string | (Contact | ContactGroup)[], options: Record<string, unknown> = {}) => {
+    // It's important we return here (as opposed to ignoring the
+    // `this.props.change` callback) because this method is asynchronous.
+
+    // The `tokensPromise` may be formed with an empty draft, but resolved
+    // after a draft was prepared. This would cause the bad data to be
+    // propagated.
+
+    // If the input is a string, parse out email addresses and build
+    // an array of contact objects. For each email address wrapped in
+    // parentheses, look for a preceding name, if one exists.
+    let tokensPromise = null;
+    if (typeof values === 'string') {
+      tokensPromise = this._tokensForString(values, options);
+    } else {
+      tokensPromise = Promise.resolve(values);
+    }
+
+    tokensPromise.then(async (tokens) => {
+      // Safety check: remove anything from the incoming tokens that isn't
+      // a Contact. We should never receive anything else in the tokens array.
+      const contactTokens = tokens.filter((value) => value instanceof Contact);
+      const groupTokens = tokens.filter((value) => value instanceof ContactGroup);
+
+      // convert the group tokens into contact tokens
+      const contactsFromGroups = await DatabaseStore.findAll<Contact>(Contact, [
+        Contact.attributes.contactGroups.containsAny(groupTokens.map((g) => g.id)),
+      ]);
+
+      contactTokens.push(...contactsFromGroups);
+
+      const updates = {};
+      for (const field of Object.keys(this.props.participants)) {
+        updates[field] = [...this.props.participants[field]];
+      }
+
+      for (const token of contactTokens) {
+        // first remove the participant from all the fields. This ensures
+        // that drag and drop isn't "drag and copy." and you can't have the
+        // same recipient in multiple places.
+        for (const field of Object.keys(this.props.participants)) {
+          updates[field] = updates[field].filter((p) => p.email !== token.email);
+        }
+
+        // add the participant to field
+        updates[this.props.field] = [...updates[this.props.field], token];
+      }
+
+      this.props.change(updates);
+    });
+
+    return '';
+  };
+
+  _onShowContextMenu = (participant: Contact) => {
+    // Warning: Menu is already initialized as Menu.ts!
+    const MenuClass = require('@electron/remote').Menu;
+    const MenuItem = require('@electron/remote').MenuItem;
+    const clipboard = require('@electron/remote').clipboard;
+
+    const menu = new MenuClass();
+    menu.append(
+      new MenuItem({
+        label: `${localized(`Copy`)} ${participant.email}`,
+        click: () => clipboard.writeText(participant.email),
+      })
+    );
+    menu.append(
+      new MenuItem({
+        type: 'separator',
+      })
+    );
+    menu.append(
+      new MenuItem({
+        label: localized('Remove'),
+        click: () => this._remove([participant]),
+      })
+    );
+    menu.popup({});
+  };
+
+  _onInputTrySubmit = (
+    inputValue: string,
+    completions: (Contact | ContactGroup)[] = [],
+    selectedItem: Contact | ContactGroup | null
+  ) => {
+    if (RegExpUtils.emailRegex().test(inputValue)) {
+      return inputValue; // no token default to raw value.
+    }
+    return selectedItem || completions[0]; // first completion if any
+  };
+
+  _shouldBreakOnKeydown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const val = (event.target as HTMLInputElement).value.trim();
+    if (RegExpUtils.emailRegex().test(val) && event.key === ' ') {
+      return true;
+    }
+    return [',', ';'].includes(event.key);
+  };
+
+  render() {
+    return (
+      <div className={this.props.className}>
+        <TokenizingTextField<Contact>
+          ref={(el) => {
+            this._textfieldEl = el;
+          }}
+          tokens={this.props.participants[this.props.field]}
+          tokenKey={(p) => p.email || p.id}
+          tokenIsValid={(p) => ContactStore.isValidContact(p)}
+          tokenRenderer={TokenRenderer}
+          onRequestCompletions={async (input) =>
+            (
+              await Promise.all([
+                ContactStore.searchContactGroups(input),
+                ContactStore.searchContacts(input),
+              ])
+            ).flat()
+          }
+          shouldBreakOnKeydown={this._shouldBreakOnKeydown}
+          onInputTrySubmit={this._onInputTrySubmit}
+          completionNode={this._completionNode}
+          onAdd={this._add}
+          onRemove={this._remove}
+          onEdit={this._edit}
+          onEmptied={this.props.onEmptied}
+          onFocus={this.props.onFocus}
+          onTokenAction={this._onShowContextMenu}
+          className={this.props.field}
+          label={this.props.label}
+        />
+      </div>
+    );
+  }
+}

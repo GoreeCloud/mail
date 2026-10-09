@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "identity": "Courier",
+  "product": "GoreeCloud Mail",
+  "repository": "GoreeCloud/mail",
+  "separateApplication": false,
+  "separateRepository": false,
+  "mailProvider": false,
+  "mailServer": false,
+  "purpose": "first-party mail capability identity",
+  "glazeTarget": "1.7.0",
+  "lifecycle": "active-development"
+}

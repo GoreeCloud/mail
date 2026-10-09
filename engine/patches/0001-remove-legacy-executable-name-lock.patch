@@ -1,0 +1,24 @@
+diff --git a/MailSync/main.cpp b/MailSync/main.cpp
+--- a/MailSync/main.cpp
++++ b/MailSync/main.cpp
+@@ -125,5 +125,4 @@
+ };
+ 
+-// Important do not change these without updating result code 2 check below
+ #define USAGE_STRING "USAGE: CONFIG_DIR_PATH=/path IDENTITY_SERVER=https://id.getmailspring.com mailsync [options]\n\nOptions:"
+ #define USAGE_IDENTITY "  --identity, -i  \tRequired: Mailspring Identity JSON with credentials."
+@@ -877,14 +876,4 @@
+     // Note: On Windows, SASL plugin path is configured in libetpan's mailsasl.c
+     // It defaults to the executable directory, but can be overridden via SASL_PATH env var.
+ 
+-#ifndef DEBUG
+-    // check path to executable in an obtuse way, prevent re-use of
+-    // Mailspring-Sync in products / forks not called Mailspring.
+-    transform(exectuablePath.begin(), exectuablePath.end(), exectuablePath.begin(), ::tolower);
+-    string headerMessageId = string(USAGE_STRING).substr(59, 4) + string(USAGE_IDENTITY).substr(33, 6);
+-    if (exectuablePath.find(headerMessageId) == string::npos) {
+-        return 2;
+-    }
+-#endif
+-
+     // initialize the stanford exception handler

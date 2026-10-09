@@ -1,0 +1,504 @@
+import React from 'react';
+import ReactDOM from 'react-dom';
+import * as Immutable from 'immutable';
+import { Editor, Value, Operation, Range, Block, Text, Point } from 'slate';
+import { Editor as SlateEditorComponent, EditorProps, Plugin } from 'slate-react';
+import Plain from 'slate-plain-serializer';
+import { webUtils } from 'electron';
+import { InlineStyleTransformer, SanitizeTransformer } from 'mailspring-exports';
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
+import { debounce } from 'underscore';
+
+import { KeyCommandsRegion } from '../key-commands-region';
+import ComposerEditorToolbar from './composer-editor-toolbar';
+import { schema, plugins, convertFromHTML, convertToHTML, convertToPlainText } from './conversion';
+import { lastUnquotedNode, removeQuotedText, isQuoteNode } from './base-block-plugins';
+import { UNEDITABLE_TYPE } from './uneditable-plugins';
+import { changes as InlineAttachmentChanges } from './inline-attachment-plugins';
+
+// Returns a reason string if the document needs recovery, or null if it's fine.
+function getDocumentBrokenReason(value: Value): string | null {
+  const { document } = value;
+  const firstText = document.getFirstText();
+
+  // Case 1: no text nodes at all (e.g. user deleted all content before schema normalization ran)
+  if (!firstText) {
+    return 'document has no text nodes';
+  }
+
+  // Case 2: every text node is inside quoted or uneditable content (e.g. user deleted all
+  // their own text and only the collapsed quoted-text blockquote remains). Placing the cursor
+  // inside those nodes would land in hidden/read-only content.
+  const ancestors = document.getAncestors(firstText.key);
+  if (
+    ancestors.some((a) => a.object === 'block' && (isQuoteNode(a) || a.type === UNEDITABLE_TYPE))
+  ) {
+    return 'first text node is inside quoted/uneditable content';
+  }
+
+  return null;
+}
+
+// Returns true if the value's selection anchor or focus point has become "unset"
+// (key === null). This happens when a plugin calls `editor.removeNodeByKey` on the
+// exact node the selection anchor/focus was pointing into — eg. removing a template
+// variable, toggling quoted text, or removing an attachment/uneditable block — without
+// explicitly moving the selection somewhere else afterwards. Slate's `Value#removeNode`
+// unsets any point in the removed subtree that has no previous/next text to fall back
+// on, and Slate's point normalization then intentionally leaves that unset point alone
+// rather than guessing a replacement. If we don't repair it here, the very next
+// keystroke crashes deep inside Slate's `deleteExpandedAtRange` (`Point.moveTo` calling
+// `.equals` on a null path) with "Cannot read properties of null (reading 'equals')"
+// (MAILSPRING-CLIENT-1E).
+//
+// NOTE: a fully-unset-but-focused selection isn't unique to this bug — slate-react's
+// own `AfterPlugin.onFocus` intentionally calls `editor.deselect().focus()` on every
+// mouse-down focus (to stop a stale selection from blocking the upcoming native
+// `selectionchange`), which produces the exact same unset shape. That transient state
+// is harmless and self-corrects once the native selection lands, so we must not treat
+// every unset selection as broken — only recover when `operations` shows a `remove_node`
+// actually ran, since that's the only operation whose point clean-up (`Value#removeNode`)
+// can leave a point permanently unset instead of re-anchoring it.
+function isSelectionBroken(value: Value, operations: Immutable.List<Operation>): boolean {
+  const { anchor, focus } = value.selection;
+  const isUnset = anchor.key == null || focus.key == null;
+  return isUnset && operations.some((op) => op.type === 'remove_node');
+}
+
+const AEditor = SlateEditorComponent as any as React.ComponentType<
+  EditorProps & { ref: any; propsForPlugins: any }
+>;
+
+export function normalizePlainTextForPaste(text: string) {
+  return text.replace(/\r\n?/g, '\n');
+}
+
+interface ComposerEditorProps {
+  value: Value;
+  propsForPlugins: any;
+  onChange: (change: { operations: Immutable.List<Operation>; value: Value }) => void;
+  className?: string;
+  readOnly?: boolean;
+  onBlur?: (e: React.FocusEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onFileReceived?: (path: string) => void;
+  onUpdatedSlateEditor?: (editor: Editor | null) => void;
+}
+
+interface ComposerEditorState {
+  isTyping: boolean;
+}
+
+export class ComposerEditor extends React.Component<ComposerEditorProps, ComposerEditorState> {
+  // Public API
+
+  _pluginKeyHandlers = {};
+  _mounted = false;
+  editor: Editor | null = null;
+  state: ComposerEditorState = { isTyping: false };
+
+  _onDoneTyping = debounce(() => {
+    if (this._mounted) {
+      this.setState({ isTyping: false });
+    }
+  }, 800);
+
+  constructor(props) {
+    super(props);
+
+    // Bind the commands specified by the plugins to the props of this instance.
+    // Note that we cache these between renders so we don't remove and re-add them
+    // every render.
+    this._pluginKeyHandlers = {};
+    plugins.forEach((plugin) => {
+      if (!plugin.appCommands) return;
+      Object.entries(plugin.appCommands).forEach(
+        ([command, handler]: [string, (event: any, val: any) => any]) => {
+          this._pluginKeyHandlers[command] = (event: CustomEvent) => {
+            if (!this._mounted) return;
+            handler(event, this.editor);
+          };
+        }
+      );
+    });
+  }
+
+  componentDidMount() {
+    this._mounted = true;
+    this.props.onUpdatedSlateEditor && this.props.onUpdatedSlateEditor(this.editor);
+
+    // This is a bit of a hack. The toolbar requires access to the Editor model,
+    // which IS the Editor component in `slate-react`. It seems silly to copy a ref
+    // into state, but we need to re-render once after mount when we have it.
+    this.forceUpdate();
+  }
+
+  componentWillUnmount() {
+    this._mounted = false;
+    this.props.onUpdatedSlateEditor && this.props.onUpdatedSlateEditor(null);
+
+    // We need to explicitly blur the editor so that it saves a new selection (null)
+    // and doesn't try to restore the selection / steal focus when you navigate to
+    // the thread again.
+
+    const editorEl = ReactDOM.findDOMNode(this.editor as any);
+    if (editorEl && editorEl.contains(document.getSelection().anchorNode)) {
+      this.props.onChange({
+        operations: Immutable.List([]),
+        value: this.editor.deselect().blur().value,
+      });
+    }
+  }
+
+  focus = () => {
+    this.editor.focus().moveToRangeOfDocument().moveToStart();
+  };
+
+  focusEndReplyText = () => {
+    window.requestAnimationFrame(() => {
+      const node = lastUnquotedNode(this.editor.value);
+      if (!node) return;
+      this.editor.moveToEndOfNode(node).focus();
+    });
+  };
+
+  focusEndAbsolute = () => {
+    window.requestAnimationFrame(() => {
+      this.editor.moveToRangeOfDocument().moveToEnd().focus();
+    });
+  };
+
+  removeQuotedText = () => {
+    removeQuotedText(this.editor);
+  };
+
+  insertInlineAttachment = (file) => {
+    InlineAttachmentChanges.insert(this.editor, file);
+  };
+
+  onFocusIfBlurred = (_event: React.MouseEvent<HTMLDivElement>) => {
+    if (!this.props.value.selection.isFocused) {
+      this.focus();
+    }
+  };
+
+  onKeyDown = (event, editor: Editor, next: () => void) => {
+    // When the user types, disable spellcheck to avoid performance issues.
+    // After they stop typing for 800ms, re-enable it.
+    //
+    // IMPORTANT: We use requestAnimationFrame to defer the setState call because
+    // changing the spellCheck attribute on a contenteditable element synchronously
+    // during a key event can cause Chromium to lose focus or interfere with event
+    // processing, resulting in "swallowed" keystrokes (especially Enter and Backspace).
+    // By deferring to the next frame, we ensure the key event is fully processed
+    // before React re-renders and changes the spellCheck attribute.
+    //
+    // Navigation keys (Home, End, arrow keys, etc.) do not produce text and do not
+    // benefit from disabling spellcheck. More importantly, toggling spellCheck on a
+    // contenteditable causes Chromium to reset the cursor/selection, which means the
+    // first Home/End press after 800ms of inactivity would be "eaten" by the spellCheck
+    // re-render. We skip the isTyping transition for these keys to avoid that.
+    const isNavigationKey = [
+      'Home',
+      'End',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'PageUp',
+      'PageDown',
+    ].includes(event.key);
+    if (!isNavigationKey && !this.state.isTyping) {
+      requestAnimationFrame(() => {
+        if (this._mounted && !this.state.isTyping) {
+          this.setState({ isTyping: true });
+        }
+      });
+    }
+    if (!isNavigationKey) {
+      this._onDoneTyping();
+    }
+    return next();
+  };
+
+  onCopy = (event, editor: Editor, next: () => void) => {
+    const sel = document.getSelection();
+
+    // copying within an uneditable region of the composer (eg: quoted HTML email)
+    // is handled by the browser on it's own. We only need to copy the Slate
+    // value if the selection is in the editable region.
+    const entirelyWithinUneditable =
+      sel.anchorNode.parentElement.closest('.uneditable') &&
+      sel.focusNode.parentElement.closest('.uneditable');
+    if (entirelyWithinUneditable) return;
+
+    event.preventDefault();
+
+    const range = editor.value.selection as any as Range;
+    const fragment = editor.value.document.getFragmentAtRange(range);
+    const value = Value.create({ document: fragment });
+    const text = convertToPlainText(value);
+    if (text) {
+      event.clipboardData.setData('text/html', convertToHTML(value));
+      event.clipboardData.setData('text/plain', text);
+    } else {
+      // Don't blow away the current contents of the user's clipboard if the
+      // current editor selection has no text at all.
+    }
+
+    // Allow slate to attach it's own data, which it can use to paste nicely
+    // if the paste target is the editor.
+    next();
+  };
+
+  onCut = (event, editor: Editor, next: () => void) => {
+    // Run our clipboard setup without advancing the slate plugin chain.
+    // We must call next() exactly once below — onCopy would call it a second
+    // time if we passed the real next, causing cloneFragment to run twice and
+    // crash with "Cannot read properties of undefined (reading 'firstChild')".
+    this.onCopy(event, editor, () => {});
+
+    // Advance the chain once so Slate can attach its fragment data and delete
+    // the selected text (the actual "cut" behavior).
+    next();
+  };
+
+  onPaste = (event, editor: Editor, next: () => void) => {
+    const { onFileReceived } = this.props;
+
+    // If the copy event originated in the editor, let Slate handle the paste
+    // rather than falling back to text+html deserialization.
+    if (event.clipboardData.types.includes('application/x-slate-fragment')) {
+      return next();
+    }
+
+    if (onFileReceived && shouldAttachPastedFile(event.clipboardData)) {
+      event.preventDefault();
+      if (handleFilePasted(event, onFileReceived)) {
+        return;
+      }
+    }
+
+    let html = event.clipboardData.getData('text/html');
+
+    if (html) {
+      // Strip event handlers and disallowed tags before this HTML is rendered — the composer
+      // runs with nodeIntegration so an <img onerror=...> in pasted HTML would execute with
+      // full Node access once it lands inside an uneditable block.
+      html = SanitizeTransformer.runSync(html);
+
+      // Unfortuantely, pasting HTML requires an synchronous hop through our main process style
+      // transfomer. This ensures that we inline styles and preserve as much as possible.
+      // (eg: pasting tables from Excel).
+      try {
+        html = InlineStyleTransformer.runSync(html);
+      } catch (err) {
+        //no-op
+      }
+      const value = convertFromHTML(html);
+      if (value && value.document) {
+        editor.insertFragment(value.document);
+        event.preventDefault();
+        return;
+      }
+    }
+
+    // Slate's plain-text paste handler splits on `\n` without first normalizing Windows
+    // CRLF line endings. This leaves a stray `\r` in every block; a blank line becomes a
+    // block containing only `\r`, which our HTML serializer later emits as `&nbsp;`.
+    // Handle plain text here so the editor model, composer preview, and sent HTML all
+    // represent blank lines the same way.
+    const text = event.clipboardData.getData('text/plain');
+    if (text) {
+      const { document, selection, startBlock } = editor.value;
+      // Slate's runtime Editor includes isVoid, but the TypeScript declaration omits it.
+      if (!startBlock || (editor as any)?.isVoid(startBlock)) return next();
+
+      const fragment = Plain.deserialize(normalizePlainTextForPaste(text), {
+        defaultBlock: startBlock as any,
+        defaultMarks: document.getInsertMarksAtRange(selection as any) as any,
+      }).document;
+
+      editor.insertFragment(fragment);
+      event.preventDefault();
+      return;
+    }
+
+    // Fall back to Slate for clipboard types we do not handle.
+    return next();
+  };
+
+  onChange = (change: { operations: Immutable.List<Operation>; value: Value }) => {
+    // This needs to be here because some composer plugins defer their calls to onChange
+    // (like spellcheck and the context menu).
+    if (!this._mounted) return;
+
+    // If the incoming value is broken, apply recovery operations directly to `value`
+    // before forwarding to the parent. This emits a single onChange with the already-
+    // corrected value rather than emitting the broken value and then a second onChange
+    // from a deferred microtask (which is what would happen if we called editor commands
+    // here). The parent therefore never sees the broken state, and any recovery operation
+    // that changes the document is included in the operations list so the parent knows
+    // the document changed and doesn't skip saving.
+    let { operations, value } = change;
+
+    const reason = getDocumentBrokenReason(value);
+    if (reason) {
+      console.warn(`ComposerEditor: ${reason}, inserting empty paragraph to recover.`);
+      const op = require('slate').Operation.create({
+        type: 'insert_node',
+        path: Immutable.List([0]),
+        node: Block.create({ type: 'div', nodes: Immutable.List([Text.create('')]) }),
+      });
+      operations = operations.push(op);
+      value = op.apply(value);
+    }
+
+    // Same idea as above, but for a broken selection rather than a broken document: move
+    // the dangling anchor/focus back to the start of the document so the next keystroke
+    // doesn't crash inside Slate. This check must run on `value` (which may have just been
+    // repaired above), not the original `change.value` — removing the last text-carrying
+    // node from the document unsets the selection *and* triggers the document-broken repair
+    // in the same change, and inserting the recovery paragraph does not re-anchor a
+    // previously-unset selection point, so the selection would still be broken afterwards.
+    if (isSelectionBroken(value, change.operations)) {
+      console.warn(
+        `ComposerEditor: selection has an unset anchor or focus, moving to the start of the document to recover.`
+      );
+      const firstText = value.document.getFirstText();
+      const point = Point.create({ key: firstText.key, offset: 0 });
+      value = value.setSelection({ anchor: point, focus: point });
+    }
+
+    if (value !== change.value) {
+      this.props.onChange({ operations, value });
+      return;
+    }
+
+    this.props.onChange(change);
+  };
+
+  // Event Handlers
+  render() {
+    const { className, onBlur, onDrop, value, propsForPlugins, readOnly } = this.props;
+
+    const PluginTopComponents = this.editor ? plugins.filter((p) => p.topLevelComponent) : [];
+
+    return (
+      <KeyCommandsRegion
+        className={`RichEditor-root ${className || ''}`}
+        localHandlers={this._pluginKeyHandlers}
+      >
+        {this.editor && (
+          <ComposerEditorToolbar editor={this.editor} plugins={plugins} value={value} />
+        )}
+        <div className="RichEditor-content" onClick={this.onFocusIfBlurred}>
+          {this.editor &&
+            PluginTopComponents.map((p, idx) => (
+              <p.topLevelComponent key={idx} value={value} editor={this.editor} />
+            ))}
+          <AEditor
+            ref={(editor) => (this.editor = editor)}
+            schema={schema}
+            readOnly={readOnly}
+            value={value}
+            onChange={this.onChange}
+            onBlur={(e: any, editor, next) => {
+              if (onBlur) onBlur(e as React.FocusEvent<any>);
+              if (!e.isPropagationStopped()) next();
+            }}
+            onDrop={(e: any, editor, next) => {
+              if (onDrop) onDrop(e as React.DragEvent<any>);
+              if (!e.isPropagationStopped()) next();
+            }}
+            onKeyDown={this.onKeyDown as any}
+            onCut={this.onCut as any}
+            onCopy={this.onCopy as any}
+            onPaste={this.onPaste as any}
+            spellCheck={!this.state.isTyping && AppEnv.config.get('core.composing.spellcheck')}
+            plugins={plugins as any as Plugin[]}
+            propsForPlugins={propsForPlugins}
+          />
+        </div>
+      </KeyCommandsRegion>
+    );
+  }
+}
+
+// Helpers
+
+// Excel, Numbers and LibreOffice Calc put both an HTML table and a rendered image of
+// the selection on the clipboard; the table is what the user wants. Chrome's "Copy Image"
+// also sets text/html, but only to a bare <img> with no text (PR #2104), so that case
+// must still attach the image file. An empty <table> still counts: Excel emits one for
+// blank cell ranges and pasting it beats attaching a picture of blank cells.
+//
+// Parsing unsanitized HTML here is safe: a DOMParser document has no browsing context
+// and scripting is disabled, so nothing loads or executes (DOMPurify relies on the same).
+export function clipboardHasRichText(clipboardData: DataTransfer) {
+  const html = clipboardData.getData('text/html');
+  if (!html) return false;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('style, script').forEach((el) => el.remove());
+  return !!doc.querySelector('table') || doc.body.textContent.trim().length > 0;
+}
+
+export function extensionForClipboardMimeType(mimeType: string): string {
+  return (
+    {
+      'image/png': '.png',
+      'image/jpeg': '.jpeg',
+      'image/jpg': '.jpg', // some Windows clipboard sources still report this
+      'image/gif': '.gif',
+      'image/bmp': '.bmp',
+      'image/webp': '.webp',
+      'image/tiff': '.tiff',
+    }[mimeType] || ''
+  );
+}
+
+// Only arbitrate between file and HTML when the clipboard actually carries a file item;
+// string-only pastes skip the extra parse entirely.
+export function shouldAttachPastedFile(clipboardData: DataTransfer) {
+  const hasFileItem = Array.from(clipboardData.items).some((i) => i.kind === 'file');
+  return hasFileItem && !clipboardHasRichText(clipboardData);
+}
+
+export function handleFilePasted(event: ClipboardEvent, onFileReceived: (path: string) => void) {
+  // See https://github.com/Foundry376/Mailspring/pull/2104 - if you right-click + Copy Image in Chrome,
+  // the image file is item 1, not item 0. Every file item is attached so that copying several
+  // files in Finder / Explorer / a Linux file manager pastes all of them.
+  const fileItems = Array.from(event.clipboardData.items).filter((item) => item.kind === 'file');
+
+  for (const item of fileItems) {
+    const blob = item.getAsFile();
+
+    // Chromium exposes files copied in a file manager as file items backed by the real
+    // file. Attach those by path so the original filename is kept; only pasteboard-only
+    // blobs (screenshots) need a temp copy.
+    const existingPath = webUtils.getPathForFile(blob);
+    if (existingPath) {
+      onFileReceived(existingPath);
+      continue;
+    }
+
+    const ext = extensionForClipboardMimeType(item.type);
+
+    const reader = new FileReader();
+    reader.addEventListener('loadend', () => {
+      const buffer = Buffer.from(new Uint8Array(reader.result as any));
+      const tmpFolder = path.join(os.tmpdir(), `-mailspring-attachment-${crypto.randomUUID()}`);
+      const tmpPath = path.join(tmpFolder, `Pasted File${ext}`);
+      fs.mkdir(tmpFolder, () => {
+        fs.writeFile(tmpPath, buffer, () => {
+          onFileReceived(tmpPath);
+        });
+      });
+    });
+    reader.readAsArrayBuffer(blob);
+  }
+
+  return fileItems.length > 0;
+}

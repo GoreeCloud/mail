@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id><%= name %></id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <name><%= productName %></name>
+  <summary><%= description %></summary>
+  <description>
+    <p>GoreeCloud Mail is a provider-independent desktop email client focused on privacy, offline-capable workflows, accessibility, security, and open interoperability.</p>
+    <p>The application is undergoing a documented Fork-to-Native transition from Mailspring. Upstream provenance and licensing are preserved while GoreeCloud progressively owns the product architecture, trust boundaries, experience, and platform integration.</p>
+  </description>
+  <url type="homepage">https://github.com/GoreeCloud/mail</url>
+  <url type="bugtracker">https://github.com/GoreeCloud/mail/issues</url>
+  <url type="contribute">https://github.com/GoreeCloud/mail/blob/main/CONTRIBUTING.md</url>
+  <url type="vcs-browser">https://github.com/GoreeCloud/mail</url>
+  <launchable type="desktop-id"><%= desktopName %></launchable>
+  <developer id="io.goreecloud"><name>GoreeCloud</name></developer>
+  <content_rating type="oars-1.1" />
+</component>

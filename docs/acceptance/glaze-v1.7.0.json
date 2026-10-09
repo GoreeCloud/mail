@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "consumer": "GoreeCloud Mail",
+  "repository": "GoreeCloud/mail",
+  "requiredTargetVersion": "1.7.0",
+  "reviewedGlazeRevision": "cf35eeb82659fbc6b16f9881e6a5f68f7e5f473e",
+  "status": "adoption-required",
+  "referenceRevision": null,
+  "productionEligible": false,
+  "accepted": false,
+  "evidence": {
+    "rendered": "pending",
+    "accessibility": "pending",
+    "representativePlatform": "pending",
+    "performance": "pending",
+    "privacySecurity": "pending",
+    "rollback": "pending",
+    "humanVisual": "pending"
+  },
+  "notes": "Mail-specific Glaze integration is an implementation foundation only. Fresh consumer acceptance is required."
+}

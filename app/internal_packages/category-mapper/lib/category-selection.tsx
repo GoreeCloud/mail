@@ -1,0 +1,123 @@
+import React from 'react';
+import {
+  RetinaImg,
+  DropdownMenu,
+  LabelColorizer,
+  BoldedSearchResult,
+} from 'mailspring-component-kit';
+import { localized, Label, Utils, imapUtf7 } from 'mailspring-exports';
+
+interface CategorySelectionProps {
+  allowLabels: boolean;
+  all: CategoryItem[];
+  current: CategoryItem;
+  onSelect: (item: CategoryItem) => void;
+}
+
+interface CategorySelectionState {
+  searchValue: string;
+}
+
+type CategoryItem = {
+  backgroundColor?: string;
+  empty?: boolean;
+  path?: string;
+  name?: string;
+};
+
+export default class CategorySelection extends React.Component<
+  CategorySelectionProps,
+  CategorySelectionState
+> {
+  _categories = [];
+
+  state = {
+    searchValue: '',
+  };
+
+  _itemsForCategories(): CategoryItem[] {
+    // Compile the search regex once and reuse it across the .filter below.
+    const searchRe = Utils.wordSearchRegExp(this.state.searchValue);
+    return this.props.all
+      .sort((a, b) => {
+        const pathA = imapUtf7.decode(a.path).toUpperCase();
+        const pathB = imapUtf7.decode(b.path).toUpperCase();
+        if (pathA < pathB) {
+          return -1;
+        }
+        if (pathA > pathB) {
+          return 1;
+        }
+        return 0;
+      })
+      .filter((c) => searchRe.test(imapUtf7.decode(c.path)))
+      .map((c) => {
+        c.backgroundColor = LabelColorizer.backgroundColorDark(c);
+        return c;
+      });
+  }
+
+  _onSearchValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ searchValue: event.target.value });
+  };
+
+  _renderItem = (item: CategoryItem = { empty: true }) => {
+    let icon;
+    if (item.empty) {
+      icon = <div className="empty-icon" />;
+      item.path = `(${localized('None')})`;
+    } else {
+      icon = (
+        <RetinaImg
+          name={`${item.name}.png`}
+          fallback={item instanceof Label ? 'tag.png' : 'folder.png'}
+          mode={RetinaImg.Mode.ContentIsMask}
+        />
+      );
+    }
+
+    const displayPath = imapUtf7.decode(item.path);
+
+    return (
+      <div className="category-item">
+        {icon}
+        <div className="category-display-name">
+          <BoldedSearchResult value={displayPath} query={this.state.searchValue || ''} />
+        </div>
+      </div>
+    );
+  };
+
+  render() {
+    const placeholder = this.props.allowLabels
+      ? localized('Choose folder or label')
+      : localized('Choose folder');
+
+    const headerComponents = [
+      <input
+        type="text"
+        tabIndex={-1}
+        key="textfield"
+        className="search"
+        placeholder={placeholder}
+        value={this.state.searchValue}
+        onChange={this._onSearchValueChange}
+      />,
+    ];
+
+    return (
+      <div className="category-picker-dropdown">
+        <DropdownMenu
+          intitialSelectionItem={this.props.current || { empty: true }}
+          headerComponents={headerComponents}
+          footerComponents={[]}
+          items={this._itemsForCategories()}
+          itemKey={(item) => item.id}
+          itemContent={this._renderItem}
+          defaultSelectedIndex={this.state.searchValue === '' ? -1 : 0}
+          {...this.props}
+        />
+      </div>
+    );
+  }
+}

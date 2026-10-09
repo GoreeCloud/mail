@@ -1,0 +1,14 @@
+{
+  "calendar:move-event-up": "up",
+  "calendar:move-event-down": "down",
+  "calendar:move-event-left": "left",
+  "calendar:move-event-right": "right",
+  "calendar:resize-event-up": "shift+up",
+  "calendar:resize-event-down": "shift+down",
+  "calendar:resize-event-left": "shift+left",
+  "calendar:resize-event-right": "shift+right",
+  "calendar:go-to-today": "mod+t",
+  "calendar:navigate-next": "mod+right",
+  "calendar:navigate-previous": "mod+left",
+  "calendar:refresh-calendars": "mod+shift+r"
+}

@@ -1,0 +1,12 @@
+{
+  "application:show-mail": ["mod+shift+1", "mod+0"],
+  "application:show-calendar": "mod+shift+2",
+
+  "core:copy": "ctrl+insert",
+  "core:paste": "shift+insert",
+  "window:toggle-full-screen": "f11",
+  "window:reload": "mod+alt+l",
+  "window:toggle-dev-tools": "mod+alt+i",
+  
+  "multiselect-list:select-all": "ctrl+a"
+}

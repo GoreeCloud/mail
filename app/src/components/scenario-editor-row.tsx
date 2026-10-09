@@ -1,0 +1,222 @@
+import React from 'react';
+import Rx, { Disposable } from 'rx-lite';
+import { Flexbox } from 'mailspring-component-kit';
+
+import { Template } from './scenario-editor-models';
+
+const SOURCE_SELECT_NULL = 'NULL';
+
+interface Item {
+  value: string;
+  name: string;
+}
+type SourceSelectProps = {
+  value?: string;
+  onChange: (...args: any[]) => any;
+  options: Rx.Observable<Item[]> | Item[];
+};
+type SourceSelectState = {
+  options: Item[];
+};
+
+class SourceSelect extends React.Component<SourceSelectProps, SourceSelectState> {
+  static displayName = 'SourceSelect';
+
+  _subscription?: Disposable;
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      options: [],
+    };
+  }
+
+  componentDidMount() {
+    this._setupValuesSubscription();
+  }
+
+  componentDidUpdate(prevProps: SourceSelectProps) {
+    if (prevProps.options !== this.props.options) {
+      this._setupValuesSubscription();
+    }
+  }
+
+  componentWillUnmount() {
+    if (this._subscription) {
+      this._subscription.dispose();
+    }
+    this._subscription = null;
+  }
+
+  _setupValuesSubscription(props = this.props) {
+    if (this._subscription) {
+      this._subscription.dispose();
+    }
+    this._subscription = null;
+    if (props.options instanceof (Rx.Observable as any)) {
+      this._subscription = (props.options as Rx.Observable<Item[]>).subscribe((options) =>
+        this.setState({ options })
+      );
+    } else {
+      this.setState({ options: props.options as Item[] });
+    }
+  }
+
+  _onChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value === SOURCE_SELECT_NULL ? null : event.target.value;
+    const option = this.state.options.find((o) => o.value === value);
+    this.props.onChange({
+      target: {
+        value,
+        name: option ? option.name : undefined,
+      },
+    });
+  };
+
+  render() {
+    // The React <select> component won't select the correct option if the value
+    // is null or undefined - it just leaves the selection whatever it was in the
+    // previous render. To work around this, we coerce null/undefined to SOURCE_SELECT_NULL.
+
+    return (
+      <select value={this.props.value || SOURCE_SELECT_NULL} onChange={this._onChange}>
+        <option key={SOURCE_SELECT_NULL} value={SOURCE_SELECT_NULL} />
+        {this.state.options.map(({ value, name }) => (
+          <option key={value} value={value}>
+            {name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+}
+
+interface ScenarioEditorRowValue {
+  templateKey: string;
+  comparatorKey: string;
+  value: string;
+  valueName?: string;
+}
+
+interface ScenarioEditorRowProps {
+  instance: ScenarioEditorRowValue;
+  removable: boolean;
+  templates: Template[];
+  onChange: (item: ScenarioEditorRowValue) => void;
+  onInsert: () => void;
+  onRemove: () => void;
+}
+export default class ScenarioEditorRow extends React.Component<ScenarioEditorRowProps> {
+  static displayName = 'ScenarioEditorRow';
+
+  _onChangeValue = (event: { target: { value: string; name?: string } }) => {
+    const instance = JSON.parse(JSON.stringify(this.props.instance));
+    instance.value = event.target.value;
+    // Enum options (folders, labels) are keyed by ids that can change on the server,
+    // so the human-readable name is kept as a fallback for resolving the value later.
+    // A DOM <input> reports `name` as "" rather than undefined, so test for content.
+    if (event.target.name) {
+      instance.valueName = event.target.name;
+    } else {
+      delete instance.valueName;
+    }
+    this.props.onChange(instance);
+  };
+
+  _onChangeComparator = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const instance = JSON.parse(JSON.stringify(this.props.instance));
+    instance.comparatorKey = event.target.value;
+    this.props.onChange(instance);
+  };
+
+  _onChangeTemplate = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const instance = JSON.parse(JSON.stringify(this.props.instance));
+    const newTemplate = this.props.templates.find((t) => t.key === event.target.value);
+    this.props.onChange(newTemplate.coerceInstance(instance));
+  };
+
+  _renderTemplateSelect() {
+    const options = this.props.templates.map(({ key, name }) => (
+      <option value={key} key={key}>
+        {name}
+      </option>
+    ));
+    return (
+      <select value={this.props.instance.templateKey} onChange={this._onChangeTemplate}>
+        {options}
+      </select>
+    );
+  }
+
+  _renderComparator(template: Template) {
+    const options = Object.keys(template.comparators).map((key) => (
+      <option key={key} value={key}>
+        {template.comparators[key].name}
+      </option>
+    ));
+    if (options.length === 0) {
+      return false;
+    }
+    return (
+      <select value={this.props.instance.comparatorKey} onChange={this._onChangeComparator}>
+        {options}
+      </select>
+    );
+  }
+
+  _renderValue(template: Template) {
+    if (template.type === Template.Type.Enum) {
+      return (
+        <SourceSelect
+          value={this.props.instance.value}
+          onChange={this._onChangeValue}
+          options={template.values}
+        />
+      );
+    }
+
+    if (template.type === Template.Type.String || template.type === Template.Type.InputString) {
+      return <input type="text" value={this.props.instance.value} onChange={this._onChangeValue} />;
+    }
+    return false;
+  }
+
+  _renderActions() {
+    return (
+      <div className="actions">
+        {this.props.removable && (
+          <div className="btn" onClick={this.props.onRemove}>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
+        <div className="btn" onClick={this.props.onInsert}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  render() {
+    const template = this.props.templates.find((t) => t.key === this.props.instance.templateKey);
+    if (!template) {
+      return (
+        <span> Could not find template for instance key: {this.props.instance.templateKey}</span>
+      );
+    }
+    return (
+      <Flexbox direction="row" className="well-row">
+        <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap' }}>
+          {this._renderTemplateSelect()}
+          {this._renderComparator(template)}
+          <span>{template.valueLabel}</span>
+          {this._renderValue(template)}
+        </div>
+        {this._renderActions()}
+      </Flexbox>
+    );
+  }
+}

@@ -1,0 +1,149 @@
+import * as Attributes from '../attributes';
+import { Attribute } from '../attributes/attribute';
+import { Matcher } from '../attributes/matcher';
+
+/**
+Public: A base class for API objects that provides abstract support for
+serialization and deserialization, matching by attributes, and ID-based equality.
+
+## Attributes
+
+`id`: {AttributeString} The resolved canonical ID of the model used in the
+database and generally throughout the app. The id property is a custom
+getter that resolves to the id first, and then the id.
+
+`object`: {AttributeString} The model's type. This field is used by the JSON
+ deserializer to create an instance of the correct class when inflating the object.
+
+`accountId`: {AttributeString} The string Account Id this model belongs to.
+
+Section: Models
+ */
+
+export type AttributeValues<T> = { [P in keyof T]?: any } & { __cls?: string };
+
+type ModelAttributes = {
+  id: Attribute;
+  accountId: Attribute;
+  version: Attribute;
+  [attribute: string]: Attribute;
+};
+
+export interface ModelClass {
+  new (): Model;
+}
+
+export class Model {
+  get ctor(): typeof Model {
+    return this.constructor as unknown as typeof Model;
+  }
+
+  static attributes: ModelAttributes = {
+    id: Attributes.String({
+      queryable: true,
+      modelKey: 'id',
+    }),
+
+    accountId: Attributes.String({
+      queryable: true,
+      jsonKey: 'aid',
+      modelKey: 'accountId',
+    }),
+
+    version: Attributes.Number({
+      queryable: false,
+      jsonKey: 'v',
+      modelKey: 'version',
+    }),
+  };
+
+  static naturalSortOrder = () => null;
+
+  public id: string;
+  public accountId: string;
+  public version: number;
+
+  constructor(data: AttributeValues<typeof Model.attributes>) {
+    if (data) {
+      if (data.__cls) {
+        this.fromJSON(data);
+      } else {
+        for (const key of Object.keys(this.ctor.attributes)) {
+          if (data[key] !== undefined) {
+            this[key] = data[key];
+          }
+        }
+      }
+    }
+  }
+
+  clone(): this {
+    return new (this.ctor as any)(this.toJSON()) as any;
+  }
+
+  // Public: Inflates the model object from JSON, using the defined attributes to
+  // guide type coercision.
+  //
+  // - `json` A plain Javascript {Object} with the JSON representation of the model.
+  //
+  // This method is chainable.
+  fromJSON(json: any) {
+    for (const key of Object.keys(this.ctor.attributes)) {
+      const attr = this.ctor.attributes[key];
+      const attrValue = json[attr.jsonKey || key];
+      if (attrValue !== undefined) {
+        this[key] = attr.fromJSON(attrValue);
+      }
+    }
+    return this;
+  }
+
+  // Public: Deflates the model to a plain JSON object. Only attributes defined
+  // on the model are included in the JSON.
+  //
+  // Returns an {Object} with the JSON representation of the model.
+  //
+  toJSON() {
+    const json: any = {};
+    for (const key of Object.keys(this.ctor.attributes)) {
+      const attr = this.ctor.attributes[key];
+      const attrValue = this[key];
+      if (attrValue === undefined) {
+        continue;
+      }
+      // An attribute that serializes to `undefined` is asking to be left out entirely
+      // (see AttributeString). Dropping the key here rather than relying on
+      // JSON.stringify keeps in-memory consumers - clone(), window props - seeing the
+      // same shape the sync engine receives.
+      const jsonValue = attr.toJSON(attrValue);
+      if (jsonValue === undefined) {
+        continue;
+      }
+      json[attr.jsonKey || key] = jsonValue;
+    }
+    json.__cls = this.ctor.name;
+    return json;
+  }
+
+  toString() {
+    return JSON.stringify(this.toJSON());
+  }
+
+  // Public: Evaluates the model against one or more {Matcher} objects.
+  //
+  // - `criteria` An {Array} of {Matcher}s to run on the model.
+  //
+  // Returns true if the model matches the criteria.
+  //
+  matches(criteria: Matcher[]) {
+    if (!(criteria instanceof Array)) {
+      return false;
+    }
+    for (const matcher of criteria) {
+      if (!matcher.evaluate(this)) {
+        return false;
+      }
+    }
+    return true;
+  }
+}

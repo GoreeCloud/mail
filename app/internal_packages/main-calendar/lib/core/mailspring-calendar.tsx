@@ -1,0 +1,1267 @@
+import moment, { Moment } from 'moment';
+import React from 'react';
+import {
+  Rx,
+  DatabaseStore,
+  AccountStore,
+  Calendar,
+  Account,
+  Actions,
+  localized,
+  CalendarDateUtils,
+  DestroyEventTask,
+  Event,
+  SyncbackEventTask,
+  ICSEventHelpers,
+  DatabaseChangeRecord,
+} from 'mailspring-exports';
+import { KeyCommandsRegion } from 'mailspring-component-kit';
+import { CalendarMenuCommands } from '../calendar-menu-commands';
+import { DayView } from './day-view';
+import { WeekView } from './week-view';
+import { MonthView } from './month-view';
+import { AgendaView } from './agenda-view';
+import FocusedMomentStore from './focused-moment-store';
+import {
+  CalendarDataSource,
+  EventOccurrence,
+  FocusedEventInfo,
+  coveredDates,
+  isEventSelected,
+  occurrenceId,
+  occurrencesForEvents,
+  ownCalendarAddresses,
+  occurrenceStartUnix,
+  occurrenceEndUnix,
+} from './calendar-data-source';
+import { CalendarEventContextMenu } from './calendar-event-context-menu';
+import { openProposeNewTimePopover, offerCounterInsteadOfMove } from './calendar-rsvp';
+import { CalendarView, DEFAULT_TIMED_EVENT_DURATION_SECONDS } from './calendar-constants';
+import { CalendarEmptyState } from './calendar-empty-state';
+import {
+  setCalendarColors,
+  getColorCacheVersion,
+  getEditableCalendars,
+  showNoEditableCalendarsError,
+  showReadOnlyCalendarError,
+  invalidateThemeTextColorCache,
+  shiftEndWithStart,
+  clampEnd,
+} from './calendar-helpers';
+import { Disposable } from 'rx-core';
+import { CalendarEventArgs } from './calendar-event-container';
+import { CalendarEventPopover } from './calendar-event-popover';
+import {
+  DragState,
+  HitZone,
+  DEFAULT_DRAG_CONFIG,
+  MONTH_VIEW_DRAG_CONFIG,
+} from './calendar-drag-types';
+import {
+  createDragState,
+  updateDragState,
+  parseEventIdFromOccurrence,
+  snapAllDayTimes,
+  canAttemptMove,
+  canMoveEvent,
+  CreateDragState,
+  createDragRange,
+  CREATE_DRAG_SNAP_SECONDS,
+} from './calendar-drag-utils';
+import { showRecurringEventDialog } from './recurring-event-dialog';
+import { modifyEventWithRecurringSupport, EventTimeChangeOptions } from './recurring-event-actions';
+
+const DISABLED_CALENDARS = 'mailspring.disabledCalendars';
+const CALENDAR_VIEW = 'mailspring.calendarView';
+
+const VIEWS = {
+  [CalendarView.DAY]: DayView,
+  [CalendarView.WEEK]: WeekView,
+  [CalendarView.MONTH]: MonthView,
+  [CalendarView.AGENDA]: AgendaView,
+};
+
+export interface EventRendererProps {
+  focusedEvent: FocusedEventInfo | null;
+  selectedEvents: EventOccurrence[];
+  onEventClick: (e: React.MouseEvent<any>, event: EventOccurrence) => void;
+  onEventDoubleClick: (event: EventOccurrence) => void;
+  onEventContextMenu: (event: EventOccurrence) => void;
+  onEventFocused: (event: EventOccurrence) => void;
+}
+
+export interface MailspringCalendarViewProps extends EventRendererProps {
+  dataSource: CalendarDataSource;
+  disabledCalendars: string[];
+  focusedMoment: Moment;
+  onChangeView: (view: CalendarView) => void;
+  onChangeFocusedMoment: (moment: Moment) => void;
+  onCalendarMouseUp: (args: CalendarEventArgs) => void;
+  onCalendarMouseDown: (args: CalendarEventArgs) => void;
+  onCalendarMouseMove: (args: CalendarEventArgs) => void;
+  onCalendarClick: (args: CalendarEventArgs) => void;
+  onCalendarDoubleClick: (args: CalendarEventArgs) => void;
+  onCalendarContextMenu: (args: CalendarEventArgs) => void;
+  /**
+   * Changes whenever a calendar's colour or the theme does, so components that skip equal
+   * props repaint; keying the view on it instead would remount the grid, re-centre its scroll
+   * and re-run its subscription.
+   */
+  paintVersion: string;
+
+  // Drag-related props
+  dragState: DragState | null;
+  /** The range being drawn on empty grid space, if any. */
+  createDrag: CreateDragState | null;
+  onEventDragStart: (
+    event: EventOccurrence,
+    mouseEvent: React.MouseEvent,
+    hitZone: HitZone
+  ) => void;
+
+  /** Set of calendar IDs that are read-only (events in these calendars cannot be dragged) */
+  readOnlyCalendarIds: Set<string>;
+
+  /** Fail-closed read-only check; prefer this over readOnlyCalendarIds for write decisions */
+  isCalendarReadOnly: (calendarId: string) => boolean;
+}
+
+/*
+ * Mailspring Calendar
+ */
+interface MailspringCalendarProps {}
+
+interface MailspringCalendarState {
+  view: CalendarView;
+  selectedEvents: EventOccurrence[];
+  focusedEvent: FocusedEventInfo | null;
+  accounts?: Account[];
+  calendars: Calendar[];
+  calendarsLoaded: boolean;
+  focusedMoment: Moment;
+  disabledCalendars: string[];
+  dragState: DragState | null;
+  createDrag: CreateDragState | null;
+  readOnlyCalendarIds: Set<string>;
+  themeVersion: number;
+}
+
+export class MailspringCalendar extends React.Component<
+  MailspringCalendarProps,
+  MailspringCalendarState
+> {
+  static displayName = 'MailspringCalendar';
+
+  static DayView = DayView;
+  static WeekView = WeekView;
+
+  static containerStyles = {
+    height: '100%',
+  };
+
+  _disposable?: Disposable;
+  _themeDisposable?: { dispose(): void };
+  _unlisten?: () => void;
+  _unlistenDatabase?: () => void;
+  _unlistenFocusedMoment?: () => void;
+  _dataSource = new CalendarDataSource();
+  /**
+   * The press that began drawing a new event, held until release. It reaches state only once
+   * the pointer travels, because a setState on every press re-renders the grid.
+   */
+  _pendingCreateDrag: CreateDragState | null = null;
+  /** The click that ends a create-drag is the drag's, not a click on the grid. */
+  _suppressNextCalendarClick = false;
+  /** Selected occurrences moved here but not yet synced back, by the id they will be drawn under. */
+  _pendingMoves = new Map<string, { start: number; staleIcs: string }>();
+
+  constructor(props: MailspringCalendarProps) {
+    super(props);
+    this.state = {
+      calendars: [],
+      calendarsLoaded: false,
+      focusedEvent: null,
+      selectedEvents: [],
+      view: AppEnv.config.get(CALENDAR_VIEW) || CalendarView.WEEK,
+      focusedMoment: FocusedMomentStore.focusedMoment(),
+      disabledCalendars: AppEnv.config.get(DISABLED_CALENDARS) || [],
+      dragState: null,
+      createDrag: null,
+      readOnlyCalendarIds: new Set<string>(),
+      themeVersion: 0,
+    };
+  }
+
+  componentDidMount() {
+    this._disposable = this._subscribeToCalendars();
+    this._unlisten = Actions.focusCalendarEvent.listen(this._focusEvent);
+    this._unlistenFocusedMoment = FocusedMomentStore.listen(() =>
+      this.setState({
+        focusedMoment: FocusedMomentStore.focusedMoment(),
+        focusedEvent: FocusedMomentStore.focusedEvent(),
+      })
+    );
+    this._unlistenDatabase = DatabaseStore.listen(this._onDatabaseChange);
+    AppEnv.mailsyncBridge.sendSyncCalendarNow();
+    this._themeDisposable = AppEnv.themes.onDidChangeActiveThemes(() => {
+      invalidateThemeTextColorCache();
+      this.setState((s) => ({ themeVersion: s.themeVersion + 1 }));
+    });
+  }
+
+  componentWillUnmount() {
+    // The component is unmounting, dispose subscriptions
+    this._disposable?.dispose();
+    this._themeDisposable?.dispose();
+    if (this._unlisten) {
+      this._unlisten();
+    }
+    this._unlistenDatabase?.();
+    this._unlistenFocusedMoment?.();
+  }
+
+  _onDatabaseChange = ({ objectClass }: DatabaseChangeRecord<Event>) => {
+    if (objectClass !== Event.name) return;
+    // Deselected, a moved occurrence is drawn from its row, so it needs no guard.
+    for (const id of [...this._pendingMoves.keys()]) {
+      if (!this.state.selectedEvents.some((o) => o.id === id)) this._pendingMoves.delete(id);
+    }
+    if (this.state.selectedEvents.length > 0) {
+      this._refreshSelectedEvents();
+    }
+  };
+
+  /** Selection holds occurrence objects, whose times and exception flags go stale on a change. */
+  async _refreshSelectedEvents() {
+    const selected = this.state.selectedEvents;
+    const refreshed = await Promise.all(selected.map((o) => this._currentOccurrence(o)));
+    if (this.state.selectedEvents !== selected) return;
+    const next = refreshed.filter(Boolean);
+    if (next.length !== selected.length || next.some((o, i) => o !== selected[i])) {
+      this.setState({ selectedEvents: next });
+    }
+  }
+
+  /** The occurrence as its row draws it now; null once a move landed somewhere unpredicted. */
+  async _currentOccurrence(occurrence: EventOccurrence): Promise<EventOccurrence | null> {
+    const event = await DatabaseStore.find<Event>(Event, parseEventIdFromOccurrence(occurrence.id));
+    if (!event) return occurrence;
+    const pending = this._pendingMoves.get(occurrence.id);
+    if (pending && event.ics === pending.staleIcs) return occurrence;
+    this._pendingMoves.delete(occurrence.id);
+
+    const slotOf = (o: EventOccurrence) => o.recurrenceIdStart ?? occurrenceStartUnix(o);
+    const slot = slotOf(occurrence);
+    const start = pending ? pending.start : occurrenceStartUnix(occurrence);
+    // The expander stops at the first regular occurrence past the range, so an exception moved
+    // in from a later slot is reached only when the range runs to that slot.
+    // Re-expanded without the calendars, a meeting a secondary calendar of ours organizes would
+    // come back as somebody else's and the next arrow key would refuse to move it.
+    const sameId = occurrencesForEvents([event], {
+      startUnix: Math.min(slot, start) - 86400,
+      endUnix: Math.max(slot, start) + 86400,
+      ownCalendarAddresses: ownCalendarAddresses(this.state.calendars),
+    }).filter((o) => o.id === occurrence.id);
+    // An occurrence moved onto another's start shares its id; their slots tell them apart.
+    const current = sameId.find((o) => slotOf(o) === slot) || sameId[0];
+    return current || (pending ? null : occurrence);
+  }
+
+  /** An occurrence's id embeds its start; a series exception stored as its own row keeps its id. */
+  _followMove(occurrence: EventOccurrence, event: Event, newStart: number, staleIcs: string) {
+    if (!isEventSelected(this.state.selectedEvents, occurrence)) return;
+    const id = event.isRecurrenceException() ? occurrence.id : occurrenceId(event.id, newStart);
+    this._pendingMoves.set(id, { start: newStart, staleIcs });
+    this.setState({
+      selectedEvents: this.state.selectedEvents.map((o) =>
+        o.id === occurrence.id ? { ...o, id } : o
+      ),
+    });
+  }
+
+  _subscribeToCalendars() {
+    const calQuery = DatabaseStore.findAll<Calendar>(Calendar);
+    const calQueryObs = Rx.Observable.fromQuery(calQuery);
+    const accQueryObs = Rx.Observable.fromStore(AccountStore);
+    const configObs = Rx.Observable.fromConfig<string[] | undefined>(DISABLED_CALENDARS);
+
+    return Rx.Observable.combineLatest(calQueryObs, accQueryObs, configObs).subscribe(
+      ([calendars, accountStore, disabledCalendars]) => {
+        // Update the color cache with synced calendar colors from CalDAV
+        setCalendarColors(calendars);
+
+        const readOnlyCalendarIds = new Set<string>();
+        for (const calendar of calendars) {
+          if (calendar.readOnly) {
+            readOnlyCalendarIds.add(calendar.id);
+          }
+        }
+
+        this.setState({
+          calendars: calendars,
+          calendarsLoaded: true,
+          accounts: accountStore.accounts(),
+          disabledCalendars: disabledCalendars || [],
+          readOnlyCalendarIds,
+        });
+      }
+    );
+  }
+
+  /**
+   * Single source of truth for whether an event's calendar may be written to.
+   * Fails closed until the calendar subscription first emits, since events render
+   * from an independent subscription and can paint before calendars resolve.
+   */
+  _isCalendarReadOnly = (calendarId: string): boolean => {
+    return !this.state.calendarsLoaded || this.state.readOnlyCalendarIds.has(calendarId);
+  };
+
+  onChangeView = (view: CalendarView) => {
+    // If an event is selected, jump the new view to where it lives so it stays visible and
+    // selected (matching Apple Calendar) — switching to a narrow view could otherwise leave the
+    // selected event off-screen.
+    const selected = this.state.selectedEvents[0];
+    const focusedMoment = selected
+      ? moment.unix(this._pendingMoves.get(selected.id)?.start ?? occurrenceStartUnix(selected))
+      : this.state.focusedMoment;
+    // Clear any active drag state when changing views
+    this._pendingDragState = null;
+    this.setState({ view, dragState: null });
+    FocusedMomentStore.setFocusedMoment(focusedMoment, this.state.focusedEvent);
+    AppEnv.config.set(CALENDAR_VIEW, view);
+  };
+
+  onChangeFocusedMoment = (focusedMoment: Moment) => {
+    FocusedMomentStore.setFocusedMoment(focusedMoment);
+  };
+
+  _focusEvent = (event: FocusedEventInfo) => {
+    FocusedMomentStore.setFocusedMoment(moment(event.start * 1000), event);
+  };
+
+  /** `startEditing`: a double-click means "let me change this", as it does on empty grid. */
+  _openEventPopover(eventModel: EventOccurrence, startEditing = false) {
+    const eventEl = document.getElementById(eventModel.id);
+    if (!eventEl) {
+      return;
+    }
+
+    // In day view, events span most of the horizontal width, so opening
+    // the popover to the right/left causes horizontal scrolling. Use
+    // down/up positioning instead for day view.
+    const isDayView = this.state.view === CalendarView.DAY;
+    const direction = isDayView ? 'down' : 'right';
+    const fallbackDirection = isDayView ? 'up' : 'left';
+
+    Actions.openPopover(
+      <CalendarEventPopover
+        event={eventModel}
+        startEditing={startEditing}
+        isCalendarReadOnly={this._isCalendarReadOnly(eventModel.calendarId)}
+      />,
+      {
+        originRect: eventEl.getBoundingClientRect(),
+        direction,
+        fallbackDirection,
+        closeOnAppBlur: false,
+      }
+    );
+  }
+
+  _onEventClick = (e: React.MouseEvent, event: EventOccurrence) => {
+    let next = [...this.state.selectedEvents];
+
+    if (e.shiftKey || e.metaKey) {
+      const idx = next.findIndex(({ id }) => event.id === id);
+      if (idx === -1) {
+        next.push(event);
+      } else {
+        next.splice(idx, 1);
+      }
+    } else {
+      next = [event];
+    }
+
+    // Close any open popover when clicking an event (e.g., if another event's
+    // popover was open, it should close when selecting a different event)
+    Actions.closePopover();
+
+    this.setState({
+      selectedEvents: next,
+      focusedEvent: null,
+    });
+  };
+
+  /**
+   * Handle single click on the calendar background (not on an event).
+   * Deselects all events and closes any open popover.
+   */
+  _onCalendarClick = (_args: CalendarEventArgs) => {
+    if (this._suppressNextCalendarClick) {
+      this._suppressNextCalendarClick = false;
+      return;
+    }
+    if (this.state.selectedEvents.length > 0) {
+      this.setState({ selectedEvents: [], focusedEvent: null });
+    }
+    Actions.closePopover();
+  };
+
+  _onEventDoubleClick = (occurrence: EventOccurrence) => {
+    this._openEventPopover(occurrence, true);
+  };
+
+  _onEventContextMenu = (occurrence: EventOccurrence) => {
+    // Right-clicking an event that isn't selected selects it first, so the menu acts on what
+    // is highlighted - and so pressing Delete afterwards means the same thing.
+    if (!isEventSelected(this.state.selectedEvents, occurrence)) {
+      this.setState({ selectedEvents: [occurrence], focusedEvent: null });
+    }
+
+    const readOnly = this._isCalendarReadOnly(occurrence.calendarId);
+    const editable = !readOnly && occurrence.isMine;
+    new CalendarEventContextMenu({
+      occurrence,
+      readOnly,
+      onOpen: () => this._openEventPopover(occurrence, editable),
+      onDelete: () => this._deleteEvent(occurrence),
+      onProposeNewTime: () => openProposeNewTimePopover(occurrence),
+    }).displayMenu();
+  };
+
+  _onCalendarDoubleClick = (args: CalendarEventArgs) => {
+    this._createEventAt(args);
+  };
+
+  /**
+   * Right-clicking empty grid offers to create an event there: the double-click that also
+   * does is not discoverable, and a right-click is where users look for "New".
+   */
+  _onCalendarContextMenu = (args: CalendarEventArgs) => {
+    if (args.time === null) {
+      return;
+    }
+    this._showGridMenu([{ label: localized('New Event'), click: () => this._createEventAt(args) }]);
+  };
+
+  _showGridMenu(template: Electron.MenuItemConstructorOptions[]) {
+    require('@electron/remote').Menu.buildFromTemplate(template).popup({});
+  }
+
+  /**
+   * Opens the editor for a new event at the slot under the pointer: the time at the click
+   * position, snapped to the half hour on the hour grid, a whole day on the all-day row and
+   * in a month cell.
+   */
+  _createEventAt(args: CalendarEventArgs) {
+    if (args.time === null) {
+      return;
+    }
+
+    // Snap start time to 30-minute intervals for day/week view,
+    // or use 9 AM for month view / all-day area
+    let startUnix: number;
+    const isAllDay = args.containerType === 'all-day-area' || args.containerType === 'month-cell';
+
+    if (isAllDay) {
+      // For month/all-day, start at beginning of the day
+      const dayStart = moment(args.time * 1000)
+        .startOf('day')
+        .unix();
+      startUnix = dayStart;
+    } else {
+      // Snap to nearest 30-minute interval
+      const thirtyMinutes = 30 * 60;
+      startUnix = Math.round(args.time / thirtyMinutes) * thirtyMinutes;
+    }
+
+    const endUnix = isAllDay
+      ? CalendarDateUtils.nextDayStartUnix(CalendarDateUtils.calendarDateFromUnix(startUnix))
+      : startUnix + DEFAULT_TIMED_EVENT_DURATION_SECONDS;
+
+    this._openNewEventPopover({
+      startUnix,
+      endUnix,
+      isAllDay,
+      clientX: args.mouseEvent.clientX,
+      clientY: args.mouseEvent.clientY,
+    });
+  }
+
+  /** Opens the editor for an event that does not exist yet, covering the given range. */
+  _openNewEventPopover({
+    startUnix,
+    endUnix,
+    isAllDay,
+    clientX,
+    clientY,
+  }: {
+    startUnix: number;
+    endUnix: number;
+    isAllDay: boolean;
+    clientX: number;
+    clientY: number;
+  }) {
+    const editableCalendars = getEditableCalendars(
+      this.state.calendars,
+      this.state.disabledCalendars || []
+    );
+    if (editableCalendars.length === 0) {
+      showNoEditableCalendarsError();
+      return;
+    }
+
+    // Build a temporary EventOccurrence to open the popover in "new event" mode. Build the
+    // right variant — an all-day new event carries dates only, like every other occurrence.
+    const base = {
+      id: `__new_event_${Date.now()}`,
+      ...coveredDates(startUnix, endUnix, isAllDay),
+      title: '',
+      description: '',
+      location: '',
+      isRecurring: false,
+      isCancelled: false,
+      isPending: false,
+      isMine: true,
+      isException: false,
+      organizer: null,
+      attendees: [],
+      accountId: editableCalendars[0].accountId,
+      calendarId: editableCalendars[0].id,
+    };
+    const newEventOccurrence: EventOccurrence = isAllDay
+      ? { ...base, isAllDay: true }
+      : { ...base, isAllDay: false, start: startUnix, end: endUnix };
+
+    // Open the popover anchored near the mouse position
+    const originRect = new DOMRect(clientX - 1, clientY - 1, 2, 2);
+
+    Actions.openPopover(
+      <CalendarEventPopover
+        event={newEventOccurrence}
+        isNewEvent
+        calendars={this.state.calendars}
+        accounts={this.state.accounts}
+        disabledCalendars={this.state.disabledCalendars}
+      />,
+      {
+        originRect,
+        direction: 'right',
+        fallbackDirection: 'left',
+        closeOnAppBlur: false,
+      }
+    );
+  }
+
+  // Fires once the focused event has scrolled itself into view. Clearing the flag here keeps
+  // a later unrelated re-render from re-running that scroll (and reopening the popover).
+  _onEventFocused = (occurrence: EventOccurrence) => {
+    this._openEventPopover(occurrence);
+    this.setState({ focusedEvent: null });
+  };
+
+  _onDeleteSelectedEvents = async () => {
+    if (this.state.selectedEvents.length === 0) {
+      return;
+    }
+
+    const selected = this.state.selectedEvents;
+    if (selected.some((o) => this._pendingMoves.has(o.id))) {
+      return;
+    }
+
+    // Partition before prompting so the dialog can disclose a partial delete
+    const deletable = selected.filter((o) => !this._isCalendarReadOnly(o.calendarId));
+    if (deletable.length === 0) {
+      showReadOnlyCalendarError();
+      return;
+    }
+    const skipped = selected.length - deletable.length;
+
+    // Show initial confirmation dialog
+    const response = require('@electron/remote').dialog.showMessageBoxSync({
+      type: 'warning',
+      buttons: [localized('Delete'), localized('Cancel')],
+      message: localized('Delete or decline these events?'),
+      detail: skipped
+        ? localized(
+            "%1$@ of the %2$@ selected events will be deleted. The rest are on read-only calendars and can't be changed.",
+            deletable.length,
+            selected.length
+          )
+        : localized(
+            `Are you sure you want to delete or decline invitations for the selected event(s)?`
+          ),
+    });
+
+    if (response !== 0) {
+      return; // User cancelled
+    }
+
+    for (const occurrence of deletable) {
+      await this._deleteEvent(occurrence);
+    }
+  };
+
+  /**
+   * Delete a single event occurrence, handling recurring events appropriately
+   */
+  async _deleteEvent(occurrence: EventOccurrence) {
+    try {
+      // Parse the event ID from the occurrence ID (handles recurring instance IDs)
+      const eventId = parseEventIdFromOccurrence(occurrence.id);
+
+      // Fetch the full event from database to get ICS data
+      const event = await DatabaseStore.find<Event>(Event, eventId);
+      if (!event) {
+        console.error('Could not find event to delete:', eventId);
+        return;
+      }
+
+      // Check if this is a recurring event (and not already an exception)
+      const isRecurring = ICSEventHelpers.isRecurringEvent(event.ics);
+
+      if (event.isRecurrenceException()) {
+        // Deleting a moved occurrence means cancelling it on the master; see
+        // removeInlineException for why the row must never be destroyed on its own.
+        const master = await DatabaseStore.findBy<Event>(Event, {
+          accountId: event.accountId,
+          calendarId: event.calendarId,
+          icsuid: event.icsuid,
+          recurrenceId: '',
+        });
+        if (master) {
+          await this._cancelExceptionOccurrence(master, event);
+          return;
+        }
+      }
+
+      if (isRecurring && !event.isRecurrenceException()) {
+        // Show recurring event dialog
+        const choice = await showRecurringEventDialog('delete', occurrence.title);
+
+        if (choice === 'cancel') {
+          return; // User cancelled this deletion
+        }
+
+        if (choice === 'this-occurrence') {
+          // Delete only this occurrence by adding EXDATE to master
+          await this._deleteOccurrence(event, occurrence);
+        } else {
+          // Delete entire series
+          await this._deleteEntireEvent(event);
+        }
+      } else {
+        // Non-recurring event or already an exception - delete normally
+        await this._deleteEntireEvent(event);
+      }
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      AppEnv.showErrorDialog({
+        title: localized('Delete Failed'),
+        message: localized('Failed to delete the event. Please try again.'),
+      });
+    }
+  }
+
+  /**
+   * Delete a single occurrence of a recurring event by adding EXDATE to master.
+   * Supports undo - restores the original ICS without the EXDATE.
+   */
+  async _deleteOccurrence(masterEvent: Event, occurrence: EventOccurrence) {
+    // Capture original state for undo BEFORE modifying
+    const undoData = {
+      ics: masterEvent.ics,
+      recurrenceStart: masterEvent.recurrenceStart,
+      recurrenceEnd: masterEvent.recurrenceEnd,
+    };
+
+    // Add EXDATE to exclude this occurrence.
+    masterEvent.ics = ICSEventHelpers.bumpEventSequence(
+      ICSEventHelpers.addExclusionDate(
+        masterEvent.ics,
+        occurrenceStartUnix(occurrence),
+        occurrence.isAllDay
+      )
+    );
+
+    // Queue syncback with undo support
+    const task = SyncbackEventTask.forUpdating({
+      event: masterEvent,
+      undoData,
+      description: localized('Delete occurrence'),
+    });
+    Actions.queueTask(task);
+  }
+
+  /** Cancels the occurrence an inline exception overrides, by editing the master. */
+  async _cancelExceptionOccurrence(masterEvent: Event, exceptionEvent: Event) {
+    const undoData = {
+      ics: masterEvent.ics,
+      recurrenceStart: masterEvent.recurrenceStart,
+      recurrenceEnd: masterEvent.recurrenceEnd,
+    };
+
+    const updated = ICSEventHelpers.removeInlineException(
+      masterEvent.ics,
+      exceptionEvent.recurrenceId
+    );
+    if (updated === masterEvent.ics) {
+      // The row and its master disagree about which occurrence this is. Both live in one
+      // resource, so a DELETE would take the series; refuse rather than guess.
+      AppEnv.showErrorDialog({
+        title: localized('Delete Failed'),
+        message: localized(
+          'This occurrence could not be found in its series. Refresh the calendar and try again.'
+        ),
+      });
+      return;
+    }
+
+    masterEvent.ics = ICSEventHelpers.bumpEventSequence(updated);
+    Actions.queueTask(
+      SyncbackEventTask.forUpdating({
+        event: masterEvent,
+        undoData,
+        description: localized('Delete occurrence'),
+      })
+    );
+  }
+
+  /**
+   * Delete an entire event (or series)
+   */
+  async _deleteEntireEvent(event: Event) {
+    Actions.queueTask(DestroyEventTask.forRemoving({ events: [event] }));
+  }
+
+  /**
+   * Get the drag configuration based on the current view
+   */
+  _getDragConfig() {
+    return this.state.view === CalendarView.MONTH ? MONTH_VIEW_DRAG_CONFIG : DEFAULT_DRAG_CONFIG;
+  }
+
+  /**
+   * A grab waiting for its position: the event's mousedown lands here first, then bubbles to
+   * the CalendarEventContainer, whose hit-test hands _onCalendarMouseDown the grid time and
+   * container coordinates under the cursor — the same frame every later drag target uses.
+   */
+  _pendingDrag: { event: EventOccurrence; hitZone: HitZone } | null = null;
+
+  /**
+   * A grab that has its position but has not travelled past the drag threshold. Held here
+   * rather than in state, like _pendingCreateDrag: a setState on every press re-renders the
+   * grid for a click. _onCalendarMouseMove moves it into state once it is a drag.
+   */
+  _pendingDragState: DragState | null = null;
+
+  _onEventDragStart = (event: EventOccurrence, _mouseEvent: React.MouseEvent, hitZone: HitZone) => {
+    this._pendingDrag = { event, hitZone };
+  };
+
+  /**
+   * Handle mouse move during drag
+   */
+  _onCalendarMouseMove = (args: CalendarEventArgs) => {
+    const createDrag = this.state.createDrag || this._pendingCreateDrag;
+    if (createDrag) {
+      if (args.time === null) {
+        return;
+      }
+      // Nothing is drawn until the pointer has travelled a snap interval: until then the
+      // press is a click, which must deselect rather than create.
+      const travelled =
+        createDrag.isDragging ||
+        Math.abs(args.time - createDrag.anchorTime) >= CREATE_DRAG_SNAP_SECONDS;
+      if (!travelled) {
+        return;
+      }
+      this.setState({ createDrag: { ...createDrag, currentTime: args.time, isDragging: true } });
+      return;
+    }
+
+    const active = this.state.dragState || this._pendingDragState;
+    if (!active) {
+      return;
+    }
+
+    // args.time can be null if mouse is not over a valid calendar area
+    if (args.time === null || args.x === null || args.y === null) {
+      return;
+    }
+
+    const config = this._getDragConfig();
+
+    const newDragState = updateDragState(
+      active,
+      args.time,
+      args.x,
+      args.y,
+      args.containerType,
+      config
+    );
+
+    // A guest's drag starts so the attempt can be seen; once it is one, offer the counter instead.
+    if (
+      newDragState.isDragging &&
+      !canMoveEvent(newDragState.event, this._isCalendarReadOnly(newDragState.event.calendarId))
+    ) {
+      this._pendingDragState = null;
+      this.setState({ dragState: null });
+      offerCounterInsteadOfMove(newDragState.event);
+      return;
+    }
+
+    // Below the threshold updateDragState hands back the same object, so a grab that has not
+    // travelled stays out of state.
+    if (newDragState !== active) {
+      this._pendingDragState = null;
+      this.setState({ dragState: newDragState });
+    }
+  };
+
+  /**
+   * Handle mouse up to complete drag
+   */
+  _onCalendarMouseUp = (args: CalendarEventArgs) => {
+    // A grab that never travelled was a click on the event, which the event handles itself.
+    this._pendingDragState = null;
+    // An untravelled press was a click on the grid; the click event that follows is its own.
+    this._pendingCreateDrag = null;
+    const { createDrag } = this.state;
+    if (createDrag) {
+      this.setState({ createDrag: null });
+      this._suppressNextCalendarClick = true;
+      const { start, end } = createDragRange(createDrag);
+      this._openNewEventPopover({
+        startUnix: start,
+        endUnix: createDrag.isAllDay
+          ? CalendarDateUtils.nextDayStartUnix(CalendarDateUtils.calendarDateFromUnix(end))
+          : end,
+        isAllDay: createDrag.isAllDay,
+        clientX: args.mouseEvent.clientX,
+        clientY: args.mouseEvent.clientY,
+      });
+      return;
+    }
+
+    if (!this.state.dragState) {
+      return;
+    }
+
+    const { dragState } = this.state;
+
+    // Check if we actually dragged (threshold exceeded)
+    if (!dragState.isDragging) {
+      // Didn't drag far enough, treat as a click
+      this.setState({ dragState: null });
+      return;
+    }
+
+    // Check if the times OR the kind actually changed. A timed event dropped on the all-day
+    // row can convert with identical instants (e.g. a midnight-to-midnight event), so a
+    // times-only check would silently drop the conversion.
+    if (
+      dragState.previewStart === dragState.originalStart &&
+      dragState.previewEnd === dragState.originalEnd &&
+      dragState.previewIsAllDay === dragState.event.isAllDay
+    ) {
+      // No change, just clear state
+      this.setState({ dragState: null });
+      return;
+    }
+
+    // Persist the change
+    this._persistDragChange(dragState);
+  };
+
+  /**
+   * A press on an event arrives as a pending grab and becomes a drag of that event. Any other
+   * left press over grid time begins drawing a new event, held until the pointer travels.
+   */
+  _onCalendarMouseDown = (args: CalendarEventArgs) => {
+    // A drag released outside the calendar is followed by no click, so the flag lives one press.
+    this._suppressNextCalendarClick = false;
+    const pending = this._pendingDrag;
+    this._pendingDrag = null;
+    if (args.time === null) {
+      return;
+    }
+    if (!pending) {
+      this._beginCreateDrag(args);
+      return;
+    }
+    this._pendingDragState = createDragState(
+      pending.event,
+      pending.hitZone,
+      args.time,
+      args.x,
+      args.y,
+      this._getDragConfig()
+    );
+  };
+
+  _beginCreateDrag(args: CalendarEventArgs) {
+    if (args.mouseEvent.button !== 0) {
+      return;
+    }
+    // A press on an event that cannot be dragged sets no pending grab but still bubbles here;
+    // the DOM says where it landed, and a new event is never drawn over an existing one.
+    const target = args.mouseEvent.target as HTMLElement;
+    if (target.closest('.calendar-event, .month-view-event')) {
+      return;
+    }
+    const editable = getEditableCalendars(this.state.calendars, this.state.disabledCalendars || []);
+    if (editable.length === 0) {
+      return;
+    }
+    this._pendingCreateDrag = {
+      anchorTime: args.time,
+      currentTime: args.time,
+      isAllDay: args.containerType === 'all-day-area' || args.containerType === 'month-cell',
+      isDragging: false,
+      calendarId: editable[0].id,
+      accountId: editable[0].accountId,
+    };
+  }
+
+  /**
+   * Handle keyboard shortcuts for moving/resizing events
+   */
+  _onMoveSelectedEvent = (direction: 'up' | 'down' | 'left' | 'right', isResize: boolean) => {
+    if (this.state.selectedEvents.length === 0) {
+      return;
+    }
+
+    const occurrence = this.state.selectedEvents[0];
+    // The selection keeps the old times and flags until the move syncs back.
+    if (this._pendingMoves.has(occurrence.id)) {
+      return;
+    }
+
+    if (!canMoveEvent(occurrence, this._isCalendarReadOnly(occurrence.calendarId))) {
+      if (canAttemptMove(occurrence, this._isCalendarReadOnly(occurrence.calendarId))) {
+        offerCounterInsteadOfMove(occurrence);
+      }
+      return;
+    }
+
+    // All-day events have no time of day, so up/down has nothing to move
+    if (occurrence.isAllDay && (direction === 'up' || direction === 'down')) {
+      return;
+    }
+
+    // Calculate time delta based on view and direction
+    // Day/Week view: up/down changes time, left/right changes day
+    // Month view: left/right changes day
+    const isDayOrWeekView =
+      this.state.view === CalendarView.DAY || this.state.view === CalendarView.WEEK;
+    let timeDelta = 0;
+
+    if (isDayOrWeekView) {
+      if (direction === 'up') {
+        timeDelta = -900; // 15 minutes earlier
+      } else if (direction === 'down') {
+        timeDelta = 900; // 15 minutes later
+      } else if (direction === 'left') {
+        timeDelta = -86400; // 1 day earlier
+      } else if (direction === 'right') {
+        timeDelta = 86400; // 1 day later
+      }
+    } else {
+      // Month view: left/right changes day
+      if (direction === 'left') {
+        timeDelta = -86400; // 1 day earlier
+      } else if (direction === 'right') {
+        timeDelta = 86400; // 1 day later
+      }
+    }
+
+    if (timeDelta === 0) {
+      return;
+    }
+
+    // Apply the change
+    this._applyKeyboardEventChange(occurrence, timeDelta, isResize);
+  };
+
+  /**
+   * Apply a keyboard-initiated event change.
+   * Handles recurring events by showing the dialog to choose between
+   * modifying this occurrence or all occurrences.
+   */
+  async _applyKeyboardEventChange(
+    occurrence: EventOccurrence,
+    timeDelta: number,
+    isResize: boolean
+  ) {
+    try {
+      const eventId = parseEventIdFromOccurrence(occurrence.id);
+      const event = await DatabaseStore.find<Event>(Event, eventId);
+
+      if (!event) {
+        console.error('Could not find event to update:', eventId);
+        return;
+      }
+
+      // The keyboard pipeline is unix, so derive instants for all-day occurrences (dates only).
+      const occStart = occurrenceStartUnix(occurrence);
+      const occEnd = occurrenceEndUnix(occurrence);
+      let newStart: number;
+      let newEnd: number;
+
+      if (occurrence.isAllDay) {
+        // Only left/right reaches here, so the delta is a day in either direction. Shifting
+        // by calendar days rather than 86400 seconds keeps the times on midnight across a
+        // DST transition, where a seconds shift overshoots and snaps up an extra day.
+        const days = Math.sign(timeDelta);
+        newStart = isResize ? occStart : CalendarDateUtils.shiftedDayStartUnix(occStart, days);
+        newEnd = isResize
+          ? clampEnd(newStart, CalendarDateUtils.shiftedDayStartUnix(occEnd, days), true)
+          : shiftEndWithStart(occStart, occEnd, newStart, true);
+        const snapped = snapAllDayTimes(newStart, newEnd);
+        newStart = snapped.start;
+        newEnd = snapped.end;
+      } else if (isResize) {
+        // Shift+Arrow: resize the event (change end time only)
+        newStart = occStart;
+        newEnd = clampEnd(newStart, occEnd + timeDelta, false);
+      } else {
+        // Arrow: move the event (change both start and end)
+        newStart = occStart + timeDelta;
+        newEnd = occEnd + timeDelta;
+      }
+
+      // Resizing at the minimum duration clamps back to the current end, so the change can
+      // be a no-op. Bail like the mouse-up path does, rather than queueing a syncback and an
+      // undo toast for an identical event — or prompting for a recurring series that won't move.
+      if (newStart === occStart && newEnd === occEnd) {
+        return;
+      }
+
+      // Use shared utility for recurring event support (shows dialog if needed)
+      const options: EventTimeChangeOptions = {
+        event,
+        // For inline exceptions, use the RECURRENCE-ID value (recurrenceIdStart), NOT the
+        // exception's moved DTSTART (start). Using start would produce the wrong RECURRENCE-ID
+        // in the new exception, causing the upsert to miss the existing one and leave a duplicate.
+        originalOccurrenceStart: occurrence.recurrenceIdStart ?? occStart,
+        newStart,
+        newEnd,
+        isAllDay: occurrence.isAllDay,
+        isException: occurrence.isException,
+        description: isResize ? localized('Resize event') : localized('Move event'),
+      };
+
+      // The change is written onto `event` before it is queued.
+      const staleIcs = event.ics;
+      const result = await modifyEventWithRecurringSupport(
+        options,
+        isResize ? 'resize' : 'move',
+        occurrence.title
+      );
+      if (result.success) {
+        this._followMove(occurrence, event, newStart, staleIcs);
+      }
+    } catch (error) {
+      console.error('Failed to apply keyboard event change:', error);
+      AppEnv.showErrorDialog({
+        title: localized('Update Failed'),
+        message: localized('Failed to update the event. Please try again.'),
+      });
+    }
+  }
+
+  /**
+   * Persist the drag change to the database.
+   * Undo support is automatically provided by SyncbackEventTask.
+   */
+  async _persistDragChange(dragState: DragState): Promise<void> {
+    // Clear the drag state immediately for responsive UI
+    this.setState({ dragState: null });
+
+    try {
+      // Parse the event ID from the occurrence ID
+      const eventId = parseEventIdFromOccurrence(dragState.event.id);
+
+      const event = await DatabaseStore.find<Event>(Event, eventId);
+      if (!event) {
+        console.error('Could not find event to update:', eventId);
+        return;
+      }
+
+      if (this._isCalendarReadOnly(event.calendarId)) {
+        console.warn('Cannot modify event in read-only calendar');
+        return;
+      }
+
+      // Handle all-day events - snap times to day boundaries
+      let newStart = dragState.previewStart;
+      let newEnd = dragState.previewEnd;
+
+      if (dragState.previewIsAllDay) {
+        const snapped = snapAllDayTimes(newStart, newEnd);
+        newStart = snapped.start;
+        newEnd = snapped.end;
+      }
+
+      // Use shared utility for the modification logic (includes undo support)
+      const options: EventTimeChangeOptions = {
+        event,
+        // For inline exceptions, use the RECURRENCE-ID value (recurrenceIdStart), NOT the
+        // exception's moved DTSTART (start). Using start would produce the wrong RECURRENCE-ID
+        // in the new exception, causing the upsert to miss the existing one and leave a duplicate.
+        originalOccurrenceStart:
+          dragState.event.recurrenceIdStart ?? occurrenceStartUnix(dragState.event),
+        newStart,
+        newEnd,
+        isAllDay: dragState.previewIsAllDay,
+        isException: dragState.event.isException,
+        description:
+          dragState.mode === 'move' ? localized('Move event') : localized('Resize event'),
+      };
+
+      const staleIcs = event.ics;
+      const result = await modifyEventWithRecurringSupport(
+        options,
+        dragState.mode === 'move' ? 'move' : 'resize',
+        dragState.event.title
+      );
+      if (result.success) {
+        this._followMove(dragState.event, event, newStart, staleIcs);
+      }
+    } catch (error) {
+      console.error('Failed to persist drag change:', error);
+      AppEnv.showErrorDialog({
+        title: localized('Update Failed'),
+        message: localized('Failed to update the event. Please try again.'),
+      });
+    }
+  }
+
+  /**
+   * Navigate to the next period based on the current view.
+   */
+  _onNavigateNext = () => {
+    const { view, focusedMoment } = this.state;
+    let newMoment: Moment;
+    switch (view) {
+      case CalendarView.DAY:
+        newMoment = moment(focusedMoment).add(1, 'day');
+        break;
+      case CalendarView.WEEK:
+        newMoment = moment(focusedMoment).add(1, 'week');
+        break;
+      case CalendarView.MONTH:
+        newMoment = moment(focusedMoment).add(1, 'month');
+        break;
+      case CalendarView.AGENDA:
+        newMoment = moment(focusedMoment).add(14, 'days');
+        break;
+      default:
+        return;
+    }
+    this.onChangeFocusedMoment(newMoment);
+  };
+
+  /**
+   * Navigate to the previous period based on the current view.
+   */
+  _onNavigatePrevious = () => {
+    const { view, focusedMoment } = this.state;
+    let newMoment: Moment;
+    switch (view) {
+      case CalendarView.DAY:
+        newMoment = moment(focusedMoment).subtract(1, 'day');
+        break;
+      case CalendarView.WEEK:
+        newMoment = moment(focusedMoment).subtract(1, 'week');
+        break;
+      case CalendarView.MONTH:
+        newMoment = moment(focusedMoment).subtract(1, 'month');
+        break;
+      case CalendarView.AGENDA:
+        newMoment = moment(focusedMoment).subtract(14, 'days');
+        break;
+      default:
+        return;
+    }
+    this.onChangeFocusedMoment(newMoment);
+  };
+
+  _onRefreshCalendars = () => {
+    AppEnv.mailsyncBridge.sendSyncCalendarNow();
+  };
+
+  _shouldShowEmptyState() {
+    return this.state.calendarsLoaded && this.state.calendars.length === 0;
+  }
+
+  _renderMainContent() {
+    if (this._shouldShowEmptyState()) {
+      return <CalendarEmptyState />;
+    }
+
+    const CurrentView = VIEWS[this.state.view];
+    return (
+      <CurrentView
+        paintVersion={`${getColorCacheVersion()}-${this.state.themeVersion}`}
+        dataSource={this._dataSource}
+        focusedMoment={this.state.focusedMoment}
+        focusedEvent={this.state.focusedEvent}
+        selectedEvents={this.state.selectedEvents}
+        disabledCalendars={this.state.disabledCalendars}
+        onChangeView={this.onChangeView}
+        onChangeFocusedMoment={this.onChangeFocusedMoment}
+        onCalendarMouseUp={this._onCalendarMouseUp}
+        onCalendarMouseDown={this._onCalendarMouseDown}
+        onCalendarMouseMove={this._onCalendarMouseMove}
+        onCalendarClick={this._onCalendarClick}
+        onCalendarDoubleClick={this._onCalendarDoubleClick}
+        onCalendarContextMenu={this._onCalendarContextMenu}
+        onEventClick={this._onEventClick}
+        onEventDoubleClick={this._onEventDoubleClick}
+        onEventContextMenu={this._onEventContextMenu}
+        onEventFocused={this._onEventFocused}
+        dragState={this.state.dragState}
+        createDrag={this.state.createDrag}
+        onEventDragStart={this._onEventDragStart}
+        readOnlyCalendarIds={this.state.readOnlyCalendarIds}
+        isCalendarReadOnly={this._isCalendarReadOnly}
+      />
+    );
+  }
+
+  render() {
+    return (
+      <CalendarMenuCommands
+        onChangeView={this.onChangeView}
+        onChangeFocusedMoment={this.onChangeFocusedMoment}
+        onNavigateNext={this._onNavigateNext}
+        onNavigatePrevious={this._onNavigatePrevious}
+        onDeleteEvent={this._onDeleteSelectedEvents}
+        onRefreshCalendars={this._onRefreshCalendars}
+        hasSelectedEvents={this.state.selectedEvents.length > 0}
+      >
+        <KeyCommandsRegion
+          className="mailspring-calendar"
+          localHandlers={{
+            'core:remove-from-view': this._onDeleteSelectedEvents,
+            'calendar:move-event-up': () => this._onMoveSelectedEvent('up', false),
+            'calendar:move-event-down': () => this._onMoveSelectedEvent('down', false),
+            'calendar:move-event-left': () => this._onMoveSelectedEvent('left', false),
+            'calendar:move-event-right': () => this._onMoveSelectedEvent('right', false),
+            'calendar:resize-event-up': () => this._onMoveSelectedEvent('up', true),
+            'calendar:resize-event-down': () => this._onMoveSelectedEvent('down', true),
+            'calendar:resize-event-left': () => this._onMoveSelectedEvent('left', true),
+            'calendar:resize-event-right': () => this._onMoveSelectedEvent('right', true),
+          }}
+        >
+          {this._renderMainContent()}
+        </KeyCommandsRegion>
+      </CalendarMenuCommands>
+    );
+  }
+}

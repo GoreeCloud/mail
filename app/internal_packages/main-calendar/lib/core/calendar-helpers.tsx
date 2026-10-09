@@ -1,0 +1,501 @@
+import moment from 'moment';
+import {
+  Utils,
+  AccountStore,
+  Calendar,
+  Actions,
+  DateUtils,
+  Event,
+  ICSEventHelpers,
+  SyncbackEventTask,
+  TaskQueue,
+  localized,
+  CalendarDateUtils,
+} from 'mailspring-exports';
+import { MIN_EVENT_DURATION_SECONDS } from './calendar-constants';
+import { EventOccurrence, isTimed } from './calendar-data-source';
+import { dayFraction } from './week-view-helpers';
+
+// Cache of calendar colors synced from CalDAV servers
+const calendarColorCache: Map<string, string> = new Map();
+
+// Cached theme text color - call invalidateThemeTextColorCache() on theme change
+let _themeTextColor: { r: number; g: number; b: number } | null | undefined = undefined;
+
+export function invalidateThemeTextColorCache() {
+  _themeTextColor = undefined;
+}
+
+function getThemeTextColor(): { r: number; g: number; b: number } | null {
+  if (_themeTextColor === undefined) {
+    const container = document.querySelector('.mailspring-calendar');
+    const color = container ? getComputedStyle(container).color : '';
+    _themeTextColor = (color ? parseColor(color) : null) ?? null;
+  }
+  return _themeTextColor;
+}
+
+// Version counter that increments when colors are updated - used to trigger re-renders
+let colorCacheVersion = 0;
+
+/**
+ * Get the current color cache version. Used by components to detect when colors change.
+ */
+export function getColorCacheVersion(): number {
+  return colorCacheVersion;
+}
+
+/**
+ * Update the calendar color cache with colors from synced Calendar models.
+ * Called when calendars are loaded/updated from the database.
+ */
+export function setCalendarColors(calendars: Calendar[]) {
+  let hasChanges = false;
+  for (const calendar of calendars) {
+    if (calendar.color) {
+      if (calendarColorCache.get(calendar.id) !== calendar.color) {
+        calendarColorCache.set(calendar.id, calendar.color);
+        hasChanges = true;
+      }
+    } else if (calendarColorCache.has(calendar.id)) {
+      calendarColorCache.delete(calendar.id);
+      hasChanges = true;
+    }
+  }
+  if (hasChanges) {
+    colorCacheVersion++;
+  }
+}
+
+/**
+ * Parse a CSS color string and return RGB components.
+ * Supports hex (#RGB, #RRGGBB), rgb(), rgba(), hsl(), hsla() formats.
+ */
+function parseColor(color: string): { r: number; g: number; b: number; a: number } | null {
+  // Try hex format
+  const hexMatch = color.match(/^#([0-9a-f]{3,8})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    if (hex.length === 3) {
+      return {
+        r: parseInt(hex[0] + hex[0], 16),
+        g: parseInt(hex[1] + hex[1], 16),
+        b: parseInt(hex[2] + hex[2], 16),
+        a: 1,
+      };
+    } else if (hex.length === 6) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: 1,
+      };
+    } else if (hex.length === 8) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: parseInt(hex.slice(6, 8), 16) / 255,
+      };
+    }
+  }
+
+  // Try rgb/rgba format
+  const rgbMatch = color.match(
+    /rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/i
+  );
+  if (rgbMatch) {
+    return {
+      r: parseInt(rgbMatch[1], 10),
+      g: parseInt(rgbMatch[2], 10),
+      b: parseInt(rgbMatch[3], 10),
+      a: rgbMatch[4] !== undefined ? parseFloat(rgbMatch[4]) : 1,
+    };
+  }
+
+  // Try hsl/hsla format
+  const hslMatch = color.match(
+    /hsla?\s*\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+))?\s*\)/i
+  );
+  if (hslMatch) {
+    const h = parseFloat(hslMatch[1]) / 360;
+    const s = parseFloat(hslMatch[2]) / 100;
+    const l = parseFloat(hslMatch[3]) / 100;
+    const a = hslMatch[4] !== undefined ? parseFloat(hslMatch[4]) : 1;
+
+    // Convert HSL to RGB
+    let r: number, g: number, b: number;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a };
+  }
+
+  return null;
+}
+
+/**
+ * Get the display color for a calendar. Priority:
+ * 1. User-configured color (stored in app config)
+ * 2. Synced color from CalDAV server (stored on Calendar model)
+ * 3. Generated color based on calendar ID hash
+ */
+export function calcColor(calendarId: string) {
+  // First check user-configured color (highest priority - user override)
+  const userColor = AppEnv.config.get(`calendar.colors.${calendarId}`);
+  if (userColor) {
+    return userColor;
+  }
+
+  // Check synced color from CalDAV server
+  const syncedColor = calendarColorCache.get(calendarId);
+  if (syncedColor) {
+    return syncedColor;
+  }
+
+  // Fall back to generated color based on calendar ID
+  const hue = Utils.hueForString(calendarId);
+  return `hsl(${hue}, 80%, 45%)`;
+}
+
+/**
+ * Get event styling colors for Apple Calendar-style appearance.
+ * Returns colors for the background (light), left band (solid), and text.
+ */
+export function calcEventColors(calendarId: string): {
+  background: string;
+  band: string;
+  text: string;
+  selectedText: string;
+} {
+  const baseColor = calcColor(calendarId);
+  const parsed = parseColor(baseColor);
+
+  if (!parsed) {
+    // Fallback if color parsing fails
+    return {
+      background: baseColor,
+      band: baseColor,
+      text: 'inherit',
+      selectedText: 'white',
+    };
+  }
+
+  const { r, g, b } = parsed;
+  const selectedText = textColorOnFill(parsed);
+
+  const textParsed = getThemeTextColor();
+  const mix = 0.4; // 40% calendar color, 60% theme text color
+  const tr = textParsed ? Math.round(r * mix + textParsed.r * (1 - mix)) : Math.round(r * 0.7);
+  const tg = textParsed ? Math.round(g * mix + textParsed.g * (1 - mix)) : Math.round(g * 0.7);
+  const tb = textParsed ? Math.round(b * mix + textParsed.b * (1 - mix)) : Math.round(b * 0.7);
+
+  return {
+    // Light pastel background (15% opacity)
+    background: `rgba(${r}, ${g}, ${b}, 0.15)`,
+    // Solid color for left band
+    band: `rgb(${r}, ${g}, ${b})`,
+    // Calendar color mixed with theme text color for readability
+    text: `rgb(${tr}, ${tg}, ${tb})`,
+    // Selection fills with the band color, so its text must read against that
+    selectedText,
+  };
+}
+
+/** Black or white, whichever contrasts more with the fill (WCAG 2 relative luminance). */
+export function textColorOnFill({ r, g, b }: { r: number; g: number; b: number }): string {
+  const linear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+  const contrastWithWhite = 1.05 / (luminance + 0.05);
+  const contrastWithBlack = (luminance + 0.05) / 0.05;
+  return contrastWithBlack > contrastWithWhite ? 'black' : 'white';
+}
+
+// Common video meeting URL patterns and their display names
+const MEETING_URL_PATTERNS: { pattern: RegExp; display: string }[] = [
+  { pattern: /zoom\.us/i, display: 'zoom.us' },
+  { pattern: /meet\.google\.com/i, display: 'meet.google.com' },
+  { pattern: /teams\.microsoft\.com/i, display: 'teams.microsoft.com' },
+  { pattern: /webex\.com/i, display: 'webex.com' },
+  { pattern: /gotomeeting\.com/i, display: 'gotomeeting.com' },
+  { pattern: /whereby\.com/i, display: 'whereby.com' },
+  { pattern: /around\.co/i, display: 'around.co' },
+  { pattern: /meet\.jit\.si/i, display: 'meet.jit.si' },
+  { pattern: /discord\.gg/i, display: 'discord.gg' },
+  { pattern: /slack\.com\/calls/i, display: 'slack.com' },
+  { pattern: /chime\.aws/i, display: 'chime.aws' },
+  { pattern: /bluejeans\.com/i, display: 'bluejeans.com' },
+  { pattern: /appear\.in/i, display: 'appear.in' },
+  { pattern: /livestorm\.co/i, display: 'livestorm.co' },
+  { pattern: /hopin\.com/i, display: 'hopin.com' },
+  { pattern: /loom\.com/i, display: 'loom.com' },
+  { pattern: /tuple\.app/i, display: 'tuple.app' },
+  { pattern: /pop\.com/i, display: 'pop.com' },
+  { pattern: /cal\.com/i, display: 'cal.com' },
+  { pattern: /calendly\.com/i, display: 'calendly.com' },
+  { pattern: /facetime:/i, display: 'FaceTime' },
+];
+
+/**
+ * Extract a meeting URL domain from location or description text.
+ * Returns the friendly domain name (e.g., "zoom.us", "meet.google.com") or null.
+ */
+export function extractMeetingDomain(location: string, description: string): string | null {
+  const textToSearch = `${location} ${description}`;
+
+  // First check for known meeting platforms
+  for (const { pattern, display } of MEETING_URL_PATTERNS) {
+    if (pattern.test(textToSearch)) {
+      return display;
+    }
+  }
+
+  // Fall back to extracting domain from any URL in location field
+  const urlMatch = location.match(/https?:\/\/([^/\s]+)/i);
+  if (urlMatch) {
+    const domain = urlMatch[1].toLowerCase();
+    // Remove www. prefix if present
+    return domain.replace(/^www\./, '');
+  }
+
+  return null;
+}
+
+/**
+ * All-day events store an exclusive end — midnight after the last day covered — so a
+ * date picker showing it raw reads a day later than the event actually runs.
+ * @returns The last day the event covers, at local midnight
+ */
+export function inclusiveAllDayEnd(end: number): number {
+  return moment
+    .unix(end - 1)
+    .startOf('day')
+    .unix();
+}
+
+/**
+ * The end an event should take when its start moves, preserving the duration.
+ * All-day events shift in whole days: a seconds delta across a DST transition would
+ * land the end off midnight and gain or lose a day once serialized.
+ * @returns The new end, as a unix timestamp
+ */
+export function shiftEndWithStart(
+  startUnix: number,
+  endUnix: number,
+  newStartUnix: number,
+  isAllDay: boolean
+): number {
+  if (!isAllDay) {
+    return endUnix + (newStartUnix - startUnix);
+  }
+  const days = CalendarDateUtils.calendarDaysBetween(
+    CalendarDateUtils.calendarDateFromUnix(startUnix),
+    CalendarDateUtils.calendarDateFromUnix(newStartUnix)
+  );
+  return CalendarDateUtils.nextDayStartUnix(
+    CalendarDateUtils.addCalendarDays(
+      CalendarDateUtils.calendarDateFromUnix(inclusiveAllDayEnd(endUnix)),
+      days
+    )
+  );
+}
+
+/**
+ * Clamp a proposed end so it can never precede the start — one whole day for an all-day
+ * event, MIN_EVENT_DURATION_SECONDS for a timed one.
+ * @returns The clamped end, as a unix timestamp
+ */
+export function clampEnd(startUnix: number, endUnix: number, isAllDay: boolean): number {
+  const floor = isAllDay
+    ? CalendarDateUtils.nextDayStartUnix(CalendarDateUtils.calendarDateFromUnix(startUnix))
+    : startUnix + MIN_EVENT_DURATION_SECONDS;
+  return Math.max(endUnix, floor);
+}
+
+/**
+ * A time as compact as the locale allows: a 12-hour clock drops ":00" on the hour ("10 AM"),
+ * a 24-hour clock keeps LT ("10:00"), where a bare "10" would not read as a time.
+ */
+export function formatShortTime(unix: number): string {
+  const time = moment.unix(unix);
+  const lt = moment.localeData().longDateFormat('LT');
+  // moment's LT uses h for a 12-hour clock and H for a 24-hour one, as in time-picker.tsx
+  if (!/h/.test(lt) || time.minutes() !== 0) {
+    return time.format('LT');
+  }
+  return time.format(lt.replace(/[:.]mm/, ''));
+}
+
+/**
+ * Format an event's time range for display (e.g., "12 – 1PM").
+ * Only returns a string for events that are 1 hour or longer.
+ * Returns null for shorter events or all-day events.
+ */
+export function formatEventTimeRange(
+  startUnix: number,
+  endUnix: number,
+  isAllDay: boolean
+): string | null {
+  if (isAllDay) {
+    return null;
+  }
+
+  const durationMinutes = (endUnix - startUnix) / 60;
+  if (durationMinutes < 60) {
+    return null;
+  }
+
+  const startDate = new Date(startUnix * 1000);
+  const endDate = new Date(endUnix * 1000);
+
+  const formatTime = (date: Date, includeAmPm: boolean) => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+
+    let timeStr = String(hours);
+    if (minutes > 0) {
+      timeStr += ':' + String(minutes).padStart(2, '0');
+    }
+    if (includeAmPm) {
+      timeStr += ampm;
+    }
+    return timeStr;
+  };
+
+  const startAmPm = startDate.getHours() >= 12 ? 'PM' : 'AM';
+  const endAmPm = endDate.getHours() >= 12 ? 'PM' : 'AM';
+
+  // Only include AM/PM on start time if it differs from end time
+  const includeStartAmPm = startAmPm !== endAmPm;
+
+  return `${formatTime(startDate, includeStartAmPm)} – ${formatTime(endDate, true)}`;
+}
+
+/**
+ * Filter calendars to only those that are writable and not disabled by the user.
+ */
+export function getEditableCalendars(
+  calendars: Calendar[],
+  disabledCalendars: string[]
+): Calendar[] {
+  return calendars.filter((c) => !c.readOnly && !disabledCalendars.includes(c.id));
+}
+
+/**
+ * Show an error dialog when no editable calendars are available.
+ */
+export function showNoEditableCalendarsError(): void {
+  AppEnv.showErrorDialog(
+    localized(
+      "This account has no editable calendars. We can't create an event for you. Please make sure you have an editable calendar with your account provider."
+    )
+  );
+}
+
+/**
+ * Show an error dialog when the user tries to change events on a read-only calendar.
+ */
+export function showReadOnlyCalendarError(): void {
+  AppEnv.showErrorDialog(
+    localized("This calendar is read-only, so its events can't be changed or deleted.")
+  );
+}
+
+/**
+ * Options for creating a new calendar event.
+ */
+export interface CreateCalendarEventOptions {
+  summary: string;
+  start: Date;
+  end: Date;
+  isAllDay: boolean;
+  calendarId: string;
+  accountId: string;
+  description?: string;
+  location?: string;
+  attendees?: Array<{ email: string; name?: string }>;
+  recurrenceRule?: string;
+  timezone?: string;
+}
+
+/** The account, as the ORGANIZER the ICS helpers name once an event has guests. */
+export function organizerForAccount(
+  accountId: string
+): { email: string; name?: string } | undefined {
+  const account = AccountStore.accountForId(accountId);
+  return account ? { email: account.emailAddress, name: account.name } : undefined;
+}
+
+/**
+ * Create a new calendar event, queue the syncback task, and focus the event.
+ * Shared by CalendarEventPopover and QuickEventPopover.
+ */
+export async function createCalendarEvent(options: CreateCalendarEventOptions): Promise<void> {
+  const icsuid = ICSEventHelpers.generateUID();
+  const ics = ICSEventHelpers.createICSString({
+    uid: icsuid,
+    summary: options.summary,
+    start: options.start,
+    end: options.end,
+    isAllDay: options.isAllDay,
+    timezone: options.timezone || DateUtils.timeZone,
+    description: options.description,
+    location: options.location,
+    organizer: organizerForAccount(options.accountId),
+    attendees: options.attendees,
+    recurrenceRule: options.recurrenceRule,
+  });
+
+  const event = new Event({
+    calendarId: options.calendarId,
+    accountId: options.accountId,
+    ics,
+    icsuid,
+    recurrenceStart: Math.floor(options.start.getTime() / 1000),
+    recurrenceEnd: Math.floor(options.end.getTime() / 1000),
+  });
+  event.title = options.summary;
+
+  const task = SyncbackEventTask.forCreating({
+    event,
+    calendarId: options.calendarId,
+    accountId: options.accountId,
+  });
+  Actions.queueTask(task);
+
+  try {
+    await TaskQueue.waitForPerformRemote(task);
+    Actions.focusCalendarEvent({ id: event.id, start: event.recurrenceStart });
+  } catch (error) {
+    console.error('Failed to sync new event to server:', error);
+  }
+}
+
+/**
+ * Scroll a day/week hour grid so a selected timed event's time is centered in the viewport;
+ * with no timed selection, fall back to the midday default.
+ */
+export function centerGridScroll(viewportEl: HTMLElement, selectedEvent?: EventOccurrence): void {
+  const fraction = selectedEvent && isTimed(selectedEvent) ? dayFraction(selectedEvent.start) : 0.5;
+  viewportEl.scrollTop = viewportEl.scrollHeight * fraction - viewportEl.clientHeight / 2;
+}

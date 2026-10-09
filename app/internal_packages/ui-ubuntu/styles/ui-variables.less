@@ -1,0 +1,106 @@
+// All themes need a file called `ui-variables` that extends from the base
+// variables and overrides colors, padding, etc. Other plugins import
+// `ui-variables` to make their custom CSS react to the current theme.
+@import 'base/ui-variables';
+
+@accent-primary: var(--system-accent, #f07746);
+@accent-primary-dark: var(--system-accent-dark, color-mix(in srgb, @accent-primary, black 1%));
+
+@border-color-divider: #e2e2e2;
+@border-color-secondary: lighten(@background-secondary, 10%);
+
+@toolbar-background-color: #41403b;
+@light: rgb(246, 246, 246);
+
+.sheet-container {
+  .sheet-toolbar {
+    .btn-toolbar img.content-mask {
+      background-color: @light;
+    }
+
+    .sheet-toolbar-container {
+      background-image: linear-gradient(
+        to bottom,
+        lighten(@toolbar-background-color, 6%),
+        darken(@toolbar-background-color, 5%)
+      );
+      box-shadow: none;
+      .btn {
+        background: lighten(@toolbar-background-color, 4%);
+      }
+      .btn.btn-toolbar {
+        color: @light;
+      }
+      .toolbar-activity .activity-toolbar-icon {
+        background: @light;
+      }
+    }
+  }
+
+  .sheet-toolbar .item-back img.content-mask,
+  .sheet-toolbar .toolbar-menu-control img.content-mask {
+    background-color: @light;
+  }
+
+  // The macOS glass rims are white and clash with this dark toolbar; use a
+  // plain hairline edge instead.
+  body.platform-darwin & .sheet-toolbar .sheet-toolbar-container {
+    .btn.btn-toolbar,
+    .button-group {
+      box-shadow: 0 0 0 1px lighten(@toolbar-background-color, 14%);
+    }
+    .button-group .btn.btn-toolbar {
+      box-shadow: none;
+    }
+  }
+
+  .sheet-toolbar .item-back .item-back-title {
+    color: @light;
+  }
+
+  .sheet-toolbar .selection-bar {
+    .absolute {
+      border-color: lighten(@toolbar-background-color, 5%);
+      background-color: darken(@toolbar-background-color, 8%);
+
+      .inner {
+        .centered {
+          color: @light;
+        }
+      }
+    }
+  }
+
+  // The nav rail continues the toolbar, flat at the gradient's bottom stop. Matches the
+  // specificity of the toolbar rule above to outrank the core platform rules.
+  .sheet-toolbar ~ .nav-rail-frame {
+    background: darken(@toolbar-background-color, 5%);
+  }
+  .nav-rail .nav-rail-item:hover {
+    background: fade(@light, 12%);
+  }
+  .nav-rail .nav-rail-item:not(.active) img.content-mask {
+    background-color: @light;
+  }
+}
+
+.btn-icon img.content-mask {
+  background-color: @light;
+  color: @light;
+}
+
+.btn-icon img.content-mask:hover {
+  background-color: @accent-primary;
+}
+
+body.is-blurred .sheet-container {
+  .sheet-toolbar {
+    .sheet-toolbar-container {
+      background-image: linear-gradient(
+        to bottom,
+        darken(@toolbar-background-color, 5%),
+        darken(@toolbar-background-color, 5%)
+      );
+    }
+  }
+}

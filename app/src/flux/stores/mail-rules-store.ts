@@ -1,0 +1,305 @@
+import MailspringStore from 'mailspring-store';
+import _ from 'underscore';
+import * as Utils from '../models/utils';
+import * as Actions from '../actions';
+import { Thread } from '../models/thread';
+import { Message } from '../models/message';
+import { Contact } from '../models/contact';
+import DatabaseStore from '../stores/database-store';
+import CategoryStore from '../stores/category-store';
+import { AccountStore } from '../stores/account-store';
+import MailRulesProcessor from '../../mail-rules-processor';
+import { localized } from '../../intl';
+
+import { Template } from '../../components/scenario-editor-models';
+import { ConditionMode, ConditionTemplates, ActionTemplates } from '../../mail-rules-templates';
+import { DatabaseChangeRecord } from 'mailspring-exports';
+
+const RulesJSONKey = 'MailRules-V2';
+const AutoSinceJSONKey = 'MailRules-Auto-Since';
+
+export interface MailRule extends Template {
+  id: string;
+  accountId: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  name: string;
+  conditions: [
+    {
+      templateKey: string;
+      comparatorKey: string;
+      value: string;
+    },
+  ];
+  conditionMode: 'any' | 'all';
+  actions: [
+    {
+      value: string;
+      // Display name of the folder / label chosen for `value`, used to re-resolve the
+      // category when its id changes (folder ids are hashes of the IMAP path).
+      valueName?: string;
+      templateKey: string;
+    },
+  ];
+}
+
+class MailRulesStore extends MailspringStore {
+  _autoSince = Number(window.localStorage.getItem(AutoSinceJSONKey) || 0);
+  _reprocessing: {
+    [accountId: string]: {
+      count: number;
+      lastTimestamp: Date | null;
+      inboxCategoryId: string;
+    };
+  } = {};
+
+  _rules: MailRule[] = [];
+
+  constructor() {
+    super();
+
+    /* This is a bit strange - if the user has mail rules enabled, they only
+    expect rules to be applied to "new" mail. Not "new" mail as in just created,
+    since that includes old mail we're syncing for the first time. Just "new"
+    mail that has arrived since they last ran Mailspring. So, we keep a date. */
+    if (this._autoSince === 0) {
+      window.localStorage.setItem(AutoSinceJSONKey, `${Date.now()}`);
+      this._autoSince = Date.now();
+    }
+
+    try {
+      const txt = window.localStorage.getItem(RulesJSONKey);
+      if (txt) {
+        this._rules = JSON.parse(txt);
+      }
+    } catch (err) {
+      console.warn('Could not load saved mail rules', err);
+    }
+
+    this.listenTo(Actions.addMailRule, this._onAddMailRule);
+    this.listenTo(Actions.deleteMailRule, this._onDeleteMailRule);
+    this.listenTo(Actions.reorderMailRule, this._onReorderMailRule);
+    this.listenTo(Actions.updateMailRule, this._onUpdateMailRule);
+    this.listenTo(Actions.disableMailRule, this._onDisableMailRule);
+    this.listenTo(Actions.startReprocessingMailRules, this._onStartReprocessing);
+    this.listenTo(Actions.stopReprocessingMailRules, this._onStopReprocessing);
+
+    this.listenTo(DatabaseStore, this._onDatabaseChanged);
+  }
+
+  rules() {
+    return this._rules;
+  }
+
+  rulesForAccountId(accountId: string) {
+    return this._rules.filter((f) => f.accountId === accountId);
+  }
+
+  disabledRules(accountId?: string) {
+    return this._rules.filter((f) => (!accountId || f.accountId === accountId) && f.disabled);
+  }
+
+  reprocessState() {
+    return this._reprocessing;
+  }
+
+  _onDatabaseChanged = (record: DatabaseChangeRecord<Message>) => {
+    if (record.type !== 'persist' || record.objectClass !== Message.name) return;
+
+    // The sync engine sets `rulesReady` on exactly one delta per message: the first one on
+    // which the message has both its body and a copy outside Sent / Drafts / Spam / Trash.
+    // For mail the user sent to themself, that is the delta that records the Inbox copy,
+    // which can arrive well after the Sent copy. That delta always carries the body, which
+    // "Body contains" conditions read.
+    const newIds = record.objectsRawJSON.filter((json) => json.rulesReady).map((json) => json.id);
+    if (newIds.length === 0) return;
+
+    const newMessages = record.objects.filter(
+      (m) =>
+        newIds.includes(m.id) &&
+        !m.draft &&
+        m.date &&
+        m.date.valueOf() > this._autoSince &&
+        !this._isSentToOthers(m)
+    );
+
+    if (newMessages.length > 0) {
+      MailRulesProcessor.processMessages(newMessages);
+    }
+  };
+
+  /*
+  Mail this account sent to other people, which the engine also flags once the user files it
+  out of Sent (or another client files it elsewhere). Like Thunderbird, Outlook and Apple Mail,
+  rules apply to mail that arrives, never to the user's own sent mail. Mail from another of the
+  user's accounts is still incoming to this one.
+  */
+  _isSentToOthers(message: Message) {
+    const isThisAccount = (c: Contact) =>
+      AccountStore.accountForEmail(c.email)?.id === message.accountId;
+    return (
+      message.from.some(isThisAccount) &&
+      ![...message.to, ...message.cc, ...message.bcc].some(isThisAccount)
+    );
+  }
+
+  _onDeleteMailRule = (id: string) => {
+    this._rules = this._rules.filter((f) => f.id !== id);
+    this._saveMailRules();
+    this.trigger();
+  };
+
+  _onReorderMailRule = (id: string, newIdx: number) => {
+    const currentIdx = this._rules.findIndex((r) => r.id === id);
+    if (currentIdx === -1) {
+      return;
+    }
+    const rule = this._rules[currentIdx];
+    this._rules.splice(currentIdx, 1);
+    this._rules.splice(newIdx, 0, rule);
+    this._saveMailRules();
+    this.trigger();
+  };
+
+  _onAddMailRule = (properties: Partial<MailRule> & { accountId: string }) => {
+    const defaults = {
+      id: Utils.generateTempId(),
+      name: localized('Untitled Rule'),
+      conditionMode: ConditionMode.All,
+      conditions: [ConditionTemplates[0].createDefaultInstance()],
+      actions: [ActionTemplates[0].createDefaultInstance()],
+      disabled: false,
+    };
+
+    if (!properties.accountId) {
+      throw new Error('AddMailRule: you must provide an account id.');
+    }
+
+    this._rules.push(Object.assign(defaults, properties) as MailRule);
+    this._saveMailRules();
+    this.trigger();
+  };
+
+  _onUpdateMailRule = (id: string, properties: Partial<MailRule>) => {
+    const existing = this._rules.find((f) => id === f.id);
+    if (!existing) {
+      return;
+    }
+    Object.assign(existing, properties);
+    this._saveMailRules();
+    this.trigger();
+  };
+
+  _onDisableMailRule = (id: string, reason: string) => {
+    const existing = this._rules.find((f) => id === f.id);
+    if (!existing || existing.disabled === true) {
+      return;
+    }
+
+    // Disable the task
+    existing.disabled = true;
+    existing.disabledReason = reason;
+    this._saveMailRules();
+
+    // Cancel all bulk processing jobs
+    this._reprocessing = {};
+
+    this.trigger();
+  };
+
+  _saveMailRulesDebounced?: () => void;
+  _saveMailRules() {
+    this._saveMailRulesDebounced =
+      this._saveMailRulesDebounced ||
+      _.debounce(() => {
+        window.localStorage.setItem(RulesJSONKey, JSON.stringify(this._rules));
+      }, 1000);
+    this._saveMailRulesDebounced();
+  }
+
+  // Reprocessing Existing Mail
+
+  _onStartReprocessing = (aid: string) => {
+    // The preferences UI explains this to the user before dispatching; here we only
+    // avoid walking the entire inbox for nothing.
+    if (!this._rules.some((r) => r.accountId === aid && !r.disabled)) {
+      return;
+    }
+    const inboxCategory = CategoryStore.getCategoryByRole(aid, 'inbox');
+    if (!inboxCategory) {
+      AppEnv.showErrorDialog(
+        localized(
+          `Sorry, this account does not appear to have an inbox folder so this feature is disabled.`
+        )
+      );
+      return;
+    }
+
+    this._reprocessing[aid] = {
+      count: 1,
+      lastTimestamp: null,
+      inboxCategoryId: inboxCategory.id,
+    };
+    this._reprocessSome(aid);
+    this.trigger();
+  };
+
+  _onStopReprocessing = (aid: string) => {
+    delete this._reprocessing[aid];
+    this.trigger();
+  };
+
+  _reprocessSome = (accountId: string, callback?: () => void) => {
+    if (!this._reprocessing[accountId]) {
+      return;
+    }
+    const { lastTimestamp, inboxCategoryId } = this._reprocessing[accountId];
+
+    // Fetching threads first, and then getting their messages allows us to use
+    // The same indexes as the thread list / message list in the app
+
+    // Note that we look for "50 after X" rather than "offset 150", because
+    // running mail rules can move things out of the inbox!
+    const query = DatabaseStore.findAll<Thread>(Thread, { accountId })
+      .where(Thread.attributes.categories.contains(inboxCategoryId))
+      .order(Thread.attributes.lastMessageReceivedTimestamp.descending())
+      .limit(50);
+
+    if (lastTimestamp !== null) {
+      query.where(Thread.attributes.lastMessageReceivedTimestamp.lessThan(lastTimestamp));
+    }
+
+    query.then((threads) => {
+      if (!this._reprocessing[accountId]) {
+        return;
+      }
+      if (threads.length === 0) {
+        this._onStopReprocessing(accountId);
+        return;
+      }
+
+      DatabaseStore.findAll<Message>(Message, {
+        threadId: threads.map((t) => t.id),
+      }).then((messages) => {
+        if (!this._reprocessing[accountId]) {
+          return;
+        }
+        const advance = () => {
+          if (this._reprocessing[accountId]) {
+            this._reprocessing[accountId] = Object.assign({}, this._reprocessing[accountId], {
+              count: this._reprocessing[accountId].count + messages.length,
+              lastTimestamp: threads.pop().lastMessageReceivedTimestamp,
+            });
+            this.trigger();
+            setTimeout(() => {
+              this._reprocessSome(accountId);
+            }, 500);
+          }
+        };
+        MailRulesProcessor.processMessages(messages).then(advance, advance);
+      });
+    });
+  };
+}
+
+export default new MailRulesStore();
