@@ -69,6 +69,14 @@ jobs:
           test -f "$test_dir/edgehill.db" || test -f "$test_dir/Edgehill.db" || \
             { echo "Native migration completed but no known database file was detected."; exit 1; }
 
+      - name: Share source-built engine with the test job
+        uses: actions/upload-artifact@v7
+        with:
+          name: goreecloud-mail-ci-engine
+          path: app/dist/mailsync.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
