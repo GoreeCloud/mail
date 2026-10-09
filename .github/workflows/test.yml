@@ -27,7 +27,7 @@ jobs:
 
   engine-native-build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 50
+    timeout-minutes: 80
     steps:
       - name: Check out pinned GoreeCloud Mail native source
         uses: actions/checkout@v7
@@ -70,19 +70,21 @@ jobs:
             { echo "Native migration completed but no known database file was detected."; exit 1; }
 
 
-      - name: Transfer ephemeral source-built engine for app tests
-        uses: actions/upload-artifact@v7
+      - name: Install Electron test dependencies
+        run: |
+          sudo apt-get install -y dbus-x11 libgbm1 libnss3 libasound2 libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0
+      - name: Set up Node.js for Mail specs
+        uses: actions/setup-node@v7
         with:
-          name: goreecloud-mail-native-ci
-          path: |
-            app/mailsync
-            app/mailsync.bin
-            app/*.so*
-          if-no-files-found: error
-          retention-days: 1
+          node-version: '20'
+          cache: 'npm'
+      - name: Install application dependencies with native source present
+        run: npm ci
+      - name: Run complete Jasmine suite against compiled native engine
+        run: dbus-launch --exit-with-session xvfb-run -a npm test
+        timeout-minutes: 20
 
-  test:
-    needs: engine-native-build
+  static-checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -123,9 +125,3 @@ jobs:
       - name: Run typecheck
         run: npm run typecheck
 
-      - name: Allow Electron namespace sandbox
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
-      - name: Run tests
-        run: dbus-launch --exit-with-session xvfb-run -a npm test
-        timeout-minutes: 20
