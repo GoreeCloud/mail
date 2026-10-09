@@ -70,6 +70,17 @@ jobs:
             { echo "Native migration completed but no known database file was detected."; exit 1; }
 
 
+      - name: Transfer ephemeral source-built engine for app tests
+        uses: actions/upload-artifact@v7
+        with:
+          name: goreecloud-mail-native-ci
+          path: |
+            app/mailsync
+            app/mailsync.bin
+            app/*.so*
+          if-no-files-found: error
+          retention-days: 1
+
   test:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
