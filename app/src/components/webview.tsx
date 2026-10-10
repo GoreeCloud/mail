@@ -1,11 +1,9 @@
 import React from 'react';
-import { shell } from 'electron';
 import ReactDOM from 'react-dom';
 import classnames from 'classnames';
 import networkErrors from 'chromium-net-errors';
 import { localized } from 'mailspring-exports';
 
-import { rootURLForServer } from '../flux/mailspring-api-request';
 import { RetinaImg } from './retina-img';
 import { Disposable } from 'event-kit';
 
@@ -18,7 +16,7 @@ type InitialLoadingCoverState = {
   slow: boolean;
 };
 
-class InitialLoadingCover extends React.Component<
+export class InitialLoadingCover extends React.Component<
   InitialLoadingCoverProps,
   InitialLoadingCoverState
 > {
@@ -54,13 +52,13 @@ class InitialLoadingCover extends React.Component<
     if (this.props.error) {
       message = this.props.error;
     } else if (this.state.slow) {
-      message = localized(`Still trying to reach %@…`, rootURLForServer('identity'));
+      message = localized('Still connecting to the sign-in page…');
     } else {
-      message = '&nbsp;';
+      message = '';
     }
 
     return (
-      <div className={classes}>
+      <div className={classes} aria-hidden={this.props.ready && !this.props.error}>
         <div style={{ flex: 1 }} />
         <RetinaImg
           className="spinner"
@@ -68,10 +66,17 @@ class InitialLoadingCover extends React.Component<
           name="inline-loading-spinner.gif"
           mode={RetinaImg.Mode.ContentPreserve}
         />
-        <div className="message">{message}</div>
-        <div className="btn try-again" onClick={this.props.onTryAgain}>
-          {localized('Try Again')}
+        <div className="message" role={this.props.error ? 'alert' : 'status'} aria-live="polite">
+          {message}
         </div>
+        <button
+          type="button"
+          className="btn try-again"
+          disabled={!this.props.error || !this.props.onTryAgain}
+          onClick={this.props.onTryAgain}
+        >
+          {localized('Try Again')}
+        </button>
         <div style={{ flex: 1 }} />
       </div>
     );
@@ -85,7 +90,7 @@ type WebviewProps = {
 type WebviewState = {
   webviewLoading: boolean;
   ready: boolean;
-  error: null;
+  error: string | null;
 };
 
 export default class Webview extends React.Component<WebviewProps, WebviewState> {
@@ -114,26 +119,33 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
 
   componentWillUnmount() {
     this._mounted = false;
+    const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
+    if (webview) {
+      const listeners = this._webviewListeners();
+      for (const event of Object.keys(listeners)) {
+        webview.removeEventListener(event, listeners[event]);
+      }
+    }
     if (this._disposable) {
       this._disposable.dispose();
       this._disposable = null;
     }
   }
 
-  _setupWebview(props) {
-    if (!props.src) return;
-    const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
-    const listeners = {
+  _webviewListeners() {
+    return {
       'did-fail-load': this._webviewDidFailLoad,
       'did-finish-load': this._webviewDidFinishLoad,
       'did-frame-navigate': this._webviewDidFrameNavigate,
-      'console-message': this._onConsoleMessage,
       'new-window': this._onNewWindow,
-
-      // Workaround: When a webview changes pages, it's focus state seems to get out of
-      // sync and the text insertion cursor disappears until you blur it and focus it again.
-      'did-navigate': () => webview.blur(),
+      'did-navigate': this._webviewDidNavigate,
     };
+  }
+
+  _setupWebview(props) {
+    if (!props.src) return;
+    const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
+    const listeners = this._webviewListeners();
     for (const event of Object.keys(listeners)) {
       webview.removeEventListener(event, listeners[event]);
     }
@@ -145,25 +157,32 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
   }
 
   _onTryAgain = () => {
+    if (!this._mounted) return;
+    this.setState({ error: null, ready: false, webviewLoading: true });
     const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
     webview.reload();
   };
 
-  _onNewWindow = (e: { url: string }) => {
-    if (/^https?:\/\/.+/i.test(e.url)) {
-      shell.openExternal(e.url);
+  _onNewWindow = (event: { preventDefault: () => void }) => {
+    // A remote identity page must not launch arbitrary URLs in the host browser.
+    // A future explicit, user-initiated browser flow needs its own reviewed policy.
+    event.preventDefault();
+    if (this._mounted) {
+      const error = localized(
+        'A sign-in pop-up was blocked for your security. Return to sign-in and choose another method.'
+      );
+      this.setState({ ready: false, error, webviewLoading: false });
     }
   };
 
-  _onConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
-    if (/^https?:\/\/.+/i.test(e.message)) {
-      shell.openExternal(e.message);
-    }
-    console.log('Guest page logged a message:', e.message);
+  _webviewDidNavigate = () => {
+    if (!this._mounted) return;
+    // Navigating a guest can leave the text cursor out of sync until refocused.
+    const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
+    webview.blur();
   };
 
   _webviewDidFrameNavigate = ({
-    url: navigatedUrl,
     httpResponseCode,
     isMainFrame,
   }: {
@@ -177,17 +196,14 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     if (!isMainFrame) return;
 
     if (httpResponseCode >= 400) {
-      const error = localized(
-        `Could not reach Mailspring. Please try again or contact support@getmailspring.com if the issue persists. (%@: %@)`,
-        navigatedUrl,
-        httpResponseCode
-      );
-      this.setState({ ready: false, error: error, webviewLoading: false });
+      const error = localized('Could not load the sign-in page. (HTTP %@)', httpResponseCode);
+      this.setState({ ready: false, error, webviewLoading: false });
+      return;
     }
-    this.setState({ ready: true, webviewLoading: false });
+    this.setState({ ready: true, error: null, webviewLoading: false });
   };
 
-  _webviewDidFailLoad = ({ errorCode, validatedURL }) => {
+  _webviewDidFailLoad = ({ errorCode }) => {
     if (!this._mounted) return;
     // "Operation was aborted" can be fired when we move between pages quickly.
     if (errorCode === -3) {
@@ -195,7 +211,7 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     }
 
     const e = networkErrors.createByCode(errorCode);
-    const error = localized(`Could not reach %@. %@`, validatedURL, e ? e.message : errorCode);
+    const error = localized('Could not load the sign-in page. %@', e ? e.message : errorCode);
     this.setState({ ready: false, error: error, webviewLoading: false });
   };
 
