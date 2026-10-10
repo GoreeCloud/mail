@@ -152,7 +152,8 @@ export default class AutoUpdateManager extends EventEmitter {
           type: 'info',
           buttons: [localized('OK')],
           message: 'GoreeCloud Mail updates are not configured.',
-          detail: 'Update checks are disabled until a verified GoreeCloud release channel is available.',
+          detail:
+            'Update checks are disabled until a verified GoreeCloud release channel is available.',
         });
       }
       return;
@@ -205,7 +206,8 @@ export default class AutoUpdateManager extends EventEmitter {
       icon: this.dialogIcon(),
       message: localized('There was an error checking for updates.'),
       title: localized('Update Error'),
-      detail: 'No update details are available. Please check an approved GoreeCloud release source.',
+      detail:
+        'No update details are available. Please check an approved GoreeCloud release source.',
     });
   };
 }
