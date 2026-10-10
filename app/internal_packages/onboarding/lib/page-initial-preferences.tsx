@@ -8,7 +8,7 @@ import { localized, AccountStore, Account } from 'mailspring-exports';
 class AppearanceModeOption extends React.Component<{
   mode: string;
   active: boolean;
-  onClick: (e: React.MouseEvent<any>) => void;
+  onClick: () => void;
 }> {
   render() {
     let classname = 'appearance-mode';
@@ -21,8 +21,23 @@ class AppearanceModeOption extends React.Component<{
       split: localized('Reading Pane On'),
     }[this.props.mode];
 
+    const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        this.props.onClick();
+      }
+    };
+
     return (
-      <div className={classname} onClick={this.props.onClick}>
+      <div
+        className={classname}
+        role="button"
+        tabIndex={0}
+        aria-pressed={this.props.active}
+        aria-label={label}
+        onClick={this.props.onClick}
+        onKeyDown={onKeyDown}
+      >
         <RetinaImg
           name={`appearance-mode-${this.props.mode}.png`}
           mode={RetinaImg.Mode.ContentIsMask}
@@ -126,7 +141,9 @@ class InitialPreferencesOptions extends React.Component<
               `We've picked a set of keyboard shortcuts based on your email account and platform. You can also pick another set:`
             )}
           </p>
+          <label htmlFor="initial-keymap-template">{localized('Keyboard Shortcuts')}</label>
           <select
+            id="initial-keymap-template"
             style={{ margin: 0 }}
             value={this.props.config.get('core.keymapTemplate')}
             onChange={(event) => this.props.config.set('core.keymapTemplate', event.target.value)}
