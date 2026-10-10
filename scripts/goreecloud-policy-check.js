@@ -74,9 +74,11 @@ const hostLinkSection = linkStart >= 0 && linkEnd > linkStart
   : '';
 if (
   !hostLinkSection ||
-  !/shell\\.openExternal\\(resolved,\\s*\\{\\s*activate:\\s*!metaKey\\s*\\}\\)\\.catch\\(\\(\\)\\s*=>/.test(hostLinkSection) ||
+  !hostLinkSection.includes('shell.openExternal(resolved, { activate: !metaKey }).catch(() =>') ||
   !hostLinkSection.includes('GoreeCloud Mail could not open this link.') ||
-  /err\\.message|error\\.message|Mailspring was unable to open the link/.test(hostLinkSection)
+  hostLinkSection.includes('err.message') ||
+  hostLinkSection.includes('error.message') ||
+  hostLinkSection.includes('Mailspring was unable to open the link')
 ) {
   fail('external-link failures must redact OS error text and destination URLs');
 } else {
