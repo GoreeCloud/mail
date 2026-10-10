@@ -11,7 +11,7 @@ type RecoveryFileSystem = Pick<typeof fs, 'existsSync' | 'rmSync' | 'writeFileSy
 
 /**
  * Some Windows GPU driver combinations crash Chromium's renderer before the
- * first window ever paints, which leaves Mailspring as a tray icon with no UI
+ * first window ever paints, which leaves GoreeCloud Mail as a tray icon with no UI
  * and no way for the user to reach the setting that would fix it. When that
  * happens we record a marker in the config directory, relaunch, and start with
  * hardware acceleration disabled from then on.
@@ -87,18 +87,28 @@ export function attemptEarlyRendererCrashRecovery({
 }) {
   if (
     recoveryStarted ||
+    !configDirPath ||
     !shouldRecoverFromEarlyRendererCrash({ platform, primaryWindow, loaded, reason })
   ) {
+    return false;
+  }
+
+  // Relaunch only after the persistent marker has been saved. Otherwise a
+  // read-only or unavailable profile directory would cause an endless crash loop.
+  try {
+    fileSystem.writeFileSync(
+      softwareRenderingMarkerPath(configDirPath),
+      `Renderer startup failure (${reason}) at ${new Date().toISOString()}\n`
+    );
+  } catch {
+    // Do not log the raw filesystem error: its message can contain private paths.
+    console.warn('GoreeCloud Mail could not save the software-rendering recovery marker.');
     return false;
   }
 
   recoveryStarted = true;
   console.warn(
     `Renderer exited (${reason}) before the primary window loaded; relaunching with hardware acceleration disabled.`
-  );
-  fileSystem.writeFileSync(
-    softwareRenderingMarkerPath(configDirPath),
-    `Renderer startup failure (${reason}) at ${new Date().toISOString()}\n`
   );
   app.relaunch();
   app.exit(0);
@@ -116,7 +126,7 @@ export function applyPersistentSoftwareRendering(
   platform = process.platform,
   fileSystem: RecoveryFileSystem = fs
 ) {
-  if (platform !== 'win32' || !fileSystem.existsSync(softwareRenderingMarkerPath(configDirPath))) {
+  if (platform !== 'win32' || !configDirPath || !fileSystem.existsSync(softwareRenderingMarkerPath(configDirPath))) {
     return false;
   }
 
@@ -127,12 +137,17 @@ export function applyPersistentSoftwareRendering(
     for (const cacheName of CHROMIUM_CACHE_DIRECTORIES) {
       try {
         fileSystem.rmSync(path.join(configDirPath, cacheName), { recursive: true, force: true });
-      } catch (error) {
-        // Best effort: software rendering is the recovery step that matters.
-        console.warn(`Unable to clear ${cacheName} during GPU recovery: ${error.message}`);
+      } catch {
+        // Cache removal is best-effort; never log private filesystem paths.
+        console.warn(`Unable to clear ${cacheName} during GoreeCloud Mail GPU recovery.`);
       }
     }
-    fileSystem.writeFileSync(cacheClearedPath, `${new Date().toISOString()}\n`);
+    try {
+      fileSystem.writeFileSync(cacheClearedPath, `${new Date().toISOString()}\n`);
+    } catch {
+      // Retry cache cleanup on a future start, without undoing software rendering.
+      console.warn('GoreeCloud Mail could not save the GPU cache recovery marker.');
+    }
   }
   return true;
 }
