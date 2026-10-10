@@ -331,7 +331,7 @@ export class EventedIFrame extends React.Component<
 
     // Menu actions for links
     const linkTarget = this._getContainingTarget(event, { with: 'href' });
-    if (linkTarget) {
+    if (linkTarget && !this._isBlacklistedHref(linkTarget.getAttribute('href'))) {
       const href = linkTarget.getAttribute('href');
       if (href.startsWith('mailto')) {
         menu.append(
