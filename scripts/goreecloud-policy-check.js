@@ -129,5 +129,16 @@ if (
   pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
 }
 
+// Account setup may only be completed by the active trusted onboarding renderer.
+if (
+  !app.includes("ipcMain.on('account-setup-successful', (event)") ||
+  !app.includes("onboarding.browserWindow.webContents !== event.sender") ||
+  !app.includes("!isMailspringWindowContents(event.sender)")
+) {
+  fail('Account setup IPC requires the active trusted onboarding window');
+} else {
+  pass('Account setup completion rejects unrelated renderer senders');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
