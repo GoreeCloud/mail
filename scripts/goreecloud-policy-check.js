@@ -129,5 +129,52 @@ if (
   pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
 }
 
+// Privileged cross-window and host UI IPC may only originate in trusted Mail windows.
+for (const channel of [
+  'update-application-menu',
+  'call-window-method',
+  'call-devtools-webcontents-method',
+  'call-webcontents-method',
+  'mailsync-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-default',
+  'write-image-to-clipboard',
+  'write-text-to-selection-clipboard',
+  'run-in-window',
+  'remote-run-results',
+  'resize-window'
+]) {
+  const handler = "ipcMain.on('" + channel + "', (event,";
+  const start = app.indexOf(handler);
+  if (start === -1 || !app.slice(start, start + 230).includes('if (!isMailspringWindowContents(event.sender)) return;')) {
+    fail('Privileged IPC sender boundary missing: ' + channel);
+  }
+}
+
+// Relaunch belongs to the main process and only trusted app windows may request it.
+const generalPreferences = read('app/internal_packages/preferences/lib/tabs/preferences-general.tsx');
+const appearancePreferences = read('app/internal_packages/preferences/lib/tabs/preferences-appearance.tsx');
+if (
+  !app.includes("this.on('application:relaunch'") ||
+  !generalPreferences.includes("'application:relaunch'") ||
+  !appearancePreferences.includes("'application:relaunch'") ||
+  appearancePreferences.includes("require('@electron/remote').app.quit()")
+) {
+  fail('Preferences must delegate relaunch to the main process');
+} else {
+  pass('Preferences delegate relaunch to the main process');
+}
+
+// Account setup may only be completed by the active trusted onboarding renderer.
+if (
+  !app.includes("ipcMain.on('account-setup-successful', (event)") ||
+  !app.includes("onboarding.browserWindow.webContents !== event.sender") ||
+  !app.includes("!isMailspringWindowContents(event.sender)")
+) {
+  fail('Account setup IPC requires the active trusted onboarding window');
+} else {
+  pass('Account setup completion rejects unrelated renderer senders');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');

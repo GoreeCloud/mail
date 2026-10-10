@@ -15,10 +15,7 @@ class PreferencesGeneral extends React.Component<{
   static displayName = 'PreferencesGeneral';
 
   _onReboot = () => {
-    console.log('general relaunch');
-    const app = require('@electron/remote').app;
-    app.relaunch();
-    app.quit();
+    require('electron').ipcRenderer.send('command', 'application:relaunch');
   };
 
   _onResetEmailsThatIgnoreWarnings = () => {
