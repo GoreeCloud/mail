@@ -72,6 +72,66 @@ describe('hardware acceleration recovery', () => {
     expect(app.relaunch.callCount).toBe(1);
   });
 
+  it('leaves normal crash handling available when the recovery marker cannot be saved', () => {
+    const app = {
+      disableHardwareAcceleration: jasmine.createSpy('disableHardwareAcceleration'),
+      exit: jasmine.createSpy('exit'),
+      relaunch: jasmine.createSpy('relaunch'),
+    };
+    const fileSystem = {
+      existsSync: jasmine.createSpy('existsSync'),
+      rmSync: jasmine.createSpy('rmSync'),
+      writeFileSync: jasmine.createSpy('writeFileSync').andThrow(new Error('private profile path')),
+    };
+    const options = {
+      app,
+      configDirPath: CONFIG_DIR,
+      loaded: false,
+      primaryWindow: true,
+      platform: 'win32',
+      reason: 'crashed',
+      fileSystem,
+    };
+    const warning = spyOn(console, 'warn');
+
+    expect(attemptEarlyRendererCrashRecovery(options)).toBe(false);
+    expect(app.relaunch).not.toHaveBeenCalled();
+    expect(app.exit).not.toHaveBeenCalled();
+    expect(warning.mostRecentCall.args[0]).not.toContain('private profile path');
+
+    // An unsuccessful attempt must not permanently suppress a later recovery.
+    fileSystem.writeFileSync.andCallFake(() => undefined);
+    expect(attemptEarlyRendererCrashRecovery(options)).toBe(true);
+    expect(app.relaunch).toHaveBeenCalled();
+  });
+
+  it('does not try to recover without a configured profile directory', () => {
+    const app = {
+      disableHardwareAcceleration: jasmine.createSpy('disableHardwareAcceleration'),
+      exit: jasmine.createSpy('exit'),
+      relaunch: jasmine.createSpy('relaunch'),
+    };
+    const fileSystem = {
+      existsSync: jasmine.createSpy('existsSync'),
+      rmSync: jasmine.createSpy('rmSync'),
+      writeFileSync: jasmine.createSpy('writeFileSync'),
+    };
+    const options = {
+      app,
+      configDirPath: '',
+      loaded: false,
+      primaryWindow: true,
+      platform: 'win32',
+      reason: 'crashed',
+      fileSystem,
+    };
+    expect(attemptEarlyRendererCrashRecovery(options)).toBe(false);
+    expect(app.relaunch).not.toHaveBeenCalled();
+    expect(fileSystem.writeFileSync).not.toHaveBeenCalled();
+    expect(applyPersistentSoftwareRendering(app, '', 'win32', fileSystem)).toBe(false);
+    expect(app.disableHardwareAcceleration).not.toHaveBeenCalled();
+  });
+
   describe('applyPersistentSoftwareRendering', () => {
     const buildFileSystem = (existing: string[]) => ({
       existsSync: jasmine
@@ -102,6 +162,23 @@ describe('hardware acceleration recovery', () => {
       expect(app.disableHardwareAcceleration).toHaveBeenCalled();
       expect(fileSystem.rmSync.callCount).toBe(3);
       expect(fileSystem.writeFileSync).toHaveBeenCalled();
+    });
+
+    it('keeps software rendering enabled when cache cleanup or marker write fails', () => {
+      const app = buildApp();
+      const fileSystem = buildFileSystem([softwareRenderingMarkerPath(CONFIG_DIR)]);
+      fileSystem.rmSync.andThrow(new Error('private cache path'));
+      fileSystem.writeFileSync.andThrow(new Error('private profile path'));
+      const warning = spyOn(console, 'warn');
+
+      expect(applyPersistentSoftwareRendering(app, CONFIG_DIR, 'win32', fileSystem)).toBe(true);
+      expect(app.disableHardwareAcceleration).toHaveBeenCalled();
+      expect(fileSystem.rmSync.callCount).toBe(3);
+      expect(fileSystem.writeFileSync).toHaveBeenCalled();
+      expect(warning.callCount).toBe(4);
+      for (const call of warning.calls) {
+        expect(call.args[0]).not.toContain('private');
+      }
     });
 
     it('does not clear caches again on later launches', () => {
