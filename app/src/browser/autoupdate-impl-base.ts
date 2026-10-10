@@ -3,13 +3,11 @@ import https from 'https';
 import { shell } from 'electron';
 import url from 'url';
 
-const FALLBACK_DOWNLOAD_URL = 'https://getmailspring.com/download';
-
 function safeHttpUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    if (parsed.protocol !== 'https:') return null;
     return parsed.href;
   } catch {
     return null;
@@ -51,7 +49,7 @@ export default class AutoupdateImplBase extends EventEmitter {
     // On linux we can't autoupdate, but we can still show the "update available" bar.
     https
       .get({ host: feedHost, path: feedPath }, (res) => {
-        console.log(`Manual update check (${feedHost}${feedPath}) returned ${res.statusCode}`);
+        console.log(`GoreeCloud Mail update service returned status ${res.statusCode}`);
 
         if (res.statusCode === 204) {
           successCallback(false);
@@ -73,14 +71,12 @@ export default class AutoupdateImplBase extends EventEmitter {
           try {
             const json = JSON.parse(data);
             if (!json.url) {
-              this.emitError(new Error(`Autoupdater response did not include URL: ${data}`));
+              this.emitError(new Error('Autoupdater response is missing a download URL.'));
               return;
             }
             const safeUrl = safeHttpUrl(json.url);
             if (!safeUrl) {
-              this.emitError(
-                new Error(`Autoupdater response URL has disallowed scheme: ${json.url}`)
-              );
+              this.emitError(new Error('Autoupdater response contains an invalid download URL.'));
               return;
             }
             json.url = safeUrl;
@@ -113,6 +109,13 @@ export default class AutoupdateImplBase extends EventEmitter {
 
   /* Public: Install the update. */
   quitAndInstall() {
-    shell.openExternal(safeHttpUrl(this.lastRetrievedUpdateURL) ?? FALLBACK_DOWNLOAD_URL);
+    const downloadURL = safeHttpUrl(this.lastRetrievedUpdateURL);
+    if (!downloadURL) {
+      this.emitError(new Error('No approved update download URL is available.'));
+      return;
+    }
+    shell.openExternal(downloadURL).catch(() => {
+      this.emitError(new Error('The approved update URL could not be opened.'));
+    });
   }
 }
