@@ -83,5 +83,20 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
   pass('Electron main process denies guest-created windows');
 }
 
+// New-account setup must be private and independent of upstream promotions.
+const onboarding = read('app/internal_packages/onboarding/lib/page-initial-preferences.tsx');
+const onboardingRoutes = read('app/internal_packages/onboarding/lib/onboarding-root.tsx');
+const newsletter = read('app/internal_packages/onboarding/lib/newsletter-signup.tsx');
+if (
+  onboarding.includes('NewsletterSignup') ||
+  onboarding.includes('hasProFeatures') ||
+  onboardingRoutes.includes('InitialSubscriptionPage') ||
+  newsletter.includes('this._onSubscribe();')
+) {
+  fail('Mail onboarding must not auto-enroll users or route through upstream promotions');
+} else {
+  pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
