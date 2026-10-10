@@ -16,7 +16,7 @@ type InitialLoadingCoverState = {
   slow: boolean;
 };
 
-class InitialLoadingCover extends React.Component<
+export class InitialLoadingCover extends React.Component<
   InitialLoadingCoverProps,
   InitialLoadingCoverState
 > {
