@@ -38,7 +38,6 @@ describe('EventedIFrame', () =>
         'https://www.mailspring.com',
         'mailto:evan@mailspring.com',
         'tel:8585311718',
-        'custom:www.mailspring.com',
       ];
       for (let i = 0; i < hrefs.length; i++) {
         const href = hrefs[i];
@@ -75,7 +74,7 @@ describe('EventedIFrame', () =>
     });
 
     it('disallows malicious uris', function () {
-      const hrefs = ['file://usr/bin/bad'];
+      const hrefs = ['file://usr/bin/bad', 'custom:unsafe', 'data:text/plain,unsafe'];
       for (let href of Array.from(hrefs)) {
         this.frame._onIFrameClick(this.fakeEvent(href));
         expect(this.preventDefaultSpy).toHaveBeenCalled();
