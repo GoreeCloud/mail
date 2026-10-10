@@ -49,7 +49,7 @@ describe('Webview sign-in security', () => {
     expect((button as HTMLButtonElement).disabled).toBe(false);
     expect(button.textContent).toContain('Try Again');
     fireEvent.click(button);
-    expect(retry).toHaveBeenCalledTimes(1);
+    expect(retry.calls.count()).toBe(1);
   });
 
   it('keeps inactive recovery controls out of the keyboard tab order', () => {
@@ -82,7 +82,7 @@ describe('Webview sign-in security', () => {
       httpStatusText: 'Forbidden',
       isMainFrame: true,
     });
-    expect(component.setState).toHaveBeenCalledTimes(1);
+    expect((component.setState as jasmine.Spy).calls.count()).toBe(1);
     const state = (component.setState as jasmine.Spy).calls[0].args[0];
     expect(state.ready).toBe(false);
     expect(state.error).toContain('403');
