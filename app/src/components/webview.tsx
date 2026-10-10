@@ -155,7 +155,7 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     webview.reload();
   };
 
-  _onNewWindow = (event: Event) => {
+  _onNewWindow = (event: { preventDefault: () => void }) => {
     // A remote identity page must not launch arbitrary URLs in the host browser.
     // A future explicit, user-initiated browser flow needs its own reviewed policy.
     event.preventDefault();
