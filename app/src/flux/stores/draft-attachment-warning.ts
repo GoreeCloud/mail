@@ -13,7 +13,7 @@ export function mentionsAttachment(text: string): boolean {
   const visibleText = text
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<(?:"[^"]*"|'[^']*'|[^'">])*>/g, ' ')
     .replace(/\b(?:https?:\/\/|www\.)[^\s<]+/gi, ' ');
 
   return /\b(?:attach(?:ment|ments|ed|ing)?|enclos(?:ed|ure))\b/i.test(visibleText);
