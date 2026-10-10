@@ -740,6 +740,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('update-application-menu', (event, template, keystrokesByCommand) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       if (win) {
         this.applicationMenu.update(win, template, keystrokesByCommand);
@@ -773,6 +774,7 @@ export default class Application extends EventEmitter {
     const ALLOWED_DEVTOOLS_WEBCONTENTS_METHODS = new Set(['executeJavaScript']);
 
     ipcMain.on('call-window-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_WINDOW_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on BrowserWindow!`);
         return;
@@ -787,6 +789,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('call-devtools-webcontents-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_DEVTOOLS_WEBCONTENTS_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on devToolsWebContents!`);
         return;
@@ -803,6 +806,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('call-webcontents-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_WEBCONTENTS_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on WebContents!`);
         return;
@@ -815,16 +819,19 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('mailsync-bridge-rebroadcast-to-all', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       this.windowManager.sendToAllWindows('mailsync-bridge-message', { except: win }, ...args);
     });
 
     ipcMain.on('action-bridge-rebroadcast-to-all', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       this.windowManager.sendToAllWindows('action-bridge-message', { except: win }, ...args);
     });
 
     ipcMain.on('action-bridge-rebroadcast-to-default', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
       if (!mainWindow || !mainWindow.browserWindow.webContents) {
         return;
@@ -836,12 +843,14 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('write-image-to-clipboard', (event, dataURL) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       // This can't be done from the renderer due to https://github.com/electron/electron/issues/8151
       const png = nativeImage.createFromDataURL(dataURL).toPNG();
       clipboard.write([new ClipboardItem({ 'image/png': new Blob([png], { type: 'image/png' }) })]);
     });
 
     ipcMain.on('write-text-to-selection-clipboard', (event, selectedText) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (clipboard.selection) clipboard.selection.writeText(selectedText);
     });
 
