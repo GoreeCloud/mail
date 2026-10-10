@@ -35,16 +35,15 @@ shell.openExternal = (url: string, options?: Electron.OpenExternalOptions) => {
   });
 };
 
-// `shell.openPath` resolves (rather than rejects) with a string containing
-// the error message when it fails, so it can't produce an unhandled
-// rejection. Callers that don't check the resolved value (most of them)
-// currently fail completely silently; log it so failures are at least
-// visible in the console/log file.
+// `shell.openPath` resolves to an OS error string on failure. Do not log
+// the requested local path or raw OS error: either may contain personal file
+// names, account details, or other sensitive metadata. Preserve the original
+// return value so callers can handle failure without changing their behavior.
 const originalOpenPath = shell.openPath.bind(shell);
 shell.openPath = (path: string) => {
   return originalOpenPath(path).then((result) => {
     if (result) {
-      console.error(`shell.openPath could not open "${path}": ${result}`);
+      console.error('shell.openPath failed; check local file access and system associations.');
     }
     return result;
   });
