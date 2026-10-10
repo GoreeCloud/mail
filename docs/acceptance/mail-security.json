@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "product": "GoreeCloud Mail",
+  "status": "development",
+  "productionEligible": false,
+  "releaseEligible": false,
+  "acceptance": {
+    "mainRendererContextIsolation": "blocked",
+    "providerOAuthAndSSO": "unverified",
+    "hostileMessageAndAttachmentDesktopTests": "unverified",
+    "runtimeDependencyAudit": "blocked",
+    "nativeSourceAndSQLiteMigration": "ci-only",
+    "glazeAccessibility": "unverified",
+    "installerSigningAndRollback": "unverified"
+  },
+  "evidence": {
+    "source": "https://github.com/GoreeCloud/mail/pulls",
+    "securityTracking": "https://github.com/GoreeCloud/mail/issues/2",
+    "dependencyTracking": "https://github.com/GoreeCloud/mail/issues/4"
+  },
+  "note": "CI-only results never establish installed-desktop, provider, privacy, production or Stable acceptance."
+}
