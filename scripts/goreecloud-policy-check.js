@@ -91,7 +91,8 @@ if (
   onboarding.includes('NewsletterSignup') ||
   onboarding.includes('hasProFeatures') ||
   onboardingRoutes.includes('InitialSubscriptionPage') ||
-  newsletter.includes('this._onSubscribe();')
+  newsletter.includes('this._onSubscribe();') ||
+  read('app/internal_packages/onboarding/lib/page-account-onboarding-success.tsx').includes('Adding your account to Mailspring')
 ) {
   fail('Mail onboarding must not auto-enroll users or route through upstream promotions');
 } else {
