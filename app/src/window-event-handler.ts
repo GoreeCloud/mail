@@ -390,18 +390,19 @@ export default class WindowEventHandler {
       }
       require('@electron/remote').getGlobal('application').openUrl(sanitized);
     } else if (['http:', 'https:', 'tel:'].includes(protocol)) {
-      shell.openExternal(resolved, { activate: !metaKey }).catch((err: Error) => {
+      shell.openExternal(resolved, { activate: !metaKey }).catch(() => {
+        // OS errors may contain the full destination URL and sensitive query
+        // parameters. Neither the user-facing dialog nor logs should repeat it.
         if (!this._openExternalErrorShown) {
           this._openExternalErrorShown = true;
           AppEnv.showErrorDialog({
             title: localized('Failed to Open Link'),
             message: localized(
-              'Mailspring was unable to open the link in your browser.\n\n%@',
-              err.message
+              'GoreeCloud Mail could not open this link. Check your default browser or application and try again.'
             ),
           });
         } else {
-          console.error(`Failed to open link: ${err.message}`);
+          console.error('GoreeCloud Mail could not open an external link.');
         }
       });
     }
@@ -415,12 +416,12 @@ export default class WindowEventHandler {
 
     if (!AppEnv.inDevMode()) {
       console.log(
-        "%c Welcome to Mailspring! If you're exploring the source or building a " +
+        "%c Welcome to GoreeCloud Mail! If you're exploring the source or building a " +
           "plugin, you should enable debug flags. It's slower, but " +
           'gives you better exceptions, the debug version of React, ' +
           'and more. Choose %c Developer > Run with Debug Flags %c ' +
-          'from the menu. Also, check out http://Foundry376.github.io/Mailspring/ ' +
-          'for documentation and sample code!',
+          'from the menu. Review https://github.com/GoreeCloud/mail ' +
+          'for project source and development guidance!',
         'background-color: antiquewhite;',
         'background-color: antiquewhite; font-weight:bold;',
         'background-color: antiquewhite; font-weight:normal;'
