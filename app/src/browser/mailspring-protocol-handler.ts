@@ -43,15 +43,18 @@ export default class MailspringProtocolHandler {
         if (candidate !== loadPath && !candidate.startsWith(loadPath + path.sep)) {
           continue;
         }
-        let fileStats: fs.Stats | false = false;
         try {
-          fileStats = fs.statSync(candidate);
-        } catch (e) {
-          // path doesn't exist
-        }
-        if (fileStats && fileStats.isFile && fileStats.isFile()) {
-          filePath = candidate;
-          break;
+          const rootRealPath = fs.realpathSync(loadPath);
+          const fileRealPath = fs.realpathSync(candidate);
+          if (
+            fileRealPath.startsWith(rootRealPath + path.sep) &&
+            fs.statSync(fileRealPath).isFile()
+          ) {
+            filePath = fileRealPath;
+            break;
+          }
+        } catch {
+          // Missing and inaccessible resources must not escape the package root.
         }
       }
 
