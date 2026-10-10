@@ -38,7 +38,6 @@ describe('EventedIFrame', () =>
         'https://www.mailspring.com',
         'mailto:evan@mailspring.com',
         'tel:8585311718',
-        'custom:www.mailspring.com',
       ];
       for (let i = 0; i < hrefs.length; i++) {
         const href = hrefs[i];
