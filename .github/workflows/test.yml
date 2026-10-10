@@ -88,8 +88,15 @@ jobs:
       - name: Verify Electron sandbox options on the ephemeral CI runner
         run: |
           set -eu
-          electron_binary="$(node -p "require('electron')")"
-          test -x "$electron_binary"
+          binary_path_file="$(mktemp "${RUNNER_TEMP}/goreecloud-electron-path.XXXXXX")"
+          trap 'rm -f "$binary_path_file"' EXIT
+          ELECTRON_BINARY_PATH_FILE="$binary_path_file" node -e \
+            "require('fs').writeFileSync(process.env.ELECTRON_BINARY_PATH_FILE, require('electron'))"
+          electron_binary="$(cat "$binary_path_file")"
+          if ! test -x "$electron_binary"; then
+            echo "::error::Electron module did not resolve to an executable on the CI runner."
+            exit 1
+          fi
           helper="$(dirname "$electron_binary")/chrome-sandbox"
           if test -f "$helper"; then
             echo "Electron setuid sandbox helper exists; securing it for this ephemeral runner."
