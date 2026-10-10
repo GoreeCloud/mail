@@ -129,5 +129,27 @@ if (
   pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
 }
 
+// Privileged cross-window and host UI IPC may only originate in trusted Mail windows.
+for (const channel of [
+  'update-application-menu',
+  'call-window-method',
+  'call-devtools-webcontents-method',
+  'call-webcontents-method',
+  'mailsync-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-default',
+  'write-image-to-clipboard',
+  'write-text-to-selection-clipboard',
+  'run-in-window',
+  'remote-run-results',
+  'resize-window'
+]) {
+  const handler = "ipcMain.on('" + channel + "', (event,";
+  const start = app.indexOf(handler);
+  if (start === -1 || !app.slice(start, start + 230).includes('if (!isMailspringWindowContents(event.sender)) return;')) {
+    fail('Privileged IPC sender boundary missing: ' + channel);
+  }
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
