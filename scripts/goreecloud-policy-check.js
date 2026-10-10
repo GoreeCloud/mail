@@ -69,6 +69,19 @@ else pass('legacy identity-required packages remain disabled');
 // Guest web content must not create host windows or promote arbitrary URLs to
 // privileged shell navigation. These source guards complement, not replace,
 // runtime hostile-content and real-provider sign-in validation.
+// Notification IPC must reject malformed requests and minimize diagnostic data.
+const notificationIPC = read('app/src/browser/notification-ipc.ts');
+if (
+  notificationIPC.includes("console.error('Notification failed:', error)") ||
+  notificationIPC.includes('${iconPath}') ||
+  !notificationIPC.includes("typeof options.id !== 'string'") ||
+  !notificationIPC.includes("typeof options.title !== 'string'")
+) {
+  fail('Notification IPC must validate input and avoid raw paths or OS errors in logs');
+} else {
+  pass('Notification IPC validation and minimized diagnostics are preserved');
+}
+
 const signInWebview = read('app/src/components/webview.tsx');
 const desktopWindow = read('app/src/browser/mailspring-window.ts');
 if (/shell\.openExternal\s*\(/.test(signInWebview) || /['"]console-message['"]\s*:/.test(signInWebview)) {
