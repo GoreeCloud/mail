@@ -23,4 +23,12 @@
 | Mailspring ID | Upstream-specific | Remove from normal product flow |
 | Crash telemetry | Upstream-specific | Disabled by default |
 
+## Interpretation and acceptance boundaries
+
+**Inherited** means the imported Mailspring client includes legacy source/UI paths relevant to the named capability. It does **not** mean the feature is tested on a supported GoreeCloud build, free of upstream-cloud dependencies, available for every provider, privacy-accepted, or production-ready. `Legacy cloud dependent` explicitly requires replacement, governed removal, or an approved provider-compatible alternative. No entry in this table is a release-acceptance claim.
+
+The comprehensive [GoreeCloud Mail capability catalog](https://docs.google.com/document/d/1nkRDbhXr1PlkPRuKkCrFuAESKh15cNa5/edit) is a **proposed product blueprint**, not implemented parity. The [capability traceability crosswalk](./MAIL-CAPABILITY-TRACEABILITY.md) defines domain-level evidence and provisional per-item references; the [security acceptance record](./acceptance/mail-security.json) controls fail-closed production/release eligibility.
+
+Before declaring one preserved or newly implemented feature accepted, record the exact provider, platform and client version, approved security/privacy behavior, real account or synthetic integration tests, installed-app verification, failure/recovery paths and evidence of any requested deprecation. A source snippet or passing unit test alone cannot satisfy provider compatibility, Glaze UI, offline recovery or security acceptance. Do not treat optional AI, collaboration, read tracking, link analytics, mobile clients or provider-specific capabilities as already delivered.
+
 A migration phase fails this gate when an approved capability disappears without a reviewed replacement or deprecation decision.
