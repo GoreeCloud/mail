@@ -45,7 +45,7 @@ const activeNotifications = new Map<string, { notification: Notification; thread
  * Uses path.resolve() to prevent directory traversal attacks.
  */
 const validateIconPath = (iconPath: string | undefined): string | null => {
-  if (!iconPath) {
+  if (typeof iconPath !== 'string' || !iconPath || iconPath.includes('\0')) {
     return null;
   }
 
@@ -71,7 +71,8 @@ const validateIconPath = (iconPath: string | undefined): string | null => {
     }
   }
 
-  console.warn(`Notification icon path rejected - not within allowed directories: ${iconPath}`);
+  // A rejected path could contain a private account or local filesystem name.
+  console.warn('Notification icon rejected: outside approved resource directories.');
   return null;
 };
 
@@ -93,6 +94,14 @@ const displayNotification = (
   event: IpcMainInvokeEvent,
   options: NotificationOptions
 ): string | null => {
+  // IPC values are not guaranteed to match the compile-time TypeScript shape.
+  if (!options || typeof options !== 'object' ||
+      typeof options.id !== 'string' || !options.id ||
+      typeof options.title !== 'string') {
+    console.warn('GoreeCloud Mail rejected an invalid desktop notification request.');
+    return null;
+  }
+
   const platform = process.platform;
 
   // Check if notifications are supported
@@ -203,8 +212,9 @@ const displayNotification = (
   });
 
   // Handle failed event (Windows only)
-  notification.on('failed', (failedEvent, error) => {
-    console.error('Notification failed:', error);
+  notification.on('failed', () => {
+    // OS error objects can contain local paths and user-specific notification data.
+    console.error('GoreeCloud Mail could not display a desktop notification.');
   });
 
   notification.show();
