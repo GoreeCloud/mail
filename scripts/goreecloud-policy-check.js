@@ -88,8 +88,8 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
 const safeShell = read('app/src/safe-shell.ts');
 const openPathHandler = safeShell.split('shell.openPath = (path: string) => {')[1] || '';
 if (
-  !/console\\.error\\('shell\\.openPath failed;/.test(openPathHandler) ||
-  /console\\.(?:error|warn|log)\\([^\\n]*(?:\\$\\{\\s*(?:path|result)\\s*\\}|,\\s*(?:path|result)\\b)/.test(openPathHandler)
+  !/console\.error\('shell\.openPath failed;/.test(openPathHandler) ||
+  /console\.(?:error|warn|log)\([^\n]*(?:\$\{\s*(?:path|result)\s*\}|,\s*(?:path|result)\b)/.test(openPathHandler)
 ) {
   fail('file-open failure logs must redact local paths and OS diagnostic details');
 } else {
