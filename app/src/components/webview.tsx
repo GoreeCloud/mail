@@ -127,7 +127,7 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
       'did-fail-load': this._webviewDidFailLoad,
       'did-finish-load': this._webviewDidFinishLoad,
       'did-frame-navigate': this._webviewDidFrameNavigate,
-      'console-message': this._onConsoleMessage,
+      // Guest console output is untrusted: never route it to external navigation or logs.
       'new-window': this._onNewWindow,
 
       // Workaround: When a webview changes pages, it's focus state seems to get out of
@@ -153,13 +153,6 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     if (/^https?:\/\/.+/i.test(e.url)) {
       shell.openExternal(e.url);
     }
-  };
-
-  _onConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
-    if (/^https?:\/\/.+/i.test(e.message)) {
-      shell.openExternal(e.message);
-    }
-    console.log('Guest page logged a message:', e.message);
   };
 
   _webviewDidFrameNavigate = ({
