@@ -11,7 +11,7 @@ const requireFile = rel => fs.existsSync(path.join(root, rel)) ? pass(rel + ' ex
   'UPSTREAM.md','NOTICE.md','SECURITY.md','docs/ARCHITECTURE.md','docs/FORK-TO-NATIVE.md',
   'docs/FEATURE-PARITY.md','docs/PRIVACY.md','docs/GLAZE.md',
   'docs/INTEGRAL-PLATFORM-SYSTEMS.md','docs/courier.md','docs/courier.identity.json',
-  'docs/acceptance/glaze-v1.7.0.json'
+  'docs/acceptance/glaze-v1.7.0.json', 'docs/acceptance/mail-security.json'
 ].forEach(requireFile);
 
 const appPkg = JSON.parse(read('app/package.json'));
@@ -34,6 +34,26 @@ else pass('upstream Sentry destination and hardware identifier removed');
 const glaze = JSON.parse(read('docs/acceptance/glaze-v1.7.0.json'));
 if (glaze.accepted || glaze.productionEligible || glaze.status !== 'adoption-required') fail('Glaze acceptance must remain fail-closed');
 else pass('Glaze acceptance remains fail-closed');
+
+const mailSecurity = JSON.parse(read('docs/acceptance/mail-security.json'));
+const requiredUnverified = [
+  'mainRendererContextIsolation', 'providerOAuthAndSSO',
+  'hostileMessageAndAttachmentDesktopTests', 'runtimeDependencyAudit',
+  'glazeAccessibility', 'installerSigningAndRollback'
+];
+if (
+  mailSecurity.product !== 'GoreeCloud Mail' ||
+  mailSecurity.status !== 'development' ||
+  mailSecurity.productionEligible !== false ||
+  mailSecurity.releaseEligible !== false ||
+  !mailSecurity.acceptance ||
+  requiredUnverified.some(gate => !['blocked', 'unverified'].includes(mailSecurity.acceptance[gate])) ||
+  mailSecurity.acceptance.nativeSourceAndSQLiteMigration !== 'ci-only'
+) {
+  fail('Mail release/security acceptance must remain blocked until all independent runtime gates are verified');
+} else {
+  pass('Mail release/security acceptance remains fail-closed');
+}
 
 const courier = JSON.parse(read('docs/courier.identity.json'));
 if (courier.repository !== 'GoreeCloud/mail' || courier.separateApplication || courier.separateRepository) fail('Courier boundary invalid');
