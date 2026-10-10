@@ -2,7 +2,6 @@
 import { dialog, nativeImage } from 'electron';
 import { EventEmitter } from 'events';
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
 import { localized } from '../intl';
 
@@ -63,9 +62,9 @@ export default class AutoUpdateManager extends EventEmitter {
       autoUpdater = require('electron').autoUpdater;
     }
 
-    autoUpdater.on('error', (error) => {
+    autoUpdater.on('error', () => {
       if (this.specMode) return;
-      console.error(`Error Downloading Update: ${error.message}`);
+      console.error('GoreeCloud Mail update check failed.');
       this.setState(ErrorState);
     });
 
@@ -198,7 +197,7 @@ export default class AutoUpdateManager extends EventEmitter {
     });
   };
 
-  onUpdateError = (event: Electron.Event, message: string) => {
+  onUpdateError = () => {
     autoUpdater.removeListener('update-not-available', this.onUpdateNotAvailable);
     dialog.showMessageBox({
       type: 'warning',
