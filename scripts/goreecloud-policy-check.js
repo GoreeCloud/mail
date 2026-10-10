@@ -79,7 +79,7 @@ if (/shell\.openExternal\s*\(/.test(signInWebview) || /['"]console-message['"]\s
 // Crash recovery messaging must not route sensitive diagnostics to the
 // inherited provider or display the retired product name to users.
 if (
-  /Mailspring (?:is not responding|has crashed)|support@getmailspring\\.com/.test(desktopWindow) ||
+  /Mailspring (?:is not responding|has crashed)/.test(desktopWindow) || desktopWindow.includes('support@getmailspring.com') ||
   !desktopWindow.includes("message: 'GoreeCloud Mail is not responding'") ||
   !desktopWindow.includes("message: 'GoreeCloud Mail has crashed'")
 ) {
