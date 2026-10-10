@@ -151,5 +151,30 @@ for (const channel of [
   }
 }
 
+// Relaunch belongs to the main process and only trusted app windows may request it.
+const generalPreferences = read('app/internal_packages/preferences/lib/tabs/preferences-general.tsx');
+const appearancePreferences = read('app/internal_packages/preferences/lib/tabs/preferences-appearance.tsx');
+if (
+  !app.includes("this.on('application:relaunch'") ||
+  !generalPreferences.includes("'application:relaunch'") ||
+  !appearancePreferences.includes("'application:relaunch'") ||
+  appearancePreferences.includes("require('@electron/remote').app.quit()")
+) {
+  fail('Preferences must delegate relaunch to the main process');
+} else {
+  pass('Preferences delegate relaunch to the main process');
+}
+
+// Account setup may only be completed by the active trusted onboarding renderer.
+if (
+  !app.includes("ipcMain.on('account-setup-successful', (event)") ||
+  !app.includes("onboarding.browserWindow.webContents !== event.sender") ||
+  !app.includes("!isMailspringWindowContents(event.sender)")
+) {
+  fail('Account setup IPC requires the active trusted onboarding window');
+} else {
+  pass('Account setup completion rejects unrelated renderer senders');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
