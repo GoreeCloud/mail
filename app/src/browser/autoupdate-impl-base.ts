@@ -76,9 +76,7 @@ export default class AutoupdateImplBase extends EventEmitter {
             }
             const safeUrl = safeHttpUrl(json.url);
             if (!safeUrl) {
-              this.emitError(
-                new Error('Autoupdater response contains an invalid download URL.')
-              );
+              this.emitError(new Error('Autoupdater response contains an invalid download URL.'));
               return;
             }
             json.url = safeUrl;
