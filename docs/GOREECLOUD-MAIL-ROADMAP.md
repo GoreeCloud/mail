@@ -14,6 +14,6 @@ Status: Active / not production ready.
 - Audit link navigation, HTML sanitization, resource loading, attachments, filesystem paths, plugins and update channels.
 - Reconcile packaging, app IDs, icons, translations, login pages and all branded surfaces.
 - Adopt Glaze 1.7.0 and collect Mail-specific rendered, accessibility, visual, performance and rollback evidence.
-- Evaluate all seven Integral Platform Systems individually; do not presume conformance.
+- Evaluate all nine Integral Platform Systems, including GoreeCloud Policy and GoreeCloud Observability; capture applicability, contracts, runtime implementation, evidence and blockers. Do not presume conformance.
 - Validate mailbox providers, token protection, account isolation, offline recovery, searches, drafts, sending and migrations.
 - Produce signed and independently verified distribution artifacts only after release gates pass.
