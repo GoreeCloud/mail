@@ -63,5 +63,27 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
   pass('Electron main process denies guest-created windows');
 }
 
+// OS error messages can include the complete external-link URL, including
+// secret OAuth parameters. Only user-safe generic feedback may be shown or
+// logged when the desktop shell cannot open a link.
+const hostLinkHandler = read('app/src/window-event-handler.ts');
+const linkStart = hostLinkHandler.indexOf('  openLink({');
+const linkEnd = hostLinkHandler.indexOf('  showDevModeMessages()', linkStart);
+const hostLinkSection = linkStart >= 0 && linkEnd > linkStart
+  ? hostLinkHandler.slice(linkStart, linkEnd)
+  : '';
+if (
+  !hostLinkSection ||
+  !hostLinkSection.includes('shell.openExternal(resolved, { activate: !metaKey }).catch(() =>') ||
+  !hostLinkSection.includes('GoreeCloud Mail could not open this link.') ||
+  hostLinkSection.includes('err.message') ||
+  hostLinkSection.includes('error.message') ||
+  hostLinkSection.includes('Mailspring was unable to open the link')
+) {
+  fail('external-link failures must redact OS error text and destination URLs');
+} else {
+  pass('external-link errors do not expose OS destination details');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
