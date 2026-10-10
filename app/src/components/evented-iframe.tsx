@@ -255,10 +255,14 @@ export class EventedIFrame extends React.Component<
     // Email HTML is untrusted input. Only reviewed protocols may reach the
     // privileged desktop link handler. Leave bare and protocol-relative links
     // to the existing normalization path below.
-    if (!href || href !== href.trim() || Array.from(href).some((c) => {
-      const code = c.charCodeAt(0);
-      return code < 32 || code === 127;
-    })) {
+    if (
+      !href ||
+      href !== href.trim() ||
+      Array.from(href).some((c) => {
+        const code = c.charCodeAt(0);
+        return code < 32 || code === 127;
+      })
+    ) {
       return true;
     }
     const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href);
