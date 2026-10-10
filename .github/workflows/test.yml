@@ -175,6 +175,9 @@ jobs:
       - name: Run GoreeCloud policy checks
         run: npm run policy:check
 
+      - name: Report inherited renderer privilege inventory
+        run: node scripts/report-mail-renderer-privileges.js
+
       - name: Run lint
         run: npm run lint:check
 
