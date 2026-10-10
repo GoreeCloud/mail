@@ -385,8 +385,8 @@ export default class MailspringWindow extends EventEmitter {
       const chosen = dialog.showMessageBoxSync(this.browserWindow, {
         type: 'warning',
         buttons: ['Close', 'Keep Waiting'],
-        message: 'Mailspring is not responding',
-        detail: 'Would you like to force close it or keep waiting?',
+        message: 'GoreeCloud Mail is not responding',
+        detail: 'You can close this window or keep waiting. Closing may discard unsaved changes.',
       });
       if (chosen === 0) {
         this.browserWindow.destroy();
@@ -428,8 +428,8 @@ export default class MailspringWindow extends EventEmitter {
         const chosen = dialog.showMessageBoxSync({
           type: 'warning',
           buttons: ['Close Window', 'Reload', 'Keep It Open'],
-          message: 'Mailspring has crashed',
-          detail: 'Please report this issue to us at support@getmailspring.com.',
+          message: 'GoreeCloud Mail has crashed',
+          detail: 'Reload to continue, or close this window. Unsaved changes may be lost.',
         });
         if (chosen === 0) {
           this.browserWindow.destroy();
