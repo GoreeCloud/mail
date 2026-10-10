@@ -390,18 +390,19 @@ export default class WindowEventHandler {
       }
       require('@electron/remote').getGlobal('application').openUrl(sanitized);
     } else if (['http:', 'https:', 'tel:'].includes(protocol)) {
-      shell.openExternal(resolved, { activate: !metaKey }).catch((err: Error) => {
+      shell.openExternal(resolved, { activate: !metaKey }).catch(() => {
+        // OS errors may contain the full destination URL and sensitive query
+        // parameters. Neither the user-facing dialog nor logs should repeat it.
         if (!this._openExternalErrorShown) {
           this._openExternalErrorShown = true;
           AppEnv.showErrorDialog({
             title: localized('Failed to Open Link'),
             message: localized(
-              'GoreeCloud Mail was unable to open the link in your browser.\n\n%@',
-              err.message
+              'GoreeCloud Mail could not open this link. Check your default browser or application and try again.'
             ),
           });
         } else {
-          console.error(`Failed to open link: ${err.message}`);
+          console.error('GoreeCloud Mail could not open an external link.');
         }
       });
     }
