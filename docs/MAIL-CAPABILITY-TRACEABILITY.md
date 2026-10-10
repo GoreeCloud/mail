@@ -43,7 +43,17 @@
 | 24 | Platforms and Cross-Device Experience | 34 | Platform-dependent | Independent platform scope; installed Linux desktop before unverified web/mobile/iOS claims |
 | 25 | GoreeCloud Mail Architecture and Product Principles | 11 | Cross-cutting | Provider independence, account isolation, portability, authorization, transparent feature availability |
 
-The `785` primary entries are the counts as indexed in the proposed catalog. They are not implemented-feature counts. Optional outbound tracking, collaboration services, advanced AI, mobile clients and provider-specific adapters are **not** default deliverables.
+The catalog's **815 enumerated statements** reconcile as **785 primary indexed proposals**, **21 conditional external-integration entries**, and **9 optional outbound-tracking entries**. The 785 include 11 cross-cutting architecture principles in section 25 (so 774 are numbered feature/integration/analytics items). This accounting was checked against the retained DOCX's 25 domain headings, ordered tables, and principles; it is **not** an implementation count. Optional outbound tracking, collaboration services, advanced AI, mobile clients and provider-specific adapters are **not** default deliverables.
+
+## Per-item traceability contract (future gated work)
+
+The catalog document remains the authoritative source of proposal text. Do not create a competing writable feature catalog or silently rewrite proposals in GitHub. Instead, attach **provisional trace keys** such as `MAIL-01-001` through `MAIL-25-011` using the numbered section and source-order index; keys identify planning references, not completed software. Section 19 indexes 11 proposed GoreeCloud integrations followed by 21 conditional external integrations. Section 20 indexes 16 local-insights proposals followed by 9 separately approved outbound-tracking proposals. Principles in section 25 are architecture obligations, **not product feature toggles**. Keys are valid only for this catalog revision; future substantive reordering requires an explicit reconciled mapping rather than silent reuse.
+
+A future implementation/acceptance record should contain the exact catalog key, authoritative Word document version and excerpt, requirement owner, provisional delivery lane, provider and platform eligibility, explicit consent/privacy and security requirements, source commit/PR, relevant tests, representative-device acceptance, approved rollback path where applicable, and the release-gate decision. Store that evidence in its owning system: GitHub for commits/CI/issues, GoreeCloud Drive for product/technical standards, and Todoist for outstanding obligations. Avoid duplicating live GitHub task status into the catalog.
+
+**Status vocabulary:** `proposed` (catalog scope only), `unassessed` (no feature-by-feature review), `candidate` (implementation under review), `blocked` (specific gate unresolved), `accepted-for-defined-scope` (evidence covers a named provider/platform/client release), and `unsupported` (not implemented or not available in the named scope). Status is per capability **and** scoped provider/platform, not inherited from domain totals or CI. Unsupported or unverified items must not be described as operational.
+
+
 
 ## Suggested, gate-driven work sequence (planning only)
 
