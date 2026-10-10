@@ -86,6 +86,6 @@ describe('Message iframe listener lifecycle', () => {
     frame._subscribeToIFrameEvents();
     deferred.forEach((callback) => callback());
 
-    expect(doc.addEventListener).toHaveBeenCalledTimes(8);
+    expect(doc.addEventListener.callCount).toBe(8);
   });
 });
