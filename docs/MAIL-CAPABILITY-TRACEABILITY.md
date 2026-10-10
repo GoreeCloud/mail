@@ -7,7 +7,7 @@
 
 ## Interpretation rules
 
-1. **All 25 domains below are target capabilities, not claims of delivery.** The source catalog includes 785 primary feature entries plus separate external-integration and optional-tracking proposals. Some inherited client behavior may exist; no feature-level acceptance is inferred merely because code or an automated test exists.
+1. **All 25 domains below are target capabilities, not claims of delivery.** The source catalog indexes 785 primary proposals, including 11 architecture principles, plus 21 conditional external integrations and 9 optional outbound-tracking entries. Some inherited client behavior may exist; no feature-level acceptance is inferred merely because code or an automated test exists.
 2. **Delivery class is a recommended assessment lane, not an approved schedule.** Core marks client work needed for the intended email-client experience. Optional or conditional lanes require separate approval and provider/platform feasibility checks. Provider-managed hosting, transport, business policy and retention must not be advertised as owned by Mail.
 3. **Do not infer individual feature support from an aggregate domain row.** Each proposed item must eventually receive a trace to source, provider/platform prerequisites, implementation evidence, representative-device tests and release criteria.
 4. **Security/privacy gates override proposed functionality.** Live `docs/acceptance/mail-security.json` controls current acceptance, not this crosswalk. A successful draft PR or Jasmine suite does not enable a release.
