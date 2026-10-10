@@ -76,6 +76,18 @@ if (/shell\.openExternal\s*\(/.test(signInWebview) || /['"]console-message['"]\s
 } else {
   pass('untrusted sign-in console and shell navigation paths are absent');
 }
+// Crash recovery messaging must not route sensitive diagnostics to the
+// inherited provider or display the retired product name to users.
+if (
+  /Mailspring (?:is not responding|has crashed)|support@getmailspring\\.com/.test(desktopWindow) ||
+  !desktopWindow.includes("message: 'GoreeCloud Mail is not responding'") ||
+  !desktopWindow.includes("message: 'GoreeCloud Mail has crashed'")
+) {
+  fail('renderer crash and hang dialogs must use GoreeCloud Mail identity and no upstream support address');
+} else {
+  pass('renderer recovery messaging uses GoreeCloud Mail identity without upstream support address');
+}
+
 if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
     !/guestWebContents\.setWindowOpenHandler\(\(\)\s*=>\s*\(\{\s*action:\s*['"]deny['"]\s*\}\)\)/.test(desktopWindow)) {
   fail('Electron main process must explicitly deny attached guest window creation');
