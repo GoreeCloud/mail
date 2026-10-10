@@ -55,6 +55,23 @@ if (
   pass('Mail release/security acceptance remains fail-closed');
 }
 
+// The old seven-system inventory does not qualify Mail under current governance.
+const systems = read('docs/INTEGRAL-PLATFORM-SYSTEMS.md');
+const requiredSystems = [
+  'GoreeCloud Manager',
+  'Privacy Shield',
+  'Wardveil Security',
+  'Everkeep',
+  'Glaze UI',
+  'GoreeCloud Mesh',
+  'GoreeCloud Identity',
+  'GoreeCloud Policy',
+  'GoreeCloud Observability',
+];
+const missingSystems = requiredSystems.filter(name => !systems.includes('| ' + name + ' |'));
+if (missingSystems.length) fail('Mail platform inventory is missing systems: ' + missingSystems.join(', '));
+else pass('Mail documents all nine Integral Platform Systems without asserting acceptance');
+
 const courier = JSON.parse(read('docs/courier.identity.json'));
 if (courier.repository !== 'GoreeCloud/mail' || courier.separateApplication || courier.separateRepository) fail('Courier boundary invalid');
 else pass('Courier boundary valid');
