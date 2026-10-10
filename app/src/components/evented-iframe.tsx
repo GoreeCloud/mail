@@ -52,6 +52,8 @@ export class EventedIFrame extends React.Component<
 
   _regionId: string;
   _searchUsub: () => void;
+  // Invalidate deferred listener registration when the frame is replaced or unmounted.
+  _iframeListenerGeneration = 0;
 
   render() {
     const otherProps = Utils.fastOmit(this.props, EventedIFrame.ownPropKeys);
@@ -134,6 +136,7 @@ export class EventedIFrame extends React.Component<
   };
 
   _unsubscribeFromIFrameEvents() {
+    this._iframeListenerGeneration++;
     const node = ReactDOM.findDOMNode(this) as HTMLIFrameElement;
     const doc = node.contentDocument;
     if (!doc) {
@@ -155,8 +158,12 @@ export class EventedIFrame extends React.Component<
 
   _subscribeToIFrameEvents() {
     const node = ReactDOM.findDOMNode(this) as HTMLIFrameElement;
-    const doc = node.contentDocument;
+    const generation = ++this._iframeListenerGeneration;
     _.defer(() => {
+      // The iframe may have navigated, been replaced, or unmounted before this runs.
+      if (generation !== this._iframeListenerGeneration) return;
+      const doc = node.contentDocument;
+      if (!doc) return;
       doc.addEventListener('click', this._onIFrameClick);
       doc.addEventListener('keydown', this._onIFrameKeyEvent);
       doc.addEventListener('keypress', this._onIFrameKeyEvent);
