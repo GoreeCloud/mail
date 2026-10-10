@@ -46,9 +46,22 @@ describe('Webview sign-in security', () => {
     );
     expect(getByRole('alert').textContent).toContain('Unable to connect');
     const button = getByRole('button');
+    expect((button as HTMLButtonElement).disabled).toBe(false);
     expect(button.textContent).toContain('Try Again');
     fireEvent.click(button);
     expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps inactive recovery controls out of the keyboard tab order', () => {
+    const props = { ready: false, onTryAgain: () => {} };
+    const { container, rerender } = render(React.createElement(InitialLoadingCover, props));
+    const button = container.querySelector('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(container.querySelector('.webview-cover').getAttribute('aria-hidden')).toBe('false');
+
+    rerender(React.createElement(InitialLoadingCover, { ...props, ready: true }));
+    expect(button.disabled).toBe(true);
+    expect(container.querySelector('.webview-cover').getAttribute('aria-hidden')).toBe('true');
   });
 
   it('does not attach guest console handlers and keeps listener identities stable', () => {
