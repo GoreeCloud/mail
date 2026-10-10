@@ -29,6 +29,18 @@ const isTextInput = (node: EventTarget) => {
   return false;
 };
 
+// Renderer links may originate in untrusted message HTML. Reject disguised
+// URL schemes before parsing, normalizing, or asking the OS to open a link.
+export function hasUnsafeExternalLinkCharacters(href: string): boolean {
+  if (!href || href !== href.trim()) {
+    return true;
+  }
+  return Array.from(href).some((char) => {
+    const code = char.charCodeAt(0);
+    return code < 32 || code === 127;
+  });
+}
+
 // Handles low-level events related to the window.
 export default class WindowEventHandler {
   unloadCallbacks = [];
@@ -347,14 +359,20 @@ export default class WindowEventHandler {
     metaKey?: boolean;
   }) {
     let resolved = href || this.resolveHref(target || currentTarget);
-    if (!resolved) {
+    if (hasUnsafeExternalLinkCharacters(resolved)) {
       return;
     }
     if (target instanceof HTMLElement && target.closest('.no-open-link-events')) {
       return;
     }
 
-    let { protocol } = url.parse(resolved);
+    let protocol: string | null;
+    try {
+      protocol = url.parse(resolved).protocol;
+    } catch (_) {
+      // Malformed links should never abort a click handler or reach the OS.
+      return;
+    }
     if (!protocol) {
       protocol = 'http:';
       resolved = `http://${resolved}`;
@@ -364,7 +382,12 @@ export default class WindowEventHandler {
       // We sometimes get mailto URIs that are not escaped properly, or have been only partially escaped.
       // (T1927) Be sure to escape them once, and completely, before we try to open them. This logic
       // *might* apply to http/https as well but it's unclear.
-      const sanitized = encodeURI(decodeURI(resolved));
+      let sanitized: string;
+      try {
+        sanitized = encodeURI(decodeURI(resolved));
+      } catch (_) {
+        return;
+      }
       require('@electron/remote').getGlobal('application').openUrl(sanitized);
     } else if (['http:', 'https:', 'tel:'].includes(protocol)) {
       shell.openExternal(resolved, { activate: !metaKey }).catch((err: Error) => {
