@@ -20,6 +20,7 @@ describe('Draft attachment reminders', () => {
       false
     );
     expect(mentionsAttachment('<img alt="attached-image" src="cid:logo">Hello')).toBe(false);
+    expect(mentionsAttachment('<a title="open > attachment" href="/status">View</a>')).toBe(false);
     expect(mentionsAttachment('Visit https://example.test/attachments for details.')).toBe(false);
     expect(mentionsAttachment('Visit www.example.test/attach for details.')).toBe(false);
   });
