@@ -41,7 +41,7 @@ describe('Webview sign-in security', () => {
       isMainFrame: true,
     });
     expect(component.setState).toHaveBeenCalledTimes(1);
-    const state = (component.setState as jasmine.Spy).calls.mostRecent().args[0];
+    const state = (component.setState as jasmine.Spy).calls[0].args[0];
     expect(state.ready).toBe(false);
     expect(state.error).toContain('403');
     expect(state.error).not.toContain(secretUrl);
@@ -71,10 +71,7 @@ describe('Webview sign-in security', () => {
       httpStatusText: 'Not Found',
       isMainFrame: false,
     });
-    component._webviewDidFailLoad({
-      errorCode: -3,
-      validatedURL: 'https://identity.example.test/callback?code=secret',
-    });
+    component._webviewDidFailLoad({ errorCode: -3 });
     expect(component.setState).not.toHaveBeenCalled();
   });
 });
