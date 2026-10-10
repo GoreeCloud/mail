@@ -129,5 +129,19 @@ if (
   pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
 }
 
+// Relaunch belongs to the main process and only trusted app windows may request it.
+const generalPreferences = read('app/internal_packages/preferences/lib/tabs/preferences-general.tsx');
+const appearancePreferences = read('app/internal_packages/preferences/lib/tabs/preferences-appearance.tsx');
+if (
+  !app.includes("this.on('application:relaunch'") ||
+  !generalPreferences.includes("'application:relaunch'") ||
+  !appearancePreferences.includes("'application:relaunch'") ||
+  appearancePreferences.includes("require('@electron/remote').app.quit()")
+) {
+  fail('Preferences must delegate relaunch to the main process');
+} else {
+  pass('Preferences delegate relaunch to the main process');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');

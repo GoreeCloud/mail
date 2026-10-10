@@ -416,6 +416,13 @@ export default class Application extends EventEmitter {
 
     this.on('application:reset-database', this._resetDatabaseAndRelaunch);
 
+    // A renderer requests a relaunch through the trusted-window command bridge,
+    // rather than importing the privileged Electron remote app object.
+    this.on('application:relaunch', () => {
+      app.relaunch();
+      app.quit();
+    });
+
     this.on('application:quit', () => {
       app.quit();
     });

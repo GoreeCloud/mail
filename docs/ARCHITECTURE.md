@@ -8,4 +8,6 @@ External mail providers remain authoritative for hosted mailbox state and Intern
 
 The renderer privilege migration is ordered: inventory Node/Electron use, define a minimal typed preload/IPC capability surface, move secret/filesystem/network/OS-sensitive work to trusted processes, enable context isolation and remove renderer Node integration, then evaluate hardened Electron against Tauri/Rust/native desktop boundaries. Technology choice is subordinate to security, accessibility, performance, integration quality, maintainability, and feature preservation.
 
+As a limited incremental change, General and Appearance preference relaunch actions now send an application command to the trusted Electron main process, rather than importing `@electron/remote` app controls in those UI surfaces. The main command bridge already checks that the sender is a recognized GoreeCloud Mail window. Other renderer privilege surfaces remain and the P0 context-isolation migration is incomplete. This source change requires exact-head CI and representative preference/relaunch testing before integration.
+
 Courier is a capability identity inside GoreeCloud Mail, not a separate application or repository.
