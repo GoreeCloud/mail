@@ -518,6 +518,8 @@ export default class Application extends EventEmitter {
     });
 
     this.on('application:install-update', () => {
+      // A stale update action must never close mailbox windows without an approved update.
+      if (!this.autoUpdateManager.canInstallUpdate()) return;
       this.quitting = true;
       this.windowManager.cleanupBeforeAppQuit();
       this.autoUpdateManager.install();
