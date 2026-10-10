@@ -65,6 +65,10 @@ A future implementation/acceptance record should contain the exact catalog key, 
 
 **Separately approved extensions.** Scope AI, team collaboration, advanced encryption, enterprise administration, analytics/tracking, mobile/web expansions and optional RSS/NNTP/chat only after architecture, product feasibility, security, privacy, consent, and provider-capability reviews.
 
+## Catalog document accessibility — a separate acceptance track
+
+The canonical DOCX has undergone structural cleanup (semantic lists and a true scope table) and an automated Office-file audit currently reports **zero automated findings**. Neither the audit nor its rendered 22-page review establishes assistive-technology conformance. Use [the catalog-specific manual accessibility acceptance matrix](./acceptance/mail-catalog-accessibility.md) for pending screen-reader, keyboard, zoom, link, and Linux interoperability checks. This is separate from Mail client **Glaze accessibility** acceptance, which remains unverified.
+
 ## Verified development snapshot (not a feature-acceptance statement)
 
 - Combined privacy/security code draft [PR #33](https://github.com/GoreeCloud/mail/pull/33) passed exact-head source-patch, static and Jasmine CI at `9c00d319` ([run 38086570127](https://github.com/GoreeCloud/mail/actions/runs/38086570127), 2,498 passing Jasmine specs).
