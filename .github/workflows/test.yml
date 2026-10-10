@@ -85,14 +85,23 @@ jobs:
           test -x app/mailsync
           test -x app/mailsync.bin
           sha256sum --check "${RUNNER_TEMP}/goreecloud-mail-native-engine.sha256"
-      - name: Configure Electron sandbox helper on the ephemeral CI runner
+      - name: Verify Electron sandbox options on the ephemeral CI runner
         run: |
           set -eu
           helper="node_modules/electron/dist/chrome-sandbox"
-          test -f "$helper"
-          sudo chown root:root "$helper"
-          sudo chmod 4755 "$helper"
-          test "$(stat -c '%u:%g:%a' "$helper")" = "0:0:4755"
+          if test -f "$helper"; then
+            echo "Electron setuid sandbox helper exists; securing it for this ephemeral runner."
+            sudo chown root:root "$helper"
+            sudo chmod 4755 "$helper"
+            test "$(stat -c '%u:%g:%a' "$helper")" = "0:0:4755"
+          else
+            echo "Electron setuid helper is absent; checking unprivileged user namespace sandbox."
+            if ! unshare --user --map-root-user true; then
+              echo "::error::No verified setuid or user-namespace Chromium sandbox available; refusing to disable sandbox for tests."
+              exit 1
+            fi
+            echo "User namespace available; leaving Electron sandbox enabled."
+          fi
       - name: Run complete Jasmine suite against compiled native engine
         run: dbus-launch --exit-with-session xvfb-run -a npm test
         timeout-minutes: 20
