@@ -223,9 +223,13 @@ export class EventedIFrame extends React.Component<
 
       e.preventDefault();
 
-      // If this is a link to our billing site, attempt single sign on instead of
-      // just following the link directly
-      if (rawHref.startsWith(rootURLForServer('identity'))) {
+      // Inherited Mailspring cloud SSO is only permitted during an explicitly
+      // opted-in legacy migration. The ordinary GoreeCloud Mail reader must
+      // never resolve a disabled cloud identity endpoint for message links.
+      if (
+        process.env.GOREECLOUD_MAIL_ENABLE_LEGACY_MAILSPRING_SERVICES === '1' &&
+        rawHref.startsWith(rootURLForServer('identity'))
+      ) {
         const path = rawHref.split(rootURLForServer('identity')).pop();
         IdentityStore.fetchSingleSignOnURL(path, { source: 'SingleSignOnEmail' }).then(
           (href) => {
