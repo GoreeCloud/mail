@@ -4,7 +4,6 @@ import classnames from 'classnames';
 import networkErrors from 'chromium-net-errors';
 import { localized } from 'mailspring-exports';
 
-import { rootURLForServer } from '../flux/mailspring-api-request';
 import { RetinaImg } from './retina-img';
 import { Disposable } from 'event-kit';
 
@@ -53,7 +52,7 @@ class InitialLoadingCover extends React.Component<
     if (this.props.error) {
       message = this.props.error;
     } else if (this.state.slow) {
-      message = localized(`Still trying to reach %@…`, rootURLForServer('identity'));
+      message = localized('Still connecting to the sign-in page…');
     } else {
       message = '&nbsp;';
     }
@@ -67,10 +66,12 @@ class InitialLoadingCover extends React.Component<
           name="inline-loading-spinner.gif"
           mode={RetinaImg.Mode.ContentPreserve}
         />
-        <div className="message">{message}</div>
-        <div className="btn try-again" onClick={this.props.onTryAgain}>
-          {localized('Try Again')}
+        <div className="message" role={this.props.error ? 'alert' : 'status'} aria-live="polite">
+          {message}
         </div>
+        <button type="button" className="btn try-again" onClick={this.props.onTryAgain}>
+          {localized('Try Again')}
+        </button>
         <div style={{ flex: 1 }} />
       </div>
     );
@@ -151,6 +152,8 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
   }
 
   _onTryAgain = () => {
+    if (!this._mounted) return;
+    this.setState({ error: null, ready: false, webviewLoading: true });
     const webview = ReactDOM.findDOMNode(this.refs.webview) as Electron.WebviewTag;
     webview.reload();
   };
@@ -159,6 +162,12 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     // A remote identity page must not launch arbitrary URLs in the host browser.
     // A future explicit, user-initiated browser flow needs its own reviewed policy.
     event.preventDefault();
+    if (this._mounted) {
+      const error = localized(
+        'A sign-in pop-up was blocked for your security. Return to sign-in and choose another method.'
+      );
+      this.setState({ ready: false, error, webviewLoading: false });
+    }
   };
 
   _webviewDidNavigate = () => {
