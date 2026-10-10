@@ -83,5 +83,18 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
   pass('Electron main process denies guest-created windows');
 }
 
+// Local file paths and raw OS errors may contain personal data. A failed
+// file-open operation must not disclose either to application logs.
+const safeShell = read('app/src/safe-shell.ts');
+const openPathHandler = safeShell.split('shell.openPath = (path: string) => {')[1] || '';
+if (
+  !/console\\.error\\('shell\\.openPath failed;/.test(openPathHandler) ||
+  /console\\.(?:error|warn|log)\\([^\\n]*(?:\\$\\{\\s*(?:path|result)\\s*\\}|,\\s*(?:path|result)\\b)/.test(openPathHandler)
+) {
+  fail('file-open failure logs must redact local paths and OS diagnostic details');
+} else {
+  pass('local file-open failure logs omit path and OS diagnostic details');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
