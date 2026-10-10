@@ -46,5 +46,22 @@ const packageManager = read('app/src/package-manager.ts');
 if (!packageManager.includes('this.identityPresent = false')) fail('legacy identity-required packages must remain disabled');
 else pass('legacy identity-required packages remain disabled');
 
+// Guest web content must not create host windows or promote arbitrary URLs to
+// privileged shell navigation. These source guards complement, not replace,
+// runtime hostile-content and real-provider sign-in validation.
+const signInWebview = read('app/src/components/webview.tsx');
+const desktopWindow = read('app/src/browser/mailspring-window.ts');
+if (/shell\.openExternal\s*\(/.test(signInWebview) || /['"]console-message['"]\s*:/.test(signInWebview)) {
+  fail('sign-in Webview must not promote remote page output to privileged navigation or logs');
+} else {
+  pass('untrusted sign-in console and shell navigation paths are absent');
+}
+if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
+    !/guestWebContents\.setWindowOpenHandler\(\(\)\s*=>\s*\(\{\s*action:\s*['"]deny['"]\s*\}\)\)/.test(desktopWindow)) {
+  fail('Electron main process must explicitly deny attached guest window creation');
+} else {
+  pass('Electron main process denies guest-created windows');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
