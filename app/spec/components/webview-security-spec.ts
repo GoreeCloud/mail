@@ -42,7 +42,7 @@ describe('Webview sign-in security', () => {
   it('renders an accessible retry button and announces sign-in failures', () => {
     const retry = jasmine.createSpy('retry');
     const { getByRole } = render(
-      <InitialLoadingCover error="Unable to connect" onTryAgain={retry} />
+      React.createElement(InitialLoadingCover, { error: "Unable to connect", onTryAgain: retry })
     );
     expect(getByRole('alert').textContent).toContain('Unable to connect');
     const button = getByRole('button');
