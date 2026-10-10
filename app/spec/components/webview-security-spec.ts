@@ -1,6 +1,10 @@
-import Webview from '../../src/components/webview';
+import React from 'react';
+import { render, fireEvent, cleanup } from '@testing-library/react';
+import Webview, { InitialLoadingCover } from '../../src/components/webview';
 
 describe('Webview sign-in security', () => {
+  afterEach(cleanup);
+
   const newComponent = () => {
     const component = new Webview({ src: 'https://identity.example.test' });
     component._mounted = true;
@@ -19,7 +23,32 @@ describe('Webview sign-in security', () => {
       const event = { url, preventDefault: jasmine.createSpy('preventDefault') };
       component._onNewWindow(event);
       expect(event.preventDefault).toHaveBeenCalled();
+      expect(component.setState).toHaveBeenCalled();
     }
+  });
+
+
+  it('explains blocked guest popups without exposing the requested destination', () => {
+    const component = newComponent();
+    const url = 'https://identity.example.test/redirect?code=private-code';
+    component._onNewWindow({ preventDefault: jasmine.createSpy('preventDefault') });
+    const state = (component.setState as jasmine.Spy).calls[0].args[0];
+    expect(state.ready).toBe(false);
+    expect(state.error).toContain('blocked');
+    expect(state.error).not.toContain(url);
+    expect(state.webviewLoading).toBe(false);
+  });
+
+  it('renders an accessible retry button and announces sign-in failures', () => {
+    const retry = jasmine.createSpy('retry');
+    const { getByRole } = render(
+      <InitialLoadingCover error="Unable to connect" onTryAgain={retry} />
+    );
+    expect(getByRole('alert').textContent).toContain('Unable to connect');
+    const button = getByRole('button');
+    expect(button.textContent).toContain('Try Again');
+    fireEvent.click(button);
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it('does not attach guest console handlers and keeps listener identities stable', () => {
