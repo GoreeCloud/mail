@@ -126,7 +126,11 @@ export function applyPersistentSoftwareRendering(
   platform = process.platform,
   fileSystem: RecoveryFileSystem = fs
 ) {
-  if (platform !== 'win32' || !configDirPath || !fileSystem.existsSync(softwareRenderingMarkerPath(configDirPath))) {
+  if (
+    platform !== 'win32' ||
+    !configDirPath ||
+    !fileSystem.existsSync(softwareRenderingMarkerPath(configDirPath))
+  ) {
     return false;
   }
 
