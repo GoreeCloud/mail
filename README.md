@@ -11,7 +11,7 @@ The import commit preserves upstream Git ancestry.
 - Independent GoreeCloud Mail identity and onboarding.
 - Glaze 1.7.0 adoption and independent consumer acceptance.
 - Offline-first multi-account email using standards-based interoperability.
-- Privacy Shield, Wardveil Security, Everkeep, GoreeCloud Manager, Mesh, and Identity applicability evaluated with evidence.
+- Evaluate all nine GoreeCloud Integral Platform Systems, including Policy and Observability, with evidence of real integration; naming alone does not constitute acceptance.
 - Secure mail rendering, attachment handling, credential isolation, provider OAuth, keyboard accessibility, and reduced privilege boundaries.
 - Progressive replacement of upstream proprietary services and product-defining architecture.
 
