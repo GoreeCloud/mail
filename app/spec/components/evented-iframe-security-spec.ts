@@ -27,11 +27,11 @@ describe('Message link protocol policy', () => {
 describe('Message iframe listener lifecycle', () => {
   it('does not subscribe when the document is inaccessible', () => {
     let deferred: () => void = () => {};
-    spyOn(_, 'defer').and.callFake((callback: () => void) => {
+    spyOn(_, 'defer').andCallFake((callback: () => void) => {
       deferred = callback;
       return 0 as any;
     });
-    spyOn(ReactDOM, 'findDOMNode').and.returnValue({
+    spyOn(ReactDOM, 'findDOMNode').andReturn({
       contentDocument: null,
       contentWindow: null,
     } as any);
@@ -47,11 +47,11 @@ describe('Message iframe listener lifecycle', () => {
       addEventListener: jasmine.createSpy('addEventListener'),
       removeEventListener: jasmine.createSpy('removeEventListener'),
     };
-    spyOn(_, 'defer').and.callFake((callback: () => void) => {
+    spyOn(_, 'defer').andCallFake((callback: () => void) => {
       deferred = callback;
       return 0 as any;
     });
-    spyOn(ReactDOM, 'findDOMNode').and.returnValue({
+    spyOn(ReactDOM, 'findDOMNode').andReturn({
       contentDocument: doc,
       contentWindow: null,
     } as any);
@@ -71,11 +71,11 @@ describe('Message iframe listener lifecycle', () => {
       addEventListener: jasmine.createSpy('addEventListener'),
       removeEventListener: jasmine.createSpy('removeEventListener'),
     };
-    spyOn(_, 'defer').and.callFake((callback: () => void) => {
+    spyOn(_, 'defer').andCallFake((callback: () => void) => {
       deferred.push(callback);
       return 0 as any;
     });
-    spyOn(ReactDOM, 'findDOMNode').and.returnValue({
+    spyOn(ReactDOM, 'findDOMNode').andReturn({
       contentDocument: doc,
       contentWindow: null,
     } as any);
