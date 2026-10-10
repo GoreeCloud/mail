@@ -845,10 +845,19 @@ export default class Application extends EventEmitter {
       if (clipboard.selection) clipboard.selection.writeText(selectedText);
     });
 
-    ipcMain.on('account-setup-successful', () => {
+    ipcMain.on('account-setup-successful', (event) => {
+      // Only the active, trusted onboarding window may finish account setup.
+      // Untrusted guests and unrelated app windows must not trigger this IPC.
+      const onboarding = this.windowManager.get(WindowManager.ONBOARDING_WINDOW);
+      if (
+        !isMailspringWindowContents(event.sender) ||
+        !onboarding ||
+        onboarding.browserWindow.webContents !== event.sender
+      ) {
+        return;
+      }
       this.windowManager.ensureWindow(WindowManager.MAIN_WINDOW);
       const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
-      const onboarding = this.windowManager.get(WindowManager.ONBOARDING_WINDOW);
       if (onboarding) {
         if (mainWindow) {
           // Wait for the main window to finish loading before closing onboarding.
