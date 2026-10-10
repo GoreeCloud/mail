@@ -83,5 +83,21 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
   pass('Electron main process denies guest-created windows');
 }
 
+// No updater may contact the inherited provider before an approved release channel exists.
+const updater = read('app/src/browser/autoupdate-manager.ts');
+const updaterImpl = read('app/src/browser/autoupdate-impl-base.ts');
+const app = read('app/src/browser/application.ts');
+if (
+  !updater.includes("this.feedURL = '';") ||
+  !updater.includes('canInstallUpdate()') ||
+  updater.includes('updates.getmailspring.com') ||
+  updaterImpl.includes('getmailspring.com/download') ||
+  !app.includes('this.autoUpdateManager.canInstallUpdate()')
+) {
+  fail('Inherited update traffic or unguarded update installation remains');
+} else {
+  pass('Legacy update endpoint is disabled and installation remains guarded');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
