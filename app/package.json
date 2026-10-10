@@ -78,7 +78,8 @@
     "electron": "44.5.1",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
-    "proxy-addr": "2.0.8"
+    "proxy-addr": "2.0.8",
+    "source-map-js": "1.2.2"
   },
   "optionalDependencies": {
     "windows-focus-assist": "^1.4.0"
