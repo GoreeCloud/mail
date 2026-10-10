@@ -375,12 +375,23 @@ describe('FixedPopover', function fixedPopover() {
     });
 
     it('starts again from the requested direction once the content fits it', () => {
-      const popover = mountWithChild(100, 200, 250);
+      const popover = mountWithChild(100, 220, 250);
+      const child = (findDOMNode(popover) as HTMLElement).querySelector<HTMLElement>('.grows');
+
+      // A hidden Electron spec window does not supply stable bounding rects.
+      // Fix only the geometry input: the right placement overflows initially,
+      // the left placement fits, and shrinking content makes right fit again.
+      popover.getCurrentRect = () => {
+        const width = parseInt(child.style.width, 10);
+        const left = popover.state.direction === Right ? 310 : 240 - width;
+        return { top: 350, bottom: 450, left, right: left + width };
+      };
+
       settle();
       expect(popover.state.direction).toBe(Left);
+      expect(popover.state.visible).toBe(true);
 
-      (findDOMNode(popover) as HTMLElement).querySelector<HTMLElement>('.grows').style.width =
-        '50px';
+      child.style.width = '50px';
       reportResizes();
       settle();
       expect(popover.state.direction).toBe(Right);

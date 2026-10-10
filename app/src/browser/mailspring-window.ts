@@ -174,6 +174,14 @@ export default class MailspringWindow extends EventEmitter {
       webPreferences.sandbox = true;
     });
 
+    // Electron's guest-window creation policy belongs to the trusted main process,
+    // not to a deprecated renderer-side <webview> popup event. Remote identity
+    // pages cannot request a new host window, even if the renderer never receives
+    // a "new-window" event. A reviewed user-initiated OAuth handoff must be separate.
+    this.browserWindow.webContents.on('did-attach-webview', (_event, guestWebContents) => {
+      guestWebContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    });
+
     require('@electron/remote/main').enable(this.browserWindow.webContents);
     (this.browserWindow as any).updateLoadSettings = this.updateLoadSettings;
 
