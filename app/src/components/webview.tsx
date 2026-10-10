@@ -54,11 +54,11 @@ export class InitialLoadingCover extends React.Component<
     } else if (this.state.slow) {
       message = localized('Still connecting to the sign-in page…');
     } else {
-      message = '&nbsp;';
+      message = '';
     }
 
     return (
-      <div className={classes}>
+      <div className={classes} aria-hidden={this.props.ready && !this.props.error}>
         <div style={{ flex: 1 }} />
         <RetinaImg
           className="spinner"
@@ -69,7 +69,12 @@ export class InitialLoadingCover extends React.Component<
         <div className="message" role={this.props.error ? 'alert' : 'status'} aria-live="polite">
           {message}
         </div>
-        <button type="button" className="btn try-again" onClick={this.props.onTryAgain}>
+        <button
+          type="button"
+          className="btn try-again"
+          disabled={!this.props.error || !this.props.onTryAgain}
+          onClick={this.props.onTryAgain}
+        >
           {localized('Try Again')}
         </button>
         <div style={{ flex: 1 }} />
