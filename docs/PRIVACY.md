@@ -8,4 +8,6 @@ Inherited automatic crash upload and the hard-coded upstream Sentry destination 
 
 Local mailbox databases, caches, indexes, attachment caches, configuration, and diagnostics are sensitive. Provider OAuth and reusable credentials belong in approved secret-storage boundaries and must not be committed to source or exposed to untrusted message content.
 
+Custom-protocol asset loading now checks both the requested resource path and its canonical filesystem target against the approved package root. This is a defense-in-depth source change; malicious content and installed-desktop tests remain required.
+
 Privacy Shield remains the policy authority; this document records application-local behavior and does not grant conformance.

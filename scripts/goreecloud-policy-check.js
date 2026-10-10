@@ -83,5 +83,19 @@ if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
   pass('Electron main process denies guest-created windows');
 }
 
+// Mail package resources must never escape allowed roots through symlinks.
+const resourceLoader = read('app/src/browser/mailspring-protocol-handler.ts');
+const resourceTests = read('app/spec/mailspring-protocol-handler-spec.ts');
+if (
+  !resourceLoader.includes('fs.realpathSync(root)') ||
+  !resourceLoader.includes('fs.realpathSync(candidate)') ||
+  !resourceLoader.includes('resolvePackageResource(loadPath, relativePath)') ||
+  !resourceTests.includes('symlinks targeting private files outside')
+) {
+  fail('Mail custom resource loading requires canonical-path enforcement and regression tests');
+} else {
+  pass('Mail resource paths use canonical package boundaries');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
