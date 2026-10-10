@@ -14,6 +14,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependency-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out GoreeCloud Mail
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+      - name: Audit runtime dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+
+  application-dependency-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+      - name: Audit Mail application lockfile
+        run: npm audit --prefix app --omit=dev --audit-level=high
+
   engine-source-patch:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
