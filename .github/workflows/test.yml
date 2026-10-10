@@ -88,7 +88,9 @@ jobs:
       - name: Verify Electron sandbox options on the ephemeral CI runner
         run: |
           set -eu
-          helper="node_modules/electron/dist/chrome-sandbox"
+          electron_binary="$(node -p "require('electron')")"
+          test -x "$electron_binary"
+          helper="$(dirname "$electron_binary")/chrome-sandbox"
           if test -f "$helper"; then
             echo "Electron setuid sandbox helper exists; securing it for this ephemeral runner."
             sudo chown root:root "$helper"
