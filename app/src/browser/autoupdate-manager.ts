@@ -36,41 +36,23 @@ export default class AutoUpdateManager extends EventEmitter {
     this.preferredChannel = preferredChannel;
 
     this.updateFeedURL();
-    this.config.onDidChange('identity.id', this.updateFeedURL);
 
     setTimeout(() => this.setupAutoUpdater(), 0);
   }
 
+  // No independently approved GoreeCloud update service has been released yet.
+  // Never send a provider ID, device metadata, or version to the inherited
+  // Mailspring update service, even during app startup or manual checks.
   updateFeedURL = () => {
-    const params = {
-      platform: process.platform,
-      arch: process.arch,
-      version: this.version,
-      id: this.config.get('identity.id') || 'anonymous',
-      channel: this.preferredChannel,
-    };
-
-    // If we're on the x64 Mac build, but the machine has an Apple-branded
-    // processor, switch the user to the arm64 build.
-    if (params.platform === 'darwin' && process.arch === 'x64') {
-      const cpus = os.cpus();
-      if (cpus.length && cpus[0].model.startsWith('Apple ')) {
-        params.arch = 'arm64';
-      }
-    }
-
-    let host = `updates.getmailspring.com`;
-    if (this.config.get('env') === 'staging') {
-      host = `updates-staging.getmailspring.com`;
-    }
-
-    this.feedURL = `https://${host}/check/${params.platform}/${params.arch}/${params.version}/${params.id}/${params.channel}`;
-    if (autoUpdater) {
-      autoUpdater.setFeedURL(this.feedURL);
-    }
+    this.feedURL = '';
+    this.setState(UnsupportedState);
   };
 
   setupAutoUpdater() {
+    if (!this.feedURL) {
+      this.setState(UnsupportedState);
+      return;
+    }
     if (process.platform === 'win32') {
       const Impl = require('./autoupdate-impl-win32').default;
       autoUpdater = new Impl();
@@ -164,6 +146,18 @@ export default class AutoUpdateManager extends EventEmitter {
 
   check({ hidePopups }: { hidePopups?: boolean } = {}) {
     this.updateFeedURL();
+    if (!this.feedURL || !autoUpdater) {
+      this.setState(UnsupportedState);
+      if (!hidePopups && !this.specMode) {
+        dialog.showMessageBox({
+          type: 'info',
+          buttons: [localized('OK')],
+          message: 'GoreeCloud Mail updates are not configured.',
+          detail: 'Update checks are disabled until a verified GoreeCloud release channel is available.',
+        });
+      }
+      return;
+    }
     if (!hidePopups) {
       autoUpdater.once('update-not-available', this.onUpdateNotAvailable);
       autoUpdater.once('error', this.onUpdateError);
@@ -171,8 +165,14 @@ export default class AutoUpdateManager extends EventEmitter {
     autoUpdater.checkForUpdates();
   }
 
+  canInstallUpdate() {
+    return !!this.feedURL && !!autoUpdater && this.state === UpdateAvailableState;
+  }
+
   install() {
+    if (!this.canInstallUpdate()) return false;
     autoUpdater.quitAndInstall();
+    return true;
   }
 
   dialogIcon() {
@@ -194,7 +194,7 @@ export default class AutoUpdateManager extends EventEmitter {
       icon: this.dialogIcon(),
       message: localized('No update available.'),
       title: localized('No update available.'),
-      detail: localized(`You're running the latest version of Mailspring (%@).`, this.version),
+      detail: localized(`You're running the latest version of GoreeCloud Mail (%@).`, this.version),
     });
   };
 
@@ -206,7 +206,7 @@ export default class AutoUpdateManager extends EventEmitter {
       icon: this.dialogIcon(),
       message: localized('There was an error checking for updates.'),
       title: localized('Update Error'),
-      detail: message,
+      detail: 'No update details are available. Please check an approved GoreeCloud release source.',
     });
   };
 }
