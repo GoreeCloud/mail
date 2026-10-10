@@ -30,6 +30,7 @@ import { ActionBarPlugins } from './action-bar-plugins';
 import { AttachmentsArea } from './attachments-area';
 import { QuotedTextControl } from './quoted-text-control';
 import Fields from './fields';
+import { threadIdsFromDragPayload } from './thread-drop-payload';
 
 const { hasBlockquote, hasNonTrailingBlockquote, hideQuotedTextByDefault } =
   ComposerSupport.BaseBlockPlugins;
@@ -331,12 +332,7 @@ export default class ComposerView extends React.Component<ComposerViewProps, Com
   };
 
   _onThreadsReceived = async (json: string) => {
-    let threadIds: string[] = [];
-    try {
-      threadIds = JSON.parse(json).threadIds || [];
-    } catch (err) {
-      return;
-    }
+    const threadIds = threadIdsFromDragPayload(json);
     if (!threadIds.length) {
       return;
     }
