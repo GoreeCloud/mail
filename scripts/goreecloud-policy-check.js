@@ -97,5 +97,37 @@ if (
   pass('Mail resource paths use canonical package boundaries');
 }
 
+// No updater may contact the inherited provider before an approved release channel exists.
+const updater = read('app/src/browser/autoupdate-manager.ts');
+const updaterImpl = read('app/src/browser/autoupdate-impl-base.ts');
+const app = read('app/src/browser/application.ts');
+if (
+  !updater.includes("this.feedURL = '';") ||
+  !updater.includes('canInstallUpdate()') ||
+  updater.includes('updates.getmailspring.com') ||
+  updaterImpl.includes('getmailspring.com/download') ||
+  !app.includes('this.autoUpdateManager.canInstallUpdate()')
+) {
+  fail('Inherited update traffic or unguarded update installation remains');
+} else {
+  pass('Legacy update endpoint is disabled and installation remains guarded');
+}
+
+// New-account setup must be private and independent of upstream promotions.
+const onboarding = read('app/internal_packages/onboarding/lib/page-initial-preferences.tsx');
+const onboardingRoutes = read('app/internal_packages/onboarding/lib/onboarding-root.tsx');
+const newsletter = read('app/internal_packages/onboarding/lib/newsletter-signup.tsx');
+if (
+  onboarding.includes('NewsletterSignup') ||
+  onboarding.includes('hasProFeatures') ||
+  onboardingRoutes.includes('InitialSubscriptionPage') ||
+  newsletter.includes('this._onSubscribe();') ||
+  read('app/internal_packages/onboarding/lib/page-account-onboarding-success.tsx').includes('Adding your account to Mailspring')
+) {
+  fail('Mail onboarding must not auto-enroll users or route through upstream promotions');
+} else {
+  pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
+}
+
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');
