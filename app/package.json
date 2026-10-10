@@ -23,7 +23,7 @@
     "chrono-node": "^2.9.0",
     "classnames": "^2.5.1",
     "collapse-whitespace": "^1.1.7",
-    "debug": "github:emorikawa/debug#nylas",
+    "debug": "4.4.3",
     "dompurify": "^3.3.1",
     "emoji-data": "^0.2.0",
     "event-kit": "^1.0.2",
