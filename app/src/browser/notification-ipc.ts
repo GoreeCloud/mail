@@ -95,9 +95,13 @@ const displayNotification = (
   options: NotificationOptions
 ): string | null => {
   // IPC values are not guaranteed to match the compile-time TypeScript shape.
-  if (!options || typeof options !== 'object' ||
-      typeof options.id !== 'string' || !options.id ||
-      typeof options.title !== 'string') {
+  if (
+    !options ||
+    typeof options !== 'object' ||
+    typeof options.id !== 'string' ||
+    !options.id ||
+    typeof options.title !== 'string'
+  ) {
     console.warn('GoreeCloud Mail rejected an invalid desktop notification request.');
     return null;
   }
