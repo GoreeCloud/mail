@@ -874,6 +874,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('run-in-window', (event, params) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const sourceWindow = BrowserWindow.fromWebContents(event.sender);
       this._sourceWindows[params.taskId] = sourceWindow;
 
@@ -892,6 +893,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('remote-run-results', (event, params) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const sourceWindow = this._sourceWindows[params.taskId];
       sourceWindow.webContents.send('remote-run-results', params);
       delete this._sourceWindows[params.taskId];
@@ -949,6 +951,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('resize-window', (event, params) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const sourceWindow = BrowserWindow.fromWebContents(event.sender);
       if (!sourceWindow) return;
       sourceWindow.setSize(params.width, params.height);
