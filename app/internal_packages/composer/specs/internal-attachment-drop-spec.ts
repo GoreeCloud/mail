@@ -7,9 +7,9 @@ describe('Composer internal attachment dragging', () => {
   const name = path.basename(filePath);
 
   it('accepts the exact DownloadURL format produced by AttachmentItem', () => {
-    expect(internalAttachmentPathFromDrop('application/pdf:' + name + ':file://' + filePath)).toEqual(
-      filePath
-    );
+    expect(
+      internalAttachmentPathFromDrop('application/pdf:' + name + ':file://' + filePath)
+    ).toEqual(filePath);
   });
 
   it('preserves raw native paths when content type is absent', () => {
@@ -19,7 +19,9 @@ describe('Composer internal attachment dragging', () => {
   });
 
   it('rejects mismatched advertised basenames and relative paths', () => {
-    expect(internalAttachmentPathFromDrop('application/pdf:fake.pdf:file://' + filePath)).toBe(null);
+    expect(internalAttachmentPathFromDrop('application/pdf:fake.pdf:file://' + filePath)).toBe(
+      null
+    );
     expect(internalAttachmentPathFromDrop('application/pdf:relative.pdf:file://relative.pdf')).toBe(
       null
     );
@@ -27,9 +29,9 @@ describe('Composer internal attachment dragging', () => {
 
   it('rejects malformed envelopes and control characters', () => {
     expect(internalAttachmentPathFromDrop('file://' + filePath)).toBe(null);
-    expect(internalAttachmentPathFromDrop('application/pdf:' + name + ':file://' + filePath + '\n')).toBe(
-      null
-    );
+    expect(
+      internalAttachmentPathFromDrop('application/pdf:' + name + ':file://' + filePath + '\n')
+    ).toBe(null);
     expect(internalAttachmentPathFromDrop('https://example.invalid/' + name)).toBe(null);
   });
 });
