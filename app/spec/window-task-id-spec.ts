@@ -1,4 +1,4 @@
-import { isValidWindowTaskId } from '../src/browser/window-task-id';
+import { isValidWindowTaskId, reserveWindowTask } from '../src/browser/window-task-id';
 
 describe('Cross-window IPC task identifiers', () => {
   it('accepts ordinary generated task IDs', () => {
@@ -13,6 +13,24 @@ describe('Cross-window IPC task identifiers', () => {
     expect(isValidWindowTaskId('task-id ')).toBe(false);
     expect(isValidWindowTaskId('x'.repeat(257))).toBe(false);
     expect(isValidWindowTaskId('x'.repeat(256))).toBe(true);
+  });
+
+  it('does not overwrite an active IPC task owner', () => {
+    const pending = new Map<string, string>();
+    expect(reserveWindowTask(pending, 'task-1', 'original')).toBe(true);
+    expect(reserveWindowTask(pending, 'task-1', 'replacement')).toBe(false);
+    expect(pending.get('task-1')).toBe('original');
+    pending.delete('task-1');
+    expect(reserveWindowTask(pending, 'task-1', 'replacement')).toBe(true);
+  });
+
+  it('caps pending IPC task reservations', () => {
+    const pending = new Map<string, number>();
+    for (let i = 0; i < 1024; i++) {
+      expect(reserveWindowTask(pending, `task-${i}`, i)).toBe(true);
+    }
+    expect(reserveWindowTask(pending, 'overflow', 10)).toBe(false);
+    expect(pending.size).toBe(1024);
   });
 
   it('rejects non-string and missing IDs', () => {
