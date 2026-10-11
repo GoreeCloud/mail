@@ -31,6 +31,9 @@ export function defaultEmlFilename(subject: string): string {
   // eslint-disable-next-line no-control-regex
   name = name.replace(/[\u0000-\u001f\u007f]/g, '');
   name = name.replace(/[.\s]+$/, '');
+  if (!name) {
+    name = 'untitled';
+  }
   return `${name}.eml`;
 }
 
@@ -92,9 +95,12 @@ export async function stageMessagesAsEml(
   }
 
   const staged = messages.map((message) => {
-    const token = crypto.randomBytes(4).toString('hex');
-    const dir = path.join(os.tmpdir(), `mailspring-eml-${message.id}-${token}`);
-    const basename = filename || defaultEmlFilename(message.subject);
+    // IDs originate in provider-backed message records and are not safe path segments.
+    // A random directory also avoids exposing message identifiers in temp paths.
+    const dir = path.join(os.tmpdir(), `${STAGING_DIR_PREFIX}${crypto.randomBytes(12).toString('hex')}`);
+    const basename = filename
+      ? defaultEmlFilename(filename.replace(/\.eml$/i, ''))
+      : defaultEmlFilename(message.subject);
     return { message, dir, filePath: path.join(dir, basename) };
   });
 
@@ -164,7 +170,11 @@ const STAGING_DIR_PREFIX = 'mailspring-eml-';
 function removeStagingDirectory(dir: string) {
   // Guard against deleting anything we didn't create ourselves — callers hand
   // us paths, and a wrong one shouldn't take a real directory with it.
-  if (!path.basename(dir).startsWith(STAGING_DIR_PREFIX)) {
+  const resolved = path.resolve(dir);
+  if (
+    path.dirname(resolved) !== path.resolve(os.tmpdir()) ||
+    !path.basename(resolved).startsWith(STAGING_DIR_PREFIX)
+  ) {
     return;
   }
   try {
