@@ -109,18 +109,36 @@ export async function stageMessagesAsEml(
 
   // Queue every fetch before awaiting any of them so a multi-message stage
   // isn't serialized on the sync engine's round trips.
-  const tasks = staged.map(({ message, dir, filePath }) => {
-    fs.mkdirSync(dir, { recursive: true });
-    const task = new GetMessageRFC2822Task({
-      messageId: message.id,
-      accountId: message.accountId,
-      filepath: filePath,
+  try {
+    const tasks = staged.map(({ message, dir, filePath }) => {
+      fs.mkdirSync(dir, { recursive: true });
+      const task = new GetMessageRFC2822Task({
+        messageId: message.id,
+        accountId: message.accountId,
+        filepath: filePath,
+      });
+      Actions.queueTask(task);
+      return task;
     });
-    Actions.queueTask(task);
-    return task;
-  });
 
-  await Promise.all(tasks.map((task) => TaskQueue.waitForPerformRemote(task)));
+    const results = await Promise.all(
+      tasks.map(async (task) => {
+        try {
+          await TaskQueue.waitForPerformRemote(task);
+          return { failed: false, error: null };
+        } catch (error) {
+          return { failed: true, error };
+        }
+      })
+    );
+    const failure = results.find((result) => result.failed);
+    if (failure) {
+      throw failure.error;
+    }
+  } catch (err) {
+    staged.forEach(({ dir }) => removeStagingDirectory(dir));
+    throw err;
+  }
 
   // Directories whose file never arrived are dead weight — drop them now, and
   // leave the rest to discardStagedEml once the caller is done with the file.
