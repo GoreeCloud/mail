@@ -1,5 +1,6 @@
 import os from 'os';
 import path from 'path';
+import { buildAttachmentDragPayload } from '../../../src/components/attachment-drag-payload';
 import { internalAttachmentPathFromDrop } from '../lib/internal-attachment-drop';
 
 describe('Composer internal attachment dragging', () => {
@@ -7,15 +8,14 @@ describe('Composer internal attachment dragging', () => {
   const name = path.basename(filePath);
 
   it('accepts the exact DownloadURL format produced by AttachmentItem', () => {
-    expect(
-      internalAttachmentPathFromDrop('application/pdf:' + name + ':file://' + filePath)
-    ).toEqual(filePath);
+    const payload = buildAttachmentDragPayload('application/pdf', filePath);
+    expect(payload).toEqual('application/pdf:' + name + ':file://' + filePath);
+    expect(internalAttachmentPathFromDrop(payload)).toEqual(filePath);
   });
 
   it('preserves raw native paths when content type is absent', () => {
-    expect(internalAttachmentPathFromDrop('undefined:' + name + ':file://' + filePath)).toEqual(
-      filePath
-    );
+    const payload = buildAttachmentDragPayload(undefined, filePath);
+    expect(internalAttachmentPathFromDrop(payload)).toEqual(filePath);
   });
 
   it('rejects mismatched advertised basenames and relative paths', () => {
