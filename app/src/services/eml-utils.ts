@@ -97,7 +97,10 @@ export async function stageMessagesAsEml(
   const staged = messages.map((message) => {
     // IDs originate in provider-backed message records and are not safe path segments.
     // A random directory also avoids exposing message identifiers in temp paths.
-    const dir = path.join(os.tmpdir(), `${STAGING_DIR_PREFIX}${crypto.randomBytes(12).toString('hex')}`);
+    const dir = path.join(
+      os.tmpdir(),
+      `${STAGING_DIR_PREFIX}${crypto.randomBytes(12).toString('hex')}`
+    );
     const basename = filename
       ? defaultEmlFilename(filename.replace(/\.eml$/i, ''))
       : defaultEmlFilename(message.subject);
