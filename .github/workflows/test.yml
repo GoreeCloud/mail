@@ -25,7 +25,122 @@ jobs:
       - name: Verify GoreeCloud Mail engine patch applies cleanly
         run: bash scripts/prepare-native-mailsync.sh
 
-  test:
+  engine-native-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - name: Check out pinned GoreeCloud Mail native source
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Install native engine build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            autoconf automake build-essential clang cmake fakeroot \
+            git libc-ares-dev libctemplate-dev libcurl4-openssl-dev \
+            libglib2.0-dev libicu-dev liblzma-dev libsasl2-dev libssl-dev \
+            libsasl2-modules libsasl2-modules-gssapi-mit \
+            libtidy-dev libtool libxext-dev libxkbfile-dev libxml2-dev \
+            libxtst-dev rpm uuid-dev xvfb
+      - name: Apply reviewed GoreeCloud native source patch
+        run: bash scripts/prepare-native-mailsync.sh
+      - name: Build native engine from patched source
+        run: |
+          chmod +x mailsync/build.sh
+          (cd mailsync && ./build.sh)
+      - name: Inspect native engine artifact
+        run: |
+          test -x app/mailsync
+          test -x app/mailsync.bin
+          file app/mailsync app/mailsync.bin
+          readelf -h app/mailsync.bin
+          sha256sum app/mailsync.bin | tee "${RUNNER_TEMP}/goreecloud-mail-native-engine.sha256"
+      - name: Exercise sterile engine migration outside legacy product paths
+        run: |
+          set -eu
+          test_dir="$(mktemp -d "${RUNNER_TEMP}/goreecloud-mail-migrate.XXXXXXXX")"
+          trap 'rm -rf "$test_dir"' EXIT
+          CONFIG_DIR_PATH="$test_dir" \
+          IDENTITY_SERVER="http://127.0.0.1:9" \
+            ./app/mailsync --mode migrate
+          test -f "$test_dir/edgehill.db" || test -f "$test_dir/Edgehill.db" || \
+            { echo "Native migration completed but no known database file was detected."; exit 1; }
+          database="$test_dir/edgehill.db"
+          if test ! -f "$database"; then database="$test_dir/Edgehill.db"; fi
+          test ! -L "$database"
+          before="$(sha256sum "$database" | cut -d ' ' -f 1)"
+          python3 - "$database" <<'PY'
+          import pathlib
+          import sqlite3
+          import sys
+
+          db = pathlib.Path(sys.argv[1])
+          # Read-only URI deliberately never creates or migrates a database.
+          with sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True) as conn:
+              checks = [result[0] for result in conn.execute('PRAGMA integrity_check')]
+              if checks != ['ok']:
+                  raise SystemExit('Native migration produced an invalid SQLite database')
+              tables = conn.execute(
+                  "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+              ).fetchone()[0]
+              if tables < 1:
+                  raise SystemExit('Native migration produced an empty SQLite schema')
+          print('PASS: sterile native database integrity and nonempty schema')
+          PY
+          after="$(sha256sum "$database" | cut -d ' ' -f 1)"
+          test "$before" = "$after" || \
+            { echo "Read-only migration validation unexpectedly modified the database"; exit 1; }
+
+
+      - name: Install Electron test dependencies
+        run: |
+          sudo apt-get install -y dbus-x11 libgbm1 libnss3 libasound2t64 libatk1.0-0t64 libatk-bridge2.0-0t64 libgtk-3-0t64
+      - name: Set up Node.js for Mail specs
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install application dependencies with native source present
+        run: npm ci
+      - name: Verify npm install retained the source-built Mail engine
+        run: |
+          test -x app/mailsync
+          test -x app/mailsync.bin
+          sha256sum --check "${RUNNER_TEMP}/goreecloud-mail-native-engine.sha256"
+      - name: Verify Electron sandbox options on the ephemeral CI runner
+        run: |
+          set -eu
+          binary_path_file="$(mktemp "${RUNNER_TEMP}/goreecloud-electron-path.XXXXXX")"
+          trap 'rm -f "$binary_path_file"' EXIT
+          ELECTRON_BINARY_PATH_FILE="$binary_path_file" node -e \
+            "require('fs').writeFileSync(process.env.ELECTRON_BINARY_PATH_FILE, require('electron'))"
+          electron_binary="$(cat "$binary_path_file")"
+          if ! test -x "$electron_binary"; then
+            echo "::error::Electron module did not resolve to an executable on the CI runner."
+            exit 1
+          fi
+          helper="$(dirname "$electron_binary")/chrome-sandbox"
+          if test -f "$helper"; then
+            echo "Electron setuid sandbox helper exists; securing it for this ephemeral runner."
+            sudo chown root:root "$helper"
+            sudo chmod 4755 "$helper"
+            test "$(stat -c '%u:%g:%a' "$helper")" = "0:0:4755"
+          else
+            echo "Electron setuid helper is absent; checking unprivileged user namespace sandbox."
+            if ! unshare --user --map-root-user true; then
+              echo "::error::No verified setuid or user-namespace Chromium sandbox available; refusing to disable sandbox for tests."
+              exit 1
+            fi
+            echo "User namespace available; leaving Electron sandbox enabled."
+          fi
+      - name: Run complete Jasmine suite against compiled native engine
+        run: dbus-launch --exit-with-session xvfb-run -a npm test
+        timeout-minutes: 20
+
+  static-checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -51,7 +166,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -66,9 +181,3 @@ jobs:
       - name: Run typecheck
         run: npm run typecheck
 
-      - name: Allow Electron namespace sandbox
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
-      - name: Run tests
-        run: dbus-launch --exit-with-session xvfb-run -a npm test
-        timeout-minutes: 20
