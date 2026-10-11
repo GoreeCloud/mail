@@ -8,6 +8,7 @@ import { localized } from 'mailspring-exports';
 import { rootURLForServer } from '../flux/mailspring-api-request';
 import { RetinaImg } from './retina-img';
 import { Disposable } from 'event-kit';
+import { safeWebviewExternalUrl } from './webview-external-url';
 
 type InitialLoadingCoverProps = {
   ready?: boolean;
@@ -127,7 +128,6 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
       'did-fail-load': this._webviewDidFailLoad,
       'did-finish-load': this._webviewDidFinishLoad,
       'did-frame-navigate': this._webviewDidFrameNavigate,
-      'console-message': this._onConsoleMessage,
       'new-window': this._onNewWindow,
 
       // Workaround: When a webview changes pages, it's focus state seems to get out of
@@ -150,16 +150,10 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
   };
 
   _onNewWindow = (e: { url: string }) => {
-    if (/^https?:\/\/.+/i.test(e.url)) {
-      shell.openExternal(e.url);
+    const url = safeWebviewExternalUrl(e.url);
+    if (url) {
+      shell.openExternal(url);
     }
-  };
-
-  _onConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
-    if (/^https?:\/\/.+/i.test(e.message)) {
-      shell.openExternal(e.message);
-    }
-    console.log('Guest page logged a message:', e.message);
   };
 
   _webviewDidFrameNavigate = ({
