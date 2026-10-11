@@ -37,7 +37,11 @@ import Config from '../config';
 import { registerQuickpreviewIPCHandlers } from './quickpreview-ipc';
 import { guardAuxiliaryWindowNavigation } from './auxiliary-window-guard';
 import { isMailspringWindowContents } from './mailspring-window';
-import { isValidWindowTaskId, reserveWindowTask } from './window-task-id';
+import {
+  discardWindowTasksForSource,
+  isValidWindowTaskId,
+  reserveWindowTask,
+} from './window-task-id';
 import {
   handleWindowsToastXMLProtocolAction,
   registerNotificationIPCHandlers,
@@ -69,6 +73,7 @@ export default class Application extends EventEmitter {
   windowsTaskbarManager?: WindowsTaskbarManager;
 
   _sourceWindows = new Map<string, BrowserWindow>();
+  _watchedSourceWindows = new WeakSet<BrowserWindow>();
   _resettingAndRelaunching: boolean;
   _initialized = false;
   _pendingLaunchOptions: any[] = [];
@@ -904,6 +909,13 @@ export default class Application extends EventEmitter {
 
       if (!reserveWindowTask(this._sourceWindows, params.taskId, sourceWindow)) {
         return;
+      }
+      if (!this._watchedSourceWindows.has(sourceWindow)) {
+        this._watchedSourceWindows.add(sourceWindow);
+        sourceWindow.once('closed', () => {
+          discardWindowTasksForSource(this._sourceWindows, sourceWindow);
+          this._watchedSourceWindows.delete(sourceWindow);
+        });
       }
       targetWindow.browserWindow.webContents.send('run-in-window', params);
     });
