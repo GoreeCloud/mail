@@ -907,9 +907,9 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('remote-run-results', (event, params) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
       if (
-        !isMailspringWindowContents(event.sender) ||
         !mainWindow ||
         mainWindow.browserWindow.webContents !== event.sender ||
         !params ||
