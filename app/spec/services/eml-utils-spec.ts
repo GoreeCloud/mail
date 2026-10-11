@@ -143,7 +143,6 @@ describe('defaultEmlFilename', function () {
       expect(defaultEmlFilename('....')).toEqual('untitled.eml');
     });
 
-
     it('removes a trailing dot', () => {
       expect(defaultEmlFilename('Subject.')).toEqual('Subject.eml');
     });
