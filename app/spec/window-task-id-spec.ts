@@ -1,6 +1,24 @@
-import { isValidWindowTaskId, reserveWindowTask } from '../src/browser/window-task-id';
+import {
+  discardWindowTasksForSource,
+  isValidWindowTaskId,
+  reserveWindowTask,
+} from '../src/browser/window-task-id';
 
 describe('Cross-window IPC task identifiers', () => {
+  it('discards only the closed window’s routes and preserves another window', () => {
+    const first = { id: 'first' };
+    const second = { id: 'second' };
+    const pending = new Map<string, typeof first>();
+    expect(reserveWindowTask(pending, 'first-a', first)).toBe(true);
+    expect(reserveWindowTask(pending, 'second-a', second)).toBe(true);
+    expect(reserveWindowTask(pending, 'first-b', first)).toBe(true);
+    expect(discardWindowTasksForSource(pending, first)).toBe(2);
+    expect(pending.has('first-a')).toBe(false);
+    expect(pending.get('second-a')).toBe(second);
+    expect(reserveWindowTask(pending, 'first-a', second)).toBe(true);
+    expect(discardWindowTasksForSource(pending, first)).toBe(0);
+  });
+
   it('accepts ordinary generated task IDs', () => {
     expect(isValidWindowTaskId('task-48b61f12')).toBe(true);
     expect(isValidWindowTaskId('a4fba20c-9c06-40d0-95e2-a2614f5ba1bb')).toBe(true);
