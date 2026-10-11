@@ -319,6 +319,64 @@ describe('stageMessagesAsEml', function () {
     expect(path.basename(staged[0].filePath)).toEqual('Written.eml');
   });
 
+  it('removes every staged file after a remote fetch fails', async () => {
+    let releaseSuccessfulFetch: () => void;
+    const gate = new Promise<void>((resolve) => (releaseSuccessfulFetch = resolve));
+    (TaskQueue.waitForPerformRemote as any).andCallFake((task: GetMessageRFC2822Task) => {
+      if (task.messageId === 'm2') {
+        return Promise.reject(new Error('message unavailable'));
+      }
+      fs.writeFileSync(task.filepath, 'raw');
+      cleanup.push(path.dirname(task.filepath));
+      return gate;
+    });
+
+    const pending = stageMessagesAsEml([
+      new Message({ id: 'm1', accountId: 'a1', subject: 'Written' }),
+      new Message({ id: 'm2', accountId: 'a1', subject: 'Failed' }),
+    ]);
+
+    // A failed sibling must not trigger cleanup until the other fetch settles.
+    let settled = false;
+    pending.then(
+      () => (settled = true),
+      () => (settled = true)
+    );
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releaseSuccessfulFetch();
+    let error: Error = null;
+    try {
+      await pending;
+    } catch (err) {
+      error = err;
+    }
+    expect(error.message).toEqual('message unavailable');
+    queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
+  });
+
+  it('cleans created staging directories if queue submission itself fails', async () => {
+    (Actions.queueTask as any).andCallFake((task: GetMessageRFC2822Task) => {
+      queued.push(task);
+      if (task.messageId === 'm2') {
+        throw new Error('queue unavailable');
+      }
+    });
+
+    let error: Error = null;
+    try {
+      await stageMessagesAsEml([
+        new Message({ id: 'm1', accountId: 'a1', subject: 'First' }),
+        new Message({ id: 'm2', accountId: 'a1', subject: 'Second' }),
+      ]);
+    } catch (err) {
+      error = err;
+    }
+    expect(error.message).toEqual('queue unavailable');
+    queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
+  });
+
   it('uses an explicit filename when one is given', async () => {
     engineWrites(() => true);
     const staged = await stageMessagesAsEml(
