@@ -139,6 +139,11 @@ describe('defaultEmlFilename', function () {
   });
 
   describe('trailing dots and whitespace removal', () => {
+    it('falls back to a safe filename when the subject is only dots', () => {
+      expect(defaultEmlFilename('....')).toEqual('untitled.eml');
+    });
+
+
     it('removes a trailing dot', () => {
       expect(defaultEmlFilename('Subject.')).toEqual('Subject.eml');
     });
@@ -263,6 +268,30 @@ describe('stageMessagesAsEml', function () {
     expect(path.dirname(staged[0].filePath)).not.toEqual(path.dirname(staged[1].filePath));
   });
 
+  it('uses random temp directories instead of provider-controlled message identifiers', async () => {
+    engineWrites(() => true);
+    const [staged] = await stageMessagesAsEml([
+      new Message({ id: '../private/thread-1', accountId: 'a1', subject: 'Report' }),
+    ]);
+
+    const dir = path.dirname(staged.filePath);
+    expect(path.dirname(dir)).toEqual(path.resolve(os.tmpdir()));
+    expect(/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(dir))).toBe(true);
+    expect(dir.includes('private')).toBe(false);
+    expect(path.basename(staged.filePath)).toEqual('Report.eml');
+  });
+
+  it('sanitizes explicit filenames before constructing staging paths', async () => {
+    engineWrites(() => true);
+    const [staged] = await stageMessagesAsEml(
+      [new Message({ id: 'm3', accountId: 'a1', subject: 'Hello' })],
+      { filename: '../../outside.eml' }
+    );
+
+    expect(path.dirname(path.dirname(staged.filePath))).toEqual(path.resolve(os.tmpdir()));
+    expect(path.basename(staged.filePath)).toEqual('.._.._outside.eml');
+  });
+
   it('queues every fetch before awaiting any of them', async () => {
     let resolveAll;
     const gate = new Promise<void>((resolve) => (resolveAll = resolve));
@@ -340,6 +369,21 @@ describe('discardStagedEml', function () {
     discardStagedEml(filePath);
     expect(fs.existsSync(filePath)).toBe(true);
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('never removes prefixed directories outside the immediate system temp root', () => {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'mail-staging-guard-'));
+    const child = path.join(parent, 'mailspring-eml-other-project');
+    const filePath = path.join(child, 'Hello.eml');
+
+    try {
+      fs.mkdirSync(child, { recursive: true });
+      fs.writeFileSync(filePath, 'safe');
+      discardStagedEml(filePath);
+      expect(fs.existsSync(filePath)).toBe(true);
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
   });
 
   it('does not throw when the file is already gone', () => {
