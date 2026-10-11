@@ -1,4 +1,4 @@
-import { mentionsAttachment } from '../../src/flux/stores/draft-attachment-warning';
+import { hasVisibleAttachment, mentionsAttachment } from '../../src/flux/stores/draft-attachment-warning';
 
 describe('Draft attachment reminders', () => {
   it('recognizes an explicit mention of an attachment', () => {
@@ -35,5 +35,23 @@ describe('Draft attachment reminders', () => {
     expect(mentionsAttachment('We should detach the equipment.')).toBe(false);
     expect(mentionsAttachment('Please review the agenda.')).toBe(false);
     expect(mentionsAttachment('')).toBe(false);
+  });
+});
+
+
+describe('Composer visible attachments', () => {
+  it('does not treat an inline CID image as a separate file attachment', () => {
+    expect(hasVisibleAttachment([{ contentId: 'inline-logo@example' }])).toBe(false);
+  });
+
+  it('accepts a regular attachment alongside inline message images', () => {
+    expect(
+      hasVisibleAttachment([{ contentId: 'inline-logo@example' }, { contentId: '' }])
+    ).toBe(true);
+  });
+
+  it('handles empty or absent file collections without throwing', () => {
+    expect(hasVisibleAttachment([])).toBe(false);
+    expect(hasVisibleAttachment()).toBe(false);
   });
 });
