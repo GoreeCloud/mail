@@ -114,6 +114,26 @@ describe('defaultEmlFilename', function () {
     });
   });
 
+  describe('cross-platform filename boundaries', () => {
+    it('does not split an emoji at the maximum basename length', () => {
+      expect(defaultEmlFilename('a'.repeat(79) + '🐱' + 'ignored')).toEqual(
+        'a'.repeat(79) + '🐱.eml'
+      );
+    });
+
+    it('prefixes Windows-reserved names even with a subject extension', () => {
+      for (const subject of ['CON', 'aux', 'Com9', 'LPT1', 'NUL.txt']) {
+        expect(defaultEmlFilename(subject)).toEqual('file-' + subject + '.eml');
+      }
+    });
+
+    it('removes bidirectional overrides, isolates, and C1 controls', () => {
+      expect(defaultEmlFilename('annual\u202Efdp.exe\u2066\u0081')).toEqual(
+        'annualfdp.exe.eml'
+      );
+    });
+  });
+
   describe('control character stripping', () => {
     it('strips null byte (U+0000)', () => {
       expect(defaultEmlFilename('hello\u0000world')).toEqual('helloworld.eml');
