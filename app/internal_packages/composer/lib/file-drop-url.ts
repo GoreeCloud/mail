@@ -22,7 +22,8 @@ export function localFilePathFromDropUri(value: string): string | null {
       return null;
     }
 
-    return fileURLToPath(uri);
+    const filePath = fileURLToPath(uri);
+    return filePath.includes('\0') ? null : filePath;
   } catch (err) {
     return null;
   }
