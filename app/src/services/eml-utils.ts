@@ -35,7 +35,7 @@ export function defaultEmlFilename(subject: string): string {
     name = 'untitled';
   }
   // Windows device names stay reserved even when a file extension is appended.
-  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) {
+  if (/^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?: *\.|$)/i.test(name)) {
     name = 'file-' + name;
   }
   return `${name}.eml`;
