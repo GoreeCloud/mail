@@ -7,65 +7,50 @@ describe('AutoUpdateManager', function () {
     this.config = {
       set: jasmine.createSpy('config.set'),
       get: (key) => {
-        if (key === 'identity.id') {
-          return this.mailspringIdentityId;
-        }
-        if (key === 'env') {
-          return 'production';
-        }
+        if (key === 'identity.id') return this.mailspringIdentityId;
+        if (key === 'env') return 'production';
+        return null;
       },
-      onDidChange: (key, callback) => {
-        return callback();
-      },
+      onDidChange: jasmine.createSpy('config.onDidChange'),
     };
   });
 
-  describe('with attached commit version', () =>
-    it('correctly sets the feedURL', function () {
-      const m = new AutoUpdateManager('3.222.1-abc', this.config, this.specMode);
-      spyOn(m, 'setupAutoUpdater');
-      expect(m.feedURL).toEqual(
-        'https://updates.getmailspring.com/check/' +
-          process.platform +
-          '/' +
-          process.arch +
-          '/3.222.1-abc/anonymous/stable'
-      );
-    }));
+  it('has no inherited update feed even with an attached commit version', function () {
+    const m = new AutoUpdateManager('3.222.1-abc', this.config, this.specMode);
+    spyOn(m, 'setupAutoUpdater');
+    expect(m.feedURL).toEqual('');
+    expect(m.getState()).toBe('unsupported');
+  });
 
-  describe('with no attached commit', () =>
-    it('correctly sets the feedURL', function () {
-      const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
-      spyOn(m, 'setupAutoUpdater');
-      expect(m.feedURL).toEqual(
-        'https://updates.getmailspring.com/check/' +
-          process.platform +
-          '/' +
-          process.arch +
-          '/3.222.1/anonymous/stable'
-      );
-    }));
+  it('has no inherited update feed for an untagged version', function () {
+    const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
+    spyOn(m, 'setupAutoUpdater');
+    expect(m.feedURL).toEqual('');
+  });
 
-  describe('when an update identity is already set', () =>
-    it('should send it and not save any changes', function () {
-      this.mailspringIdentityId = 'test-mailspring-id';
-      const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
-      expect(m.feedURL).toEqual(
-        'https://updates.getmailspring.com/check/' +
-          process.platform +
-          '/' +
-          process.arch +
-          '/3.222.1/test-mailspring-id/stable'
-      );
-    }));
+  it('never includes a legacy identity in its update destination', function () {
+    this.mailspringIdentityId = 'test-mailspring-id';
+    const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
+    spyOn(m, 'setupAutoUpdater');
+    expect(m.feedURL).toEqual('');
+    expect(this.config.onDidChange).not.toHaveBeenCalled();
+  });
 
-  describe('when an update identity is added', () =>
-    it('should update the feed URL', function () {
-      const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
-      spyOn(m, 'setupAutoUpdater');
-      expect(m.feedURL.includes('anonymous')).toEqual(true);
-      this.mailspringIdentityId = 'test-mailspring-id';
-      m.updateFeedURL();
-      expect(m.feedURL.includes(this.mailspringIdentityId)).toEqual(true);
-    }));
+  it('does not resume upstream traffic when identity settings change', function () {
+    const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
+    spyOn(m, 'setupAutoUpdater');
+    this.mailspringIdentityId = 'test-mailspring-id';
+    m.updateFeedURL();
+    expect(m.feedURL).toEqual('');
+    expect(m.getState()).toBe('unsupported');
+  });
+
+  it('fails safely on manual check and cannot install without an approved feed', function () {
+    const m = new AutoUpdateManager('3.222.1', this.config, this.specMode);
+    spyOn(m, 'setupAutoUpdater');
+    expect(() => m.check()).not.toThrow();
+    expect(m.canInstallUpdate()).toBe(false);
+    expect(m.install()).toBe(false);
+    expect(m.getState()).toBe('unsupported');
+  });
 });

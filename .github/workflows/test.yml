@@ -68,6 +68,31 @@ jobs:
             ./app/mailsync --mode migrate
           test -f "$test_dir/edgehill.db" || test -f "$test_dir/Edgehill.db" || \
             { echo "Native migration completed but no known database file was detected."; exit 1; }
+          database="$test_dir/edgehill.db"
+          if test ! -f "$database"; then database="$test_dir/Edgehill.db"; fi
+          test ! -L "$database"
+          before="$(sha256sum "$database" | cut -d ' ' -f 1)"
+          python3 - "$database" <<'PY'
+          import pathlib
+          import sqlite3
+          import sys
+
+          db = pathlib.Path(sys.argv[1])
+          # Read-only URI deliberately never creates or migrates a database.
+          with sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True) as conn:
+              checks = [result[0] for result in conn.execute('PRAGMA integrity_check')]
+              if checks != ['ok']:
+                  raise SystemExit('Native migration produced an invalid SQLite database')
+              tables = conn.execute(
+                  "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+              ).fetchone()[0]
+              if tables < 1:
+                  raise SystemExit('Native migration produced an empty SQLite schema')
+          print('PASS: sterile native database integrity and nonempty schema')
+          PY
+          after="$(sha256sum "$database" | cut -d ' ' -f 1)"
+          test "$before" = "$after" || \
+            { echo "Read-only migration validation unexpectedly modified the database"; exit 1; }
 
 
       - name: Install Electron test dependencies

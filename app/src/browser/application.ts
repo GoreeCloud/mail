@@ -37,6 +37,7 @@ import Config from '../config';
 import { registerQuickpreviewIPCHandlers } from './quickpreview-ipc';
 import { guardAuxiliaryWindowNavigation } from './auxiliary-window-guard';
 import { isMailspringWindowContents } from './mailspring-window';
+import { isValidWindowTaskId, reserveWindowTask } from './window-task-id';
 import {
   handleWindowsToastXMLProtocolAction,
   registerNotificationIPCHandlers,
@@ -67,7 +68,7 @@ export default class Application extends EventEmitter {
   systemTrayManager: SystemTrayManager;
   windowsTaskbarManager?: WindowsTaskbarManager;
 
-  _sourceWindows: { [taskId: string]: BrowserWindow } = {};
+  _sourceWindows = new Map<string, BrowserWindow>();
   _resettingAndRelaunching: boolean;
   _initialized = false;
   _pendingLaunchOptions: any[] = [];
@@ -416,6 +417,13 @@ export default class Application extends EventEmitter {
 
     this.on('application:reset-database', this._resetDatabaseAndRelaunch);
 
+    // A renderer requests a relaunch through the trusted-window command bridge,
+    // rather than importing the privileged Electron remote app object.
+    this.on('application:relaunch', () => {
+      app.relaunch();
+      app.quit();
+    });
+
     this.on('application:quit', () => {
       app.quit();
     });
@@ -518,6 +526,8 @@ export default class Application extends EventEmitter {
     });
 
     this.on('application:install-update', () => {
+      // A stale update action must never close mailbox windows without an approved update.
+      if (!this.autoUpdateManager.canInstallUpdate()) return;
       this.quitting = true;
       this.windowManager.cleanupBeforeAppQuit();
       this.autoUpdateManager.install();
@@ -738,6 +748,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('update-application-menu', (event, template, keystrokesByCommand) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       if (win) {
         this.applicationMenu.update(win, template, keystrokesByCommand);
@@ -771,6 +782,7 @@ export default class Application extends EventEmitter {
     const ALLOWED_DEVTOOLS_WEBCONTENTS_METHODS = new Set(['executeJavaScript']);
 
     ipcMain.on('call-window-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_WINDOW_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on BrowserWindow!`);
         return;
@@ -785,6 +797,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('call-devtools-webcontents-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_DEVTOOLS_WEBCONTENTS_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on devToolsWebContents!`);
         return;
@@ -801,6 +814,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('call-webcontents-method', (event, method, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (!ALLOWED_WEBCONTENTS_METHODS.has(method)) {
         console.error(`Method ${method} is not permitted on WebContents!`);
         return;
@@ -813,16 +827,19 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('mailsync-bridge-rebroadcast-to-all', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       this.windowManager.sendToAllWindows('mailsync-bridge-message', { except: win }, ...args);
     });
 
     ipcMain.on('action-bridge-rebroadcast-to-all', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const win = BrowserWindow.fromWebContents(event.sender);
       this.windowManager.sendToAllWindows('action-bridge-message', { except: win }, ...args);
     });
 
     ipcMain.on('action-bridge-rebroadcast-to-default', (event, ...args) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
       if (!mainWindow || !mainWindow.browserWindow.webContents) {
         return;
@@ -834,19 +851,30 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('write-image-to-clipboard', (event, dataURL) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       // This can't be done from the renderer due to https://github.com/electron/electron/issues/8151
       const png = nativeImage.createFromDataURL(dataURL).toPNG();
       clipboard.write([new ClipboardItem({ 'image/png': new Blob([png], { type: 'image/png' }) })]);
     });
 
     ipcMain.on('write-text-to-selection-clipboard', (event, selectedText) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       if (clipboard.selection) clipboard.selection.writeText(selectedText);
     });
 
-    ipcMain.on('account-setup-successful', () => {
+    ipcMain.on('account-setup-successful', (event) => {
+      // Only the active, trusted onboarding window may finish account setup.
+      // Untrusted guests and unrelated app windows must not trigger this IPC.
+      const onboarding = this.windowManager.get(WindowManager.ONBOARDING_WINDOW);
+      if (
+        !isMailspringWindowContents(event.sender) ||
+        !onboarding ||
+        onboarding.browserWindow.webContents !== event.sender
+      ) {
+        return;
+      }
       this.windowManager.ensureWindow(WindowManager.MAIN_WINDOW);
       const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
-      const onboarding = this.windowManager.get(WindowManager.ONBOARDING_WINDOW);
       if (onboarding) {
         if (mainWindow) {
           // Wait for the main window to finish loading before closing onboarding.
@@ -863,27 +891,41 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('run-in-window', (event, params) => {
-      const sourceWindow = BrowserWindow.fromWebContents(event.sender);
-      this._sourceWindows[params.taskId] = sourceWindow;
-
-      const targetWindowKey = {
-        main: WindowManager.MAIN_WINDOW,
-      }[params.window];
-      if (!targetWindowKey) {
-        throw new Error("We don't support running in that window");
+      if (!isMailspringWindowContents(event.sender)) return;
+      if (!params || !isValidWindowTaskId(params.taskId) || params.window !== 'main') {
+        return;
       }
 
-      const targetWindow = this.windowManager.get(targetWindowKey);
-      if (!targetWindow || !targetWindow.browserWindow.webContents) {
+      const sourceWindow = BrowserWindow.fromWebContents(event.sender);
+      const targetWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
+      if (!sourceWindow || !targetWindow || !targetWindow.browserWindow.webContents) {
+        return;
+      }
+
+      if (!reserveWindowTask(this._sourceWindows, params.taskId, sourceWindow)) {
         return;
       }
       targetWindow.browserWindow.webContents.send('run-in-window', params);
     });
 
     ipcMain.on('remote-run-results', (event, params) => {
-      const sourceWindow = this._sourceWindows[params.taskId];
+      if (!isMailspringWindowContents(event.sender)) return;
+      const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
+      if (
+        !mainWindow ||
+        mainWindow.browserWindow.webContents !== event.sender ||
+        !params ||
+        !isValidWindowTaskId(params.taskId)
+      ) {
+        return;
+      }
+
+      const sourceWindow = this._sourceWindows.get(params.taskId);
+      this._sourceWindows.delete(params.taskId);
+      if (!sourceWindow || sourceWindow.isDestroyed() || sourceWindow.webContents.isDestroyed()) {
+        return;
+      }
       sourceWindow.webContents.send('remote-run-results', params);
-      delete this._sourceWindows[params.taskId];
     });
 
     ipcMain.on('report-error', (event, params: { extra?: string; errorJSON?: string } = {}) => {
@@ -938,6 +980,7 @@ export default class Application extends EventEmitter {
     });
 
     ipcMain.on('resize-window', (event, params) => {
+      if (!isMailspringWindowContents(event.sender)) return;
       const sourceWindow = BrowserWindow.fromWebContents(event.sender);
       if (!sourceWindow) return;
       sourceWindow.setSize(params.width, params.height);

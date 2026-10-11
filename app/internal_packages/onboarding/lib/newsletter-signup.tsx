@@ -60,11 +60,7 @@ export default class NewsletterSignup extends React.Component<
         method: 'GET',
         path: this._path(props),
       });
-      if (status === 'Never Subscribed') {
-        this._onSubscribe();
-      } else {
-        this._setState({ status });
-      }
+      this._setState({ status });
     } catch (err) {
       this._setState({ status: 'Error' });
     }

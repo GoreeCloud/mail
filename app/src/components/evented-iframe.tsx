@@ -256,7 +256,21 @@ export class EventedIFrame extends React.Component<
   };
 
   _isBlacklistedHref(href: string) {
-    return new RegExp(/^file:/i).test(href);
+    // Email HTML is untrusted input. Only reviewed protocols may reach the
+    // privileged desktop link handler. Leave bare and protocol-relative links
+    // to the existing normalization path below.
+    if (
+      !href ||
+      href !== href.trim() ||
+      Array.from(href).some((c) => {
+        const code = c.charCodeAt(0);
+        return code < 32 || code === 127;
+      })
+    ) {
+      return true;
+    }
+    const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href);
+    return scheme !== null && !/^(https?|mailto|tel)$/i.test(scheme[1]);
   }
 
   _onIFrameMouseEvent = (event: MouseEvent) => {
@@ -321,7 +335,7 @@ export class EventedIFrame extends React.Component<
 
     // Menu actions for links
     const linkTarget = this._getContainingTarget(event, { with: 'href' });
-    if (linkTarget) {
+    if (linkTarget && !this._isBlacklistedHref(linkTarget.getAttribute('href'))) {
       const href = linkTarget.getAttribute('href');
       if (href.startsWith('mailto')) {
         menu.append(

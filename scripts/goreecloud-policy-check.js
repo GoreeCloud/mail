@@ -11,7 +11,7 @@ const requireFile = rel => fs.existsSync(path.join(root, rel)) ? pass(rel + ' ex
   'UPSTREAM.md','NOTICE.md','SECURITY.md','docs/ARCHITECTURE.md','docs/FORK-TO-NATIVE.md',
   'docs/FEATURE-PARITY.md','docs/PRIVACY.md','docs/GLAZE.md',
   'docs/INTEGRAL-PLATFORM-SYSTEMS.md','docs/courier.md','docs/courier.identity.json',
-  'docs/acceptance/glaze-v1.7.0.json'
+  'docs/acceptance/glaze-v1.7.0.json', 'docs/acceptance/mail-security.json'
 ].forEach(requireFile);
 
 const appPkg = JSON.parse(read('app/package.json'));
@@ -35,6 +35,26 @@ const glaze = JSON.parse(read('docs/acceptance/glaze-v1.7.0.json'));
 if (glaze.accepted || glaze.productionEligible || glaze.status !== 'adoption-required') fail('Glaze acceptance must remain fail-closed');
 else pass('Glaze acceptance remains fail-closed');
 
+const mailSecurity = JSON.parse(read('docs/acceptance/mail-security.json'));
+const requiredUnverified = [
+  'mainRendererContextIsolation', 'providerOAuthAndSSO',
+  'hostileMessageAndAttachmentDesktopTests', 'runtimeDependencyAudit',
+  'glazeAccessibility', 'installerSigningAndRollback'
+];
+if (
+  mailSecurity.product !== 'GoreeCloud Mail' ||
+  mailSecurity.status !== 'development' ||
+  mailSecurity.productionEligible !== false ||
+  mailSecurity.releaseEligible !== false ||
+  !mailSecurity.acceptance ||
+  requiredUnverified.some(gate => !['blocked', 'unverified'].includes(mailSecurity.acceptance[gate])) ||
+  mailSecurity.acceptance.nativeSourceAndSQLiteMigration !== 'ci-only'
+) {
+  fail('Mail release/security acceptance must remain blocked until all independent runtime gates are verified');
+} else {
+  pass('Mail release/security acceptance remains fail-closed');
+}
+
 const courier = JSON.parse(read('docs/courier.identity.json'));
 if (courier.repository !== 'GoreeCloud/mail' || courier.separateApplication || courier.separateRepository) fail('Courier boundary invalid');
 else pass('Courier boundary valid');
@@ -45,6 +65,116 @@ else pass('legacy Mailspring API fails closed by default');
 const packageManager = read('app/src/package-manager.ts');
 if (!packageManager.includes('this.identityPresent = false')) fail('legacy identity-required packages must remain disabled');
 else pass('legacy identity-required packages remain disabled');
+
+// Guest web content must not create host windows or promote arbitrary URLs to
+// privileged shell navigation. These source guards complement, not replace,
+// runtime hostile-content and real-provider sign-in validation.
+const signInWebview = read('app/src/components/webview.tsx');
+const desktopWindow = read('app/src/browser/mailspring-window.ts');
+if (/shell\.openExternal\s*\(/.test(signInWebview) || /['"]console-message['"]\s*:/.test(signInWebview)) {
+  fail('sign-in Webview must not promote remote page output to privileged navigation or logs');
+} else {
+  pass('untrusted sign-in console and shell navigation paths are absent');
+}
+if (!/['"]did-attach-webview['"]/.test(desktopWindow) ||
+    !/guestWebContents\.setWindowOpenHandler\(\(\)\s*=>\s*\(\{\s*action:\s*['"]deny['"]\s*\}\)\)/.test(desktopWindow)) {
+  fail('Electron main process must explicitly deny attached guest window creation');
+} else {
+  pass('Electron main process denies guest-created windows');
+}
+
+// Mail package resources must never escape allowed roots through symlinks.
+const resourceLoader = read('app/src/browser/mailspring-protocol-handler.ts');
+const resourceTests = read('app/spec/mailspring-protocol-handler-spec.ts');
+if (
+  !resourceLoader.includes('fs.realpathSync(root)') ||
+  !resourceLoader.includes('fs.realpathSync(candidate)') ||
+  !resourceLoader.includes('resolvePackageResource(loadPath, relativePath)') ||
+  !resourceTests.includes('symlinks targeting private files outside')
+) {
+  fail('Mail custom resource loading requires canonical-path enforcement and regression tests');
+} else {
+  pass('Mail resource paths use canonical package boundaries');
+}
+
+// No updater may contact the inherited provider before an approved release channel exists.
+const updater = read('app/src/browser/autoupdate-manager.ts');
+const updaterImpl = read('app/src/browser/autoupdate-impl-base.ts');
+const app = read('app/src/browser/application.ts');
+if (
+  !updater.includes("this.feedURL = '';") ||
+  !updater.includes('canInstallUpdate()') ||
+  updater.includes('updates.getmailspring.com') ||
+  updaterImpl.includes('getmailspring.com/download') ||
+  !app.includes('this.autoUpdateManager.canInstallUpdate()')
+) {
+  fail('Inherited update traffic or unguarded update installation remains');
+} else {
+  pass('Legacy update endpoint is disabled and installation remains guarded');
+}
+
+// New-account setup must be private and independent of upstream promotions.
+const onboarding = read('app/internal_packages/onboarding/lib/page-initial-preferences.tsx');
+const onboardingRoutes = read('app/internal_packages/onboarding/lib/onboarding-root.tsx');
+const newsletter = read('app/internal_packages/onboarding/lib/newsletter-signup.tsx');
+if (
+  onboarding.includes('NewsletterSignup') ||
+  onboarding.includes('hasProFeatures') ||
+  onboardingRoutes.includes('InitialSubscriptionPage') ||
+  newsletter.includes('this._onSubscribe();') ||
+  read('app/internal_packages/onboarding/lib/page-account-onboarding-success.tsx').includes('Adding your account to Mailspring')
+) {
+  fail('Mail onboarding must not auto-enroll users or route through upstream promotions');
+} else {
+  pass('Mail onboarding excludes inherited newsletter and subscription opt-ins');
+}
+
+// Privileged cross-window and host UI IPC may only originate in trusted Mail windows.
+for (const channel of [
+  'update-application-menu',
+  'call-window-method',
+  'call-devtools-webcontents-method',
+  'call-webcontents-method',
+  'mailsync-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-all',
+  'action-bridge-rebroadcast-to-default',
+  'write-image-to-clipboard',
+  'write-text-to-selection-clipboard',
+  'run-in-window',
+  'remote-run-results',
+  'resize-window'
+]) {
+  const handler = "ipcMain.on('" + channel + "', (event,";
+  const start = app.indexOf(handler);
+  if (start === -1 || !app.slice(start, start + 230).includes('if (!isMailspringWindowContents(event.sender)) return;')) {
+    fail('Privileged IPC sender boundary missing: ' + channel);
+  }
+}
+
+// Relaunch belongs to the main process and only trusted app windows may request it.
+const generalPreferences = read('app/internal_packages/preferences/lib/tabs/preferences-general.tsx');
+const appearancePreferences = read('app/internal_packages/preferences/lib/tabs/preferences-appearance.tsx');
+if (
+  !app.includes("this.on('application:relaunch'") ||
+  !generalPreferences.includes("'application:relaunch'") ||
+  !appearancePreferences.includes("'application:relaunch'") ||
+  appearancePreferences.includes("require('@electron/remote').app.quit()")
+) {
+  fail('Preferences must delegate relaunch to the main process');
+} else {
+  pass('Preferences delegate relaunch to the main process');
+}
+
+// Account setup may only be completed by the active trusted onboarding renderer.
+if (
+  !app.includes("ipcMain.on('account-setup-successful', (event)") ||
+  !app.includes("onboarding.browserWindow.webContents !== event.sender") ||
+  !app.includes("!isMailspringWindowContents(event.sender)")
+) {
+  fail('Account setup IPC requires the active trusted onboarding window');
+} else {
+  pass('Account setup completion rejects unrelated renderer senders');
+}
 
 if (failed) process.exit(1);
 console.log('GoreeCloud Mail foundation policy checks passed.');

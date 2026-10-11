@@ -13,6 +13,42 @@ import path from 'path';
 //   * <config-dir>/packages
 //   * RESOURCE_PATH/node_modules
 //
+/**
+ * Resolve a package resource to a regular file within its canonical root.
+ * This blocks both lexical traversal and symlinks that leave the package.
+ */
+export function resolvePackageResource(loadPath: string, relativePath: string): string | null {
+  const root = path.resolve(loadPath);
+  const candidate = path.resolve(path.join(root, relativePath));
+  const lexicalRelative = path.relative(root, candidate);
+  if (
+    !lexicalRelative ||
+    lexicalRelative === '..' ||
+    lexicalRelative.startsWith('..' + path.sep) ||
+    path.isAbsolute(lexicalRelative)
+  ) {
+    return null;
+  }
+
+  try {
+    const canonicalRoot = fs.realpathSync(root);
+    const canonicalCandidate = fs.realpathSync(candidate);
+    const canonicalRelative = path.relative(canonicalRoot, canonicalCandidate);
+    if (
+      !canonicalRelative ||
+      canonicalRelative === '..' ||
+      canonicalRelative.startsWith('..' + path.sep) ||
+      path.isAbsolute(canonicalRelative)
+    ) {
+      return null;
+    }
+    return fs.statSync(canonicalCandidate).isFile() ? canonicalCandidate : null;
+  } catch {
+    // A missing, unreadable or unsafe path must never be served.
+    return null;
+  }
+}
+
 export default class MailspringProtocolHandler {
   loadPaths: string[] = [];
 
@@ -35,22 +71,9 @@ export default class MailspringProtocolHandler {
 
       let filePath = null;
       for (const loadPath of this.loadPaths) {
-        // Use path.join (not path.resolve) so absolute-looking inputs like
-        // "/foo" stay anchored to the load path instead of replacing it.
-        const candidate = path.resolve(path.join(loadPath, relativePath));
-        // Ensure the resolved path is contained within the load path.
-        // Append path.sep to prevent prefix-matching attacks (e.g. /packages-evil/).
-        if (candidate !== loadPath && !candidate.startsWith(loadPath + path.sep)) {
-          continue;
-        }
-        let fileStats: fs.Stats | false = false;
-        try {
-          fileStats = fs.statSync(candidate);
-        } catch (e) {
-          // path doesn't exist
-        }
-        if (fileStats && fileStats.isFile && fileStats.isFile()) {
-          filePath = candidate;
+        const resolvedPath = resolvePackageResource(loadPath, relativePath);
+        if (resolvedPath) {
+          filePath = resolvedPath;
           break;
         }
       }
