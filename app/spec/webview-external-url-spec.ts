@@ -1,31 +1,36 @@
-import { safeWebviewExternalUrl } from '../src/components/webview-external-url';
+import Webview from '../src/components/webview';
 
-describe('Sign-in guest external URL safety', () => {
-  it('allows valid absolute HTTPS and HTTP links', () => {
-    expect(safeWebviewExternalUrl('https://example.org/help')).toEqual(
-      'https://example.org/help'
-    );
-    expect(safeWebviewExternalUrl('http://example.org/terms')).toEqual(
-      'http://example.org/terms'
-    );
+describe('Onboarding guest popup security', () => {
+  it('blocks every external guest popup request', () => {
+    const component = new Webview({ src: 'https://identity.example.test' });
+    component._mounted = true;
+    spyOn(component, 'setState');
+
+    for (const url of [
+      'https://example.org',
+      'http://example.org',
+      'file:///tmp/file.txt',
+      'javascript:alert(1)',
+    ]) {
+      const preventDefault = jasmine.createSpy('preventDefault');
+      component._onNewWindow({ preventDefault, url } as any);
+      expect(preventDefault).toHaveBeenCalled();
+      expect(component.setState).toHaveBeenCalled();
+    }
   });
 
-  it('rejects script, local file, application and non-URL requests', () => {
-    expect(safeWebviewExternalUrl('javascript:alert(1)')).toBe(null);
-    expect(safeWebviewExternalUrl('file:///etc/passwd')).toBe(null);
-    expect(safeWebviewExternalUrl('mailspring://action')).toBe(null);
-    expect(safeWebviewExternalUrl('//example.org/help')).toBe(null);
-    expect(safeWebviewExternalUrl('')).toBe(null);
-  });
+  it('does not leak rejected destination details', () => {
+    const component = new Webview({ src: 'https://identity.example.test' });
+    component._mounted = true;
+    spyOn(component, 'setState');
+    component._onNewWindow({
+      preventDefault: jasmine.createSpy('preventDefault'),
+      url: 'https://example.org/auth?code=private',
+    } as any);
 
-  it('refuses credentials, control characters and non-string payloads', () => {
-    expect(safeWebviewExternalUrl('https://user:password@example.org/')).toBe(null);
-    expect(safeWebviewExternalUrl('https://example.org/\nother')).toBe(null);
-    expect(safeWebviewExternalUrl(' https://example.org')).toBe(null);
-    expect(safeWebviewExternalUrl('https://example.org/%0a')).toEqual(
-      'https://example.org/%0a'
-    );
-    expect(safeWebviewExternalUrl(null)).toBe(null);
-    expect(safeWebviewExternalUrl({ url: 'https://example.org' })).toBe(null);
+    const state = (component.setState as jasmine.Spy).calls[0].args[0];
+    expect(state.ready).toBe(false);
+    expect(state.error).toContain('blocked');
+    expect(state.error).not.toContain('private');
   });
 });
