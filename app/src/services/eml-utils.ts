@@ -24,15 +24,19 @@ export function defaultEmlFilename(subject: string): string {
   if (name.length === 0) {
     name = 'untitled';
   }
-  if (name.length > 80) {
-    name = name.substring(0, 80);
-  }
+  // Never split a surrogate pair at the truncation boundary.
+  name = Array.from(name).slice(0, 80).join('');
   name = name.replace(/[/?<>\\:*|"]/g, '_');
+  // Strip control characters and Unicode direction overrides from untrusted subjects.
   // eslint-disable-next-line no-control-regex
-  name = name.replace(/[\u0000-\u001f\u007f]/g, '');
+  name = name.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '');
   name = name.replace(/[.\s]+$/, '');
   if (!name) {
     name = 'untitled';
+  }
+  // Windows device names stay reserved even when a file extension is appended.
+  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) {
+    name = 'file-' + name;
   }
   return `${name}.eml`;
 }
