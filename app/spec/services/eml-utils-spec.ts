@@ -350,7 +350,7 @@ describe('stageMessagesAsEml', function () {
 
 describe('discardStagedEml', function () {
   it('removes the file and the staging directory around it', () => {
-    const dir = path.join(os.tmpdir(), 'mailspring-eml-spec-discard');
+    const dir = path.join(os.tmpdir(), 'mailspring-eml-' + 'a'.repeat(24));
     const filePath = path.join(dir, 'Hello.eml');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(filePath, 'raw');
@@ -372,7 +372,7 @@ describe('discardStagedEml', function () {
 
   it('never removes prefixed directories outside the immediate system temp root', () => {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'mail-staging-guard-'));
-    const child = path.join(parent, 'mailspring-eml-other-project');
+    const child = path.join(parent, 'mailspring-eml-' + 'b'.repeat(24));
     const filePath = path.join(child, 'Hello.eml');
 
     try {
@@ -382,6 +382,20 @@ describe('discardStagedEml', function () {
       expect(fs.existsSync(filePath)).toBe(true);
     } finally {
       fs.rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses unrelated temp folders that merely share the staging prefix', () => {
+    const dir = path.join(os.tmpdir(), 'mailspring-eml-user-content');
+    const filePath = path.join(dir, 'Hello.eml');
+
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, 'keep');
+      discardStagedEml(filePath);
+      expect(fs.existsSync(filePath)).toBe(true);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
