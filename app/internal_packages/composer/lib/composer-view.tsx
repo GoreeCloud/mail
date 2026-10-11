@@ -31,6 +31,7 @@ import { AttachmentsArea } from './attachments-area';
 import { QuotedTextControl } from './quoted-text-control';
 import Fields from './fields';
 import { threadIdsFromDragPayload } from './thread-drop-payload';
+import { localFilePathFromDropUri, localFilePathFromUriList } from './file-drop-url';
 
 const { hasBlockquote, hasNonTrailingBlockquote, hideQuotedTextByDefault } =
   ComposerSupport.BaseBlockPlugins;
@@ -292,19 +293,10 @@ export default class ComposerView extends React.Component<ComposerViewProps, Com
 
   _nonNativeFilePathForDrop = (event: React.DragEvent<HTMLDivElement>) => {
     if (event.dataTransfer.types.includes('text/mailspring-file-url')) {
-      const downloadURL = event.dataTransfer.getData('text/mailspring-file-url');
-      const downloadFilePath = downloadURL.split('file://')[1];
-      if (downloadFilePath) {
-        return downloadFilePath;
-      }
+      return localFilePathFromDropUri(event.dataTransfer.getData('text/mailspring-file-url'));
     }
-
-    // Accept drops of images from within the app
     if (event.dataTransfer.types.includes('text/uri-list')) {
-      const uri = event.dataTransfer.getData('text/uri-list');
-      if (uri.indexOf('file://') === 0) {
-        return decodeURI(uri.split('file://')[1]);
-      }
+      return localFilePathFromUriList(event.dataTransfer.getData('text/uri-list'));
     }
     return null;
   };
