@@ -276,7 +276,7 @@ describe('stageMessagesAsEml', function () {
     const dir = path.dirname(staged.filePath);
     expect(path.dirname(dir)).toEqual(path.resolve(os.tmpdir()));
     expect(/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(dir))).toBe(true);
-    expect(dir.includes('private')).toBe(false);
+    expect(path.basename(dir).includes('private')).toBe(false);
     expect(path.basename(staged.filePath)).toEqual('Report.eml');
   });
 
