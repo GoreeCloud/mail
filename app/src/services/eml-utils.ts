@@ -121,7 +121,20 @@ export async function stageMessagesAsEml(
   });
 
   try {
-    await Promise.all(tasks.map((task) => TaskQueue.waitForPerformRemote(task)));
+    const results = await Promise.all(
+      tasks.map(async (task) => {
+        try {
+          await TaskQueue.waitForPerformRemote(task);
+          return { failed: false, error: null };
+        } catch (error) {
+          return { failed: true, error };
+        }
+      })
+    );
+    const failure = results.find((result) => result.failed);
+    if (failure) {
+      throw failure.error;
+    }
   } catch (err) {
     staged.forEach(({ dir }) => removeStagingDirectory(dir));
     throw err;
