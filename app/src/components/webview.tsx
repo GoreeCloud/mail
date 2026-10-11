@@ -1,5 +1,4 @@
 import React from 'react';
-import { shell } from 'electron';
 import ReactDOM from 'react-dom';
 import classnames from 'classnames';
 import networkErrors from 'chromium-net-errors';
@@ -8,7 +7,6 @@ import { localized } from 'mailspring-exports';
 import { rootURLForServer } from '../flux/mailspring-api-request';
 import { RetinaImg } from './retina-img';
 import { Disposable } from 'event-kit';
-import { safeWebviewExternalUrl } from './webview-external-url';
 
 type InitialLoadingCoverProps = {
   ready?: boolean;
@@ -149,10 +147,17 @@ export default class Webview extends React.Component<WebviewProps, WebviewState>
     webview.reload();
   };
 
-  _onNewWindow = (e: { url: string }) => {
-    const url = safeWebviewExternalUrl(e.url);
-    if (url) {
-      shell.openExternal(url);
+  _onNewWindow = (event: { preventDefault: () => void }) => {
+    // Guest pages must not launch host browser windows, including HTTP(S).
+    event.preventDefault();
+    if (this._mounted) {
+      this.setState({
+        ready: false,
+        error: localized(
+          'A sign-in pop-up was blocked for your security. Return to sign-in and choose another method.'
+        ),
+        webviewLoading: false,
+      });
     }
   };
 
