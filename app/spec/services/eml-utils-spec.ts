@@ -409,6 +409,22 @@ describe('stageMessagesAsEml', function () {
     queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
   });
 
+  it('does not remove an existing directory if private staging creation fails', async () => {
+    spyOn(fs, 'mkdirSync').andThrow(new Error('EEXIST'));
+    spyOn(fs, 'rmSync');
+
+    let error: Error = null;
+    try {
+      await stageMessagesAsEml([new Message({ id: 'm1', accountId: 'a1', subject: 'Test' })]);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error.message).toBe('EEXIST');
+    expect(fs.rmSync).not.toHaveBeenCalled();
+    expect(Actions.queueTask).not.toHaveBeenCalled();
+  });
+
   it('cleans created staging directories if queue submission itself fails', async () => {
     (Actions.queueTask as any).andCallFake((task: GetMessageRFC2822Task) => {
       queued.push(task);
