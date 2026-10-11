@@ -14,3 +14,15 @@ export function reserveWindowTask<T>(pending: Map<string, T>, id: unknown, sourc
   pending.set(id, source);
   return true;
 }
+
+/** Remove pending routes when their source window is closed. */
+export function discardWindowTasksForSource<T>(pending: Map<string, T>, source: T): number {
+  let removed = 0;
+  pending.forEach((owner, id) => {
+    if (owner === source) {
+      pending.delete(id);
+      removed += 1;
+    }
+  });
+  return removed;
+}
