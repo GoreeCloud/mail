@@ -27,9 +27,7 @@ describe('Composer abandoned conversation staging', () => {
 
   it('handles an abandoned drop without any successfully fetched files', () => {
     const cleaned: string[] = [];
-    expect(discardAbandonedThreadDrop(false, [], (filePath) => cleaned.push(filePath))).toBe(
-      true
-    );
+    expect(discardAbandonedThreadDrop(false, [], (filePath) => cleaned.push(filePath))).toBe(true);
     expect(cleaned).toEqual([]);
   });
 });
