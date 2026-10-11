@@ -18,3 +18,12 @@ export function mentionsAttachment(text: string): boolean {
 
   return /\b(?:attach(?:ment|ments|ed|ing)?|enclos(?:ed|ure))\b/i.test(visibleText);
 }
+
+/**
+ * Inline CID images are message-body resources, not files shown in the
+ * composer's attachment tray. They should not suppress an explicit
+ * missing-attachment reminder for a PDF or document.
+ */
+export function hasVisibleAttachment(files: Array<{ contentId?: string }> = []): boolean {
+  return files.some((file) => !!file && !file.contentId);
+}
