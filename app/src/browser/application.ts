@@ -37,6 +37,7 @@ import Config from '../config';
 import { registerQuickpreviewIPCHandlers } from './quickpreview-ipc';
 import { guardAuxiliaryWindowNavigation } from './auxiliary-window-guard';
 import { isMailspringWindowContents } from './mailspring-window';
+import { isValidWindowTaskId } from './window-task-id';
 import {
   handleWindowsToastXMLProtocolAction,
   registerNotificationIPCHandlers,
@@ -67,7 +68,7 @@ export default class Application extends EventEmitter {
   systemTrayManager: SystemTrayManager;
   windowsTaskbarManager?: WindowsTaskbarManager;
 
-  _sourceWindows: { [taskId: string]: BrowserWindow } = {};
+  _sourceWindows = new Map<string, BrowserWindow>();
   _resettingAndRelaunching: boolean;
   _initialized = false;
   _pendingLaunchOptions: any[] = [];
@@ -891,28 +892,38 @@ export default class Application extends EventEmitter {
 
     ipcMain.on('run-in-window', (event, params) => {
       if (!isMailspringWindowContents(event.sender)) return;
-      const sourceWindow = BrowserWindow.fromWebContents(event.sender);
-      this._sourceWindows[params.taskId] = sourceWindow;
-
-      const targetWindowKey = {
-        main: WindowManager.MAIN_WINDOW,
-      }[params.window];
-      if (!targetWindowKey) {
-        throw new Error("We don't support running in that window");
-      }
-
-      const targetWindow = this.windowManager.get(targetWindowKey);
-      if (!targetWindow || !targetWindow.browserWindow.webContents) {
+      if (!params || !isValidWindowTaskId(params.taskId) || params.window !== 'main') {
         return;
       }
+
+      const sourceWindow = BrowserWindow.fromWebContents(event.sender);
+      const targetWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
+      if (!sourceWindow || !targetWindow || !targetWindow.browserWindow.webContents) {
+        return;
+      }
+
+      this._sourceWindows.set(params.taskId, sourceWindow);
       targetWindow.browserWindow.webContents.send('run-in-window', params);
     });
 
     ipcMain.on('remote-run-results', (event, params) => {
-      if (!isMailspringWindowContents(event.sender)) return;
-      const sourceWindow = this._sourceWindows[params.taskId];
+      const mainWindow = this.windowManager.get(WindowManager.MAIN_WINDOW);
+      if (
+        !isMailspringWindowContents(event.sender) ||
+        !mainWindow ||
+        mainWindow.browserWindow.webContents !== event.sender ||
+        !params ||
+        !isValidWindowTaskId(params.taskId)
+      ) {
+        return;
+      }
+
+      const sourceWindow = this._sourceWindows.get(params.taskId);
+      this._sourceWindows.delete(params.taskId);
+      if (!sourceWindow || sourceWindow.isDestroyed() || sourceWindow.webContents.isDestroyed()) {
+        return;
+      }
       sourceWindow.webContents.send('remote-run-results', params);
-      delete this._sourceWindows[params.taskId];
     });
 
     ipcMain.on('report-error', (event, params: { extra?: string; errorJSON?: string } = {}) => {
