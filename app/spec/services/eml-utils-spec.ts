@@ -122,7 +122,7 @@ describe('defaultEmlFilename', function () {
     });
 
     it('prefixes Windows-reserved names even with a subject extension', () => {
-      for (const subject of ['CON', 'aux', 'Com9', 'LPT1', 'NUL.txt']) {
+      for (const subject of ['CON', 'aux', 'Com9', 'LPT1', 'NUL.txt', 'COM¹', 'LPT².txt', 'com³', 'CON .txt']) {
         expect(defaultEmlFilename(subject)).toEqual('file-' + subject + '.eml');
       }
     });
