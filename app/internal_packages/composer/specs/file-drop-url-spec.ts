@@ -17,6 +17,7 @@ describe('Composer local file drag URLs', () => {
 
   it('rejects invalid escapes, fragments, queries and mixed-origin text', () => {
     expect(localFilePathFromDropUri('file:///tmp/bad%ZZ.png')).toBe(null);
+    expect(localFilePathFromDropUri('file:///tmp/zero%00byte.png')).toBe(null);
     expect(localFilePathFromDropUri('file:///tmp/report.pdf?source=mail')).toBe(null);
     expect(localFilePathFromDropUri('file:///tmp/report.pdf#part')).toBe(null);
     expect(localFilePathFromDropUri('prefix file:///tmp/report.pdf')).toBe(null);
