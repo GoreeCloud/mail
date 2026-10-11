@@ -120,7 +120,12 @@ export async function stageMessagesAsEml(
     return task;
   });
 
-  await Promise.all(tasks.map((task) => TaskQueue.waitForPerformRemote(task)));
+  try {
+    await Promise.all(tasks.map((task) => TaskQueue.waitForPerformRemote(task)));
+  } catch (err) {
+    staged.forEach(({ dir }) => removeStagingDirectory(dir));
+    throw err;
+  }
 
   // Directories whose file never arrived are dead weight — drop them now, and
   // leave the rest to discardStagedEml once the caller is done with the file.
