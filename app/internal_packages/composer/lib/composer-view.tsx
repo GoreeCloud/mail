@@ -33,6 +33,7 @@ import Fields from './fields';
 import { threadIdsFromDragPayload } from './thread-drop-payload';
 import { discardAbandonedThreadDrop } from './thread-drop-staging';
 import { localFilePathFromDropUri, localFilePathFromUriList } from './file-drop-url';
+import { internalAttachmentPathFromDrop } from './internal-attachment-drop';
 
 const { hasBlockquote, hasNonTrailingBlockquote, hideQuotedTextByDefault } =
   ComposerSupport.BaseBlockPlugins;
@@ -294,7 +295,7 @@ export default class ComposerView extends React.Component<ComposerViewProps, Com
 
   _nonNativeFilePathForDrop = (event: React.DragEvent<HTMLDivElement>) => {
     if (event.dataTransfer.types.includes('text/mailspring-file-url')) {
-      return localFilePathFromDropUri(event.dataTransfer.getData('text/mailspring-file-url'));
+      return internalAttachmentPathFromDrop(event.dataTransfer.getData('text/mailspring-file-url'));
     }
     if (event.dataTransfer.types.includes('text/uri-list')) {
       return localFilePathFromUriList(event.dataTransfer.getData('text/uri-list'));
