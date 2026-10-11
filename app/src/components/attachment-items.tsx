@@ -1,5 +1,5 @@
 import fs from 'fs';
-import path from 'path';
+import { buildAttachmentDragPayload } from './attachment-drag-payload';
 import classnames from 'classnames';
 import React, { Component, CSSProperties } from 'react';
 import ReactDOM from 'react-dom';
@@ -142,7 +142,7 @@ export class AttachmentItem extends Component<AttachmentItemProps> {
     if (fs.existsSync(filePath)) {
       // Note: From trial and error, it appears that the second param /MUST/ be the
       // same as the last component of the filePath URL, or the download fails.
-      const downloadURL = `${contentType}:${path.basename(filePath)}:file://${filePath}`;
+      const downloadURL = buildAttachmentDragPayload(contentType, filePath);
       event.dataTransfer.setData('DownloadURL', downloadURL);
       event.dataTransfer.setData('text/mailspring-file-url', downloadURL);
       const el = this._fileIconComponent;
