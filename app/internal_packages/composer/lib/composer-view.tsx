@@ -31,6 +31,7 @@ import { AttachmentsArea } from './attachments-area';
 import { QuotedTextControl } from './quoted-text-control';
 import Fields from './fields';
 import { threadIdsFromDragPayload } from './thread-drop-payload';
+import { discardAbandonedThreadDrop } from './thread-drop-staging';
 import { localFilePathFromDropUri, localFilePathFromUriList } from './file-drop-url';
 
 const { hasBlockquote, hasNonTrailingBlockquote, hideQuotedTextByDefault } =
@@ -348,7 +349,7 @@ export default class ComposerView extends React.Component<ComposerViewProps, Com
       }
     }
 
-    if (!this._mounted) {
+    if (discardAbandonedThreadDrop(this._mounted, staged, EmlUtils.discardStagedEml)) {
       return;
     }
     for (const { filePath } of staged) {
