@@ -8,6 +8,17 @@ describe('Composer conversation drag payloads', () => {
     ]);
   });
 
+  it('accepts the complete thread-list drag payload with account IDs', () => {
+    expect(
+      threadIdsFromDragPayload(
+        JSON.stringify({
+          threadIds: ['message-1', 'message-2'],
+          accountIds: ['account-a', 'account-b'],
+        })
+      )
+    ).toEqual(['message-1', 'message-2']);
+  });
+
   it('deduplicates identifiers without changing their order', () => {
     expect(threadIdsFromDragPayload('{"threadIds":["a","b","a","c","b"]}')).toEqual([
       'a',
