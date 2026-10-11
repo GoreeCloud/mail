@@ -3,10 +3,14 @@
  * request an external link, and only with an absolute HTTP(S) URL.
  */
 export function safeWebviewExternalUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || !value || Array.from(value).some((c) => {
-    const code = c.charCodeAt(0);
+  if (typeof value !== 'string' || !value) {
+    return null;
+  }
+  const hasControlCharacter = Array.from(value).some((char) => {
+    const code = char.charCodeAt(0);
     return code <= 32 || code === 127;
-  })) {
+  });
+  if (hasControlCharacter) {
     return null;
   }
 
