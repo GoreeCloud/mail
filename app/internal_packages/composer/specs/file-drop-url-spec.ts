@@ -11,6 +11,9 @@ describe('Composer local file drag URLs', () => {
     expect(localFilePathFromDropUri('file://localhost/tmp/report.pdf')).toEqual(
       fileURLToPath(new URL('file:///tmp/report.pdf'))
     );
+    expect(localFilePathFromDropUri('file://LOCALHOST/tmp/report.pdf')).toEqual(
+      fileURLToPath(new URL('file:///tmp/report.pdf'))
+    );
     expect(localFilePathFromDropUri('file://server.example/tmp/report.pdf')).toBe(null);
     expect(localFilePathFromDropUri('https://example.com/report.pdf')).toBe(null);
   });
