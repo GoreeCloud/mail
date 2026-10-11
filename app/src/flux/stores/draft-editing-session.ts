@@ -18,6 +18,7 @@ import { DestroyDraftTask } from '../tasks/destroy-draft-task';
 import { Composer as ComposerExtensionRegistry } from '../../registries/extension-registry';
 import QuotedHTMLTransformer from '../../services/quoted-html-transformer';
 import { SyncbackDraftTask } from '../tasks/syncback-draft-task';
+import { hasVisibleAttachment, mentionsAttachment } from './draft-attachment-warning';
 
 export type MessageWithEditorState = Message & { bodyEditorState: any };
 
@@ -277,17 +278,17 @@ export class DraftEditingSession extends MailspringStore {
   validateDraftForSending() {
     const miscWarnings = [];
     const miscErrors = [];
-    const hasAttachment = this._draft.files && this._draft.files.length > 0;
+    const hasAttachment = hasVisibleAttachment(this._draft.files);
 
     if (!this.hasSendableFromAddress()) {
       miscErrors.push(DraftEditingSession.unsendableFromAddressMessage());
     }
 
-    if (this._draft.subject.length === 0) {
+    if (!this._draft.subject.trim()) {
       miscWarnings.push(localized('The subject field is blank.'));
     }
 
-    let cleaned = QuotedHTMLTransformer.removeQuotedHTML(this._draft.body.trim());
+    let cleaned = QuotedHTMLTransformer.removeQuotedHTML((this._draft.body || '').trim());
     const sigIndex = cleaned.search(RegExpUtils.mailspringSignatureRegex());
     cleaned = sigIndex > -1 ? cleaned.substr(0, sigIndex) : cleaned;
 
@@ -296,7 +297,7 @@ export class DraftEditingSession extends MailspringStore {
       cleaned = cleaned.substr(0, signatureIndex - 1);
     }
 
-    if (cleaned.toLowerCase().includes('attach') && !hasAttachment) {
+    if (!hasAttachment && mentionsAttachment(cleaned)) {
       miscWarnings.push(localized('The message mentions an attachment but none are attached.'));
     }
 
