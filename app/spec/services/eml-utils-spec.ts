@@ -356,6 +356,46 @@ describe('stageMessagesAsEml', function () {
     queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
   });
 
+  it('waits for queued native writes before cleanup on a later submission failure', async () => {
+    let releaseFirst: () => void;
+    const firstFetch = new Promise<void>((resolve) => (releaseFirst = resolve));
+    (Actions.queueTask as any).andCallFake((task: GetMessageRFC2822Task) => {
+      queued.push(task);
+      if (task.messageId === 'm2') {
+        throw new Error('queue unavailable');
+      }
+    });
+    (TaskQueue.waitForPerformRemote as any).andCallFake(async (task: GetMessageRFC2822Task) => {
+      if (task.messageId === 'm1') {
+        await firstFetch;
+        fs.writeFileSync(task.filepath, 'raw message');
+        cleanup.push(path.dirname(task.filepath));
+      }
+    });
+
+    const pending = stageMessagesAsEml([
+      new Message({ id: 'm1', accountId: 'a1', subject: 'First' }),
+      new Message({ id: 'm2', accountId: 'a1', subject: 'Second' }),
+    ]);
+    let settled = false;
+    pending.then(
+      () => (settled = true),
+      () => (settled = true)
+    );
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releaseFirst();
+    let error: Error = null;
+    try {
+      await pending;
+    } catch (err) {
+      error = err;
+    }
+    expect(error.message).toEqual('queue unavailable');
+    queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
+  });
+
   it('cleans created staging directories if queue submission itself fails', async () => {
     (Actions.queueTask as any).andCallFake((task: GetMessageRFC2822Task) => {
       queued.push(task);

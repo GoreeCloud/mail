@@ -109,8 +109,10 @@ export async function stageMessagesAsEml(
 
   // Queue every fetch before awaiting any of them so a multi-message stage
   // isn't serialized on the sync engine's round trips.
+  const queuedTasks: GetMessageRFC2822Task[] = [];
+  let allQueued = false;
   try {
-    const tasks = staged.map(({ message, dir, filePath }) => {
+    staged.forEach(({ message, dir, filePath }) => {
       fs.mkdirSync(dir, { recursive: true });
       const task = new GetMessageRFC2822Task({
         messageId: message.id,
@@ -118,11 +120,12 @@ export async function stageMessagesAsEml(
         filepath: filePath,
       });
       Actions.queueTask(task);
-      return task;
+      queuedTasks.push(task);
     });
+    allQueued = true;
 
     const results = await Promise.all(
-      tasks.map(async (task) => {
+      queuedTasks.map(async (task) => {
         try {
           await TaskQueue.waitForPerformRemote(task);
           return { failed: false, error: null };
@@ -136,6 +139,19 @@ export async function stageMessagesAsEml(
       throw failure.error;
     }
   } catch (err) {
+    if (!allQueued) {
+      // If a later submission throws, earlier queued tasks can still write.
+      // Wait for those remote fetches before deleting their staging paths.
+      await Promise.all(
+        queuedTasks.map(async (task) => {
+          try {
+            await TaskQueue.waitForPerformRemote(task);
+          } catch (ignored) {
+            // A failed fetch still needs its directory removed.
+          }
+        })
+      );
+    }
     staged.forEach(({ dir }) => removeStagingDirectory(dir));
     throw err;
   }
