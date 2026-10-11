@@ -10,7 +10,9 @@ export function localFilePathFromDropUri(value: string): string | null {
   }
 
   try {
-    const uri = new URL(value);
+    // Some Electron URL runtimes do not normalize file://localhost consistently.
+    // Map only this explicitly local authority to the canonical file:/// form.
+    const uri = new URL(value.replace(/^file:\/\/localhost(?=\/)/i, 'file://'));
     if (
       uri.protocol !== 'file:' ||
       (uri.hostname !== '' && uri.hostname !== 'localhost') ||
