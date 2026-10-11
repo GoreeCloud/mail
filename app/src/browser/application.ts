@@ -37,7 +37,7 @@ import Config from '../config';
 import { registerQuickpreviewIPCHandlers } from './quickpreview-ipc';
 import { guardAuxiliaryWindowNavigation } from './auxiliary-window-guard';
 import { isMailspringWindowContents } from './mailspring-window';
-import { isValidWindowTaskId } from './window-task-id';
+import { isValidWindowTaskId, reserveWindowTask } from './window-task-id';
 import {
   handleWindowsToastXMLProtocolAction,
   registerNotificationIPCHandlers,
@@ -902,7 +902,9 @@ export default class Application extends EventEmitter {
         return;
       }
 
-      this._sourceWindows.set(params.taskId, sourceWindow);
+      if (!reserveWindowTask(this._sourceWindows, params.taskId, sourceWindow)) {
+        return;
+      }
       targetWindow.browserWindow.webContents.send('run-in-window', params);
     });
 
