@@ -109,18 +109,18 @@ export async function stageMessagesAsEml(
 
   // Queue every fetch before awaiting any of them so a multi-message stage
   // isn't serialized on the sync engine's round trips.
-  const tasks = staged.map(({ message, dir, filePath }) => {
-    fs.mkdirSync(dir, { recursive: true });
-    const task = new GetMessageRFC2822Task({
-      messageId: message.id,
-      accountId: message.accountId,
-      filepath: filePath,
-    });
-    Actions.queueTask(task);
-    return task;
-  });
-
   try {
+    const tasks = staged.map(({ message, dir, filePath }) => {
+      fs.mkdirSync(dir, { recursive: true });
+      const task = new GetMessageRFC2822Task({
+        messageId: message.id,
+        accountId: message.accountId,
+        filepath: filePath,
+      });
+      Actions.queueTask(task);
+      return task;
+    });
+
     const results = await Promise.all(
       tasks.map(async (task) => {
         try {
