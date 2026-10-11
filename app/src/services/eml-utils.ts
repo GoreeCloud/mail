@@ -176,7 +176,7 @@ function removeStagingDirectory(dir: string) {
   const resolved = path.resolve(dir);
   if (
     path.dirname(resolved) !== path.resolve(os.tmpdir()) ||
-    !path.basename(resolved).startsWith(STAGING_DIR_PREFIX)
+    !/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(resolved))
   ) {
     return;
   }
