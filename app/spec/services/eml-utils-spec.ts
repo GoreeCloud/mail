@@ -410,7 +410,9 @@ describe('stageMessagesAsEml', function () {
   });
 
   it('does not remove an existing directory if private staging creation fails', async () => {
-    spyOn(fs, 'mkdirSync').andThrow(new Error('EEXIST'));
+    spyOn(fs, 'mkdirSync').andCallFake(() => {
+      throw new Error('EEXIST');
+    });
     spyOn(fs, 'rmSync');
 
     let error: Error = null;
