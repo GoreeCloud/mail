@@ -110,12 +110,14 @@ export async function stageMessagesAsEml(
   // Queue every fetch before awaiting any of them so a multi-message stage
   // isn't serialized on the sync engine's round trips.
   const queuedTasks: GetMessageRFC2822Task[] = [];
+  const createdDirs: string[] = [];
   let allQueued = false;
   try {
     staged.forEach(({ message, dir, filePath }) => {
       // Fail closed on a collision; private RFC2822 sources must never be
       // readable through a shared temporary directory.
       fs.mkdirSync(dir, { mode: 0o700 });
+      createdDirs.push(dir);
       const task = new GetMessageRFC2822Task({
         messageId: message.id,
         accountId: message.accountId,
@@ -154,7 +156,8 @@ export async function stageMessagesAsEml(
         })
       );
     }
-    staged.forEach(({ dir }) => removeStagingDirectory(dir));
+    // Never delete a preexisting directory after mkdirSync fails on a collision.
+    createdDirs.forEach(removeStagingDirectory);
     throw err;
   }
 
