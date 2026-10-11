@@ -267,6 +267,19 @@ describe('stageMessagesAsEml', function () {
     expect(path.dirname(staged[0].filePath)).not.toEqual(path.dirname(staged[1].filePath));
   });
 
+  it('protects staged message directories from other users', async () => {
+    engineWrites(() => true);
+    const [staged] = await stageMessagesAsEml([
+      new Message({ id: 'm-private', accountId: 'a1', subject: 'Report' }),
+    ]);
+    const info = fs.lstatSync(path.dirname(staged.filePath));
+    expect(info.isDirectory()).toBe(true);
+    expect(info.isSymbolicLink()).toBe(false);
+    if (process.platform !== 'win32') {
+      expect(info.mode & 0o077).toBe(0);
+    }
+  });
+
   it('uses random temp directories instead of provider-controlled message identifiers', async () => {
     engineWrites(() => true);
     const [staged] = await stageMessagesAsEml([

@@ -113,7 +113,9 @@ export async function stageMessagesAsEml(
   let allQueued = false;
   try {
     staged.forEach(({ message, dir, filePath }) => {
-      fs.mkdirSync(dir, { recursive: true });
+      // Fail closed on a collision; private RFC2822 sources must never be
+      // readable through a shared temporary directory.
+      fs.mkdirSync(dir, { mode: 0o700 });
       const task = new GetMessageRFC2822Task({
         messageId: message.id,
         accountId: message.accountId,
