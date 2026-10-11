@@ -1,4 +1,4 @@
-import { safeWebviewExternalUrl } from '../components/webview-external-url';
+import { safeWebviewExternalUrl } from '../src/components/webview-external-url';
 
 describe('Sign-in guest external URL safety', () => {
   it('allows valid absolute HTTPS and HTTP links', () => {
