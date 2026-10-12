@@ -564,6 +564,31 @@ describe('discardStagedEml', function () {
     expect(fs.existsSync(dir)).toBe(false);
   });
 
+  it('retries owned staged-file cleanup after a transient filesystem error', async () => {
+    spyOn(Actions, 'queueTask');
+    spyOn(TaskQueue, 'waitForPerformRemote').andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, 'raw');
+      return Promise.resolve();
+    });
+    const staged = await stageMessageAsEml(
+      new Message({ id: 'retry-owned', accountId: 'a1', subject: 'Retry' })
+    );
+    const dir = path.dirname(staged.filePath);
+    const originalRemove = fs.rmSync.bind(fs);
+    let calls = 0;
+    spyOn(fs, 'rmSync').andCallFake((target: string, options: any) => {
+      calls += 1;
+      if (calls === 1) throw new Error('transient file lock');
+      return originalRemove(target, options);
+    });
+
+    expect(() => discardStagedEml(staged.filePath)).not.toThrow();
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(false);
+    expect(calls).toBe(2);
+  });
+
   it('keeps a similarly named folder that the process did not stage', () => {
     const dir = path.join(os.tmpdir(), 'mailspring-eml-' + 'a'.repeat(24));
     const filePath = path.join(dir, 'Hello.eml');
