@@ -1,0 +1,984 @@
+# GoreeCloud Mail — Planned Features and Capabilities
+
+> **Status: Proposed.** This is the canonical GitHub feature catalog migrated from GoreeCloud Drive on 2026-10-12. Items are not proof of implementation, platform availability, provider compatibility, security approval, deployment, release, or Stable status. Use repository code, tests, and acceptance evidence to establish implemented capabilities.
+
+GOREECLOUD  /  PRODUCT STRATEGY
+Mail
+FEATURES & CAPABILITIES
+Unified product capability catalog
+PRODUCT	GoreeCloud Mail
+CATEGORY	Email and Communication
+DEVELOPMENT MODEL	GoreeCloud-owned, provider-independent email client
+DOCUMENT TYPE	Unified Features and Capabilities Catalog
+DOCUMENT STATUS	Proposed Product Capability Blueprint
+RECORD DATE	October 10, 2026
+SCOPE	25 capability domains • 785 indexed feature proposals
+
+### STATUS  /  PROPOSED, NOT RELEASED
+This catalog defines target capabilities. Inclusion does not establish implemented functionality, supported platforms, provider compatibility, security acceptance, or production readiness.
+
+### PRODUCT VISION
+A comprehensive, privacy-first, intelligent, secure, customizable, provider-independent email experience integrated with the GoreeCloud ecosystem.
+
+### Product Overview
+GoreeCloud Mail is GoreeCloud’s privacy-first email client and communication application, designed for a unified, intelligent, secure, customizable, and productive email experience.
+The proposed scope combines traditional email management, advanced inbox organization, communication productivity, intelligent automation, AI assistance, encryption, privacy protection, offline synchronization, collaboration, and integration with the GoreeCloud Suite.
+Compatible external email providers retain responsibility for mailbox hosting, authoritative mailbox state, and Internet mail transport. GoreeCloud Mail focuses on client-side email access, communication, productivity, privacy, security, and integration.
+The product targets the GoreeCloud Glaze design system, Wardveil Security, Privacy Shield, Everkeep continuity, and approved GoreeCloud platform services.
+
+### Reading this Catalog
+Capability lines describe proposed scope and eligibility. Provider-dependent, optional, platform-specific, and future features retain those qualifiers. Product status is not inferred from inclusion in this catalog.
+## Capability Domains
+- 1. Email Account Management
+- 2. Inbox Management and Organization
+- 3. Email Reading and Message Viewing
+- 4. Email Composition and Sending
+- 5. Productivity and Follow-Up Management
+- 6. Email Search and Discovery
+- 7. Email Rules, Filters, and Automation
+- 8. Artificial Intelligence and Smart Assistance
+- 9. Contacts and Address Book Management
+- 10. Calendar, Events, Meetings, and Tasks
+- 11. Collaboration and Shared Email Management
+- 12. Attachments and File Management
+- 13. Wardveil Security and Email Threat Protection
+- 14. Email Encryption and Confidential Communication
+- 15. Privacy Shield and Anti-Tracking Protection
+- 16. Offline Email and Synchronization
+- 17. Notifications and Alerts
+- 18. Glaze User Interface and Personalization
+- 19. GoreeCloud Suite and External Integrations
+- 20. Email Analytics and Communication Insights
+- 21. Business, Administration, and Enterprise Integration
+- 22. Advanced Technical and Desktop Capabilities
+- 23. Email Import, Export, Backup, and Recovery
+- 24. Platforms and Cross-Device Experience
+- 25. GoreeCloud Mail Architecture and Product Principles
+
+## 1. Email Account Management
+- GoreeCloud Mail will provide comprehensive account management for compatible email providers.
+- Multiple email account management
+- Unified email account administration
+- Google Gmail account integration
+- Google Workspace email integration
+- Microsoft Outlook account integration
+- Microsoft 365 email integration
+- Yahoo Mail account integration
+- Apple iCloud Mail integration
+- Proton Mail integration through supported connection mechanisms
+- Fastmail account integration
+- Custom email provider integration
+- IMAP account support
+- SMTP outgoing mail configuration
+- POP3 account retrieval where implemented
+- Microsoft Exchange integration through compatible provider adapters
+- Automatic email server configuration discovery
+- Manual incoming and outgoing server configuration
+- Custom server addresses and ports
+- Configurable connection encryption
+- OAuth 2.0 authentication
+- Provider-supported application passwords
+- Secure account credential storage
+- Individual account connection settings
+- Account connection testing
+- Account authentication management
+- Account-specific preferences
+- Account names, colors, and avatars
+- Default email account selection
+- Default sending identity selection
+- Multiple sender identities
+- Sender aliases
+- Custom email domain compatibility
+- Plus-addressing support
+- Disposable and hide-my-email alias compatibility
+- Provider-supported catch-all addresses
+- Email forwarding configuration where exposed by providers
+- Import and migration of compatible email accounts
+- Independent account synchronization
+- Provider capability detection
+- Secure account removal
+- Strict isolation between connected accounts
+
+## 2. Inbox Management and Organization
+- Flexible inbox organization and message-management capabilities.
+- Unified Inbox
+- Individual account inboxes
+- Standard Inbox
+- Focused Inbox
+- Priority Inbox
+- Smart Inbox
+- Unread-first Inbox
+- Important-first Inbox
+- Starred-first Inbox
+- Custom inbox sections
+- Multiple inbox layouts
+- Automatic email categorization
+- Personal message categorization
+- Promotional email categorization
+- Newsletter categorization
+- Notification categorization
+- Social message categorization
+- Priority sender identification
+- Unknown sender screening
+- Sender approval and blocking workflows
+- Email grouping by sender
+- Email grouping by conversation
+- Threaded conversation views
+- Collapsible conversation threads
+- Chronological message sorting
+- Message sorting by priority
+- Message sorting by read status
+- Message pinning
+- Email starring
+- Message flagging
+- Read and unread management
+- Importance marking
+- Email archiving
+- Archived message restoration
+- Folder-based organization
+- Label-based organization
+- Custom folders and labels
+- Nested folders and labels
+- Color-coded labels
+- Bulk message selection
+- Bulk message actions
+- Conversation muting
+- Spam identification and management
+- Trash and deleted message management
+- Message restoration
+- Snoozed message management
+- Completed or Done message states
+- Customizable inbox navigation
+
+## 3. Email Reading and Message Viewing
+- Flexible viewing of messages, conversations, media, metadata, and security context.
+- HTML email viewing
+- Plain-text email viewing
+- Complete conversation viewing
+- Individual message expansion and collapse
+- Conversation history navigation
+- Sender and recipient information
+- CC and BCC information where authorized
+- Email timestamps
+- Detailed message headers
+- Raw message source viewing
+- Attachment identification
+- Inline image viewing
+- Embedded content handling
+- Remote image loading controls
+- Contact profile information
+- Calendar invitation recognition
+- Meeting invitation previews
+- Accept, decline, and tentative meeting responses
+- Message translation
+- Message printing
+- Local message saving
+- Separate message windows
+- Tabbed message viewing
+- Reading-pane customization
+- Three-pane email layout
+- Next and previous message navigation
+- Keyboard-based message navigation
+- Message security indicators
+- Encryption status indicators
+- Suspicious-content warnings
+- Accessible message reading
+
+## 4. Email Composition and Sending
+- Comprehensive email composition and outgoing-message management.
+- New email composition
+- Reply
+- Reply All
+- Forward
+- Forward as attachment
+- Plain-text composition
+- Rich-text composition
+- HTML email composition
+- Font customization
+- Text size adjustment
+- Bold, italic, and underline formatting
+- Bulleted lists
+- Numbered lists
+- Text alignment
+- Hyperlink insertion
+- Inline image insertion
+- File attachment insertion
+- Multiple file attachments
+- Drag-and-drop attachments
+- To, CC, and BCC fields
+- Recipient autocomplete
+- Sender identity selection
+- Automatic draft saving
+- Draft synchronization
+- Draft editing
+- Multiple email signatures
+- HTML signatures
+- Image and logo signatures
+- Account-specific signatures
+- Email templates
+- Reusable message content
+- Template variables
+- Automatic CC/BCC rules
+- Spelling correction
+- Grammar assistance
+- Language detection
+- Missing attachment warnings
+- Recipient error warnings
+- Undo Send
+- Scheduled sending
+- Scheduled message editing
+- Personalized bulk messages
+- Mail merge
+- Contact-based merge fields
+- Spreadsheet-based merge fields through compatible integrations
+- Branded message layouts
+- Out-of-office responses
+- Vacation auto-replies where supported
+- Keyboard shortcuts for message composition
+
+## 5. Productivity and Follow-Up Management
+- Communication processing, follow-up management, and linked actions.
+- Email snoozing
+- Date-based snoozing
+- Time-based snoozing
+- Scheduled message delivery
+- Follow-up reminders
+- No-response reminders
+- Message completion tracking
+- Done and pending states
+- Pinned conversations
+- Priority sender management
+- VIP contact identification
+- Task creation from messages
+- Task-to-message linking
+- Task due dates
+- Follow-up deadlines
+- Action-required indicators
+- Email action categorization
+- Message-to-calendar-event conversion
+- Reminder notifications
+- Outstanding message tracking
+- Unread message counts
+- Quick replies
+- Saved responses
+- Customizable inbox workflows
+- Distraction-reducing inbox layouts
+- Command palette actions
+- One-click message processing
+- Keyboard-driven inbox management
+- Follow-up workflow integration with GoreeCloud Tasks
+
+## 6. Email Search and Discovery
+- Advanced search across compatible accounts and locally available data.
+- Unified search across connected accounts
+- Individual account search
+- Folder-specific search
+- Label-specific search
+- Sender search
+- Recipient search
+- Subject search
+- Message body search
+- Conversation search
+- Attachment filename search
+- Attachment metadata search
+- Date-based search
+- Date-range filtering
+- Read and unread filters
+- Starred message filters
+- Flagged message filters
+- Priority filters
+- Attachment presence filters
+- Message size filters where supported
+- Advanced search operators
+- Combined search conditions
+- Exact phrase matching
+- Excluded search terms
+- Gmail-compatible search syntax where applicable
+- Quick search filtering
+- Saved searches
+- Virtual search folders
+- Local full-text indexing
+- Offline message search
+- Natural-language search as an AI enhancement
+- AI-assisted information discovery
+- Search across supported message attachment content
+- Related calendar and contact discovery through authorized integrations
+
+## 7. Email Rules, Filters, and Automation
+- Customizable rules and automated message processing.
+- Custom email rules
+- Sender-based filters
+- Recipient-based filters
+- Subject-based filters
+- Keyword filters
+- Content-based filters
+- Multi-condition filtering
+- Automatic label assignment
+- Automatic folder movement
+- Automatic archiving
+- Automatic deletion
+- Automatic read-status changes
+- Automatic starring and flagging
+- Automatic importance marking
+- Conditional forwarding where supported
+- Template-based automatic responses
+- Sender blocking rules
+- Sender allowlists
+- Sender blocklists
+- Newsletter classification
+- Notification classification
+- Spam-handling rules
+- Rule prioritization
+- Rule editing and management
+- Rule activation and deactivation
+- Provider-supported server-side filtering
+- Client-side filtering
+- Sieve filtering compatibility where supported
+- Out-of-office automation
+- Vacation response integration
+- Workflow automation through approved GoreeCloud services
+
+## 8. Artificial Intelligence and Smart Assistance
+- Proposed AI capabilities to improve productivity while respecting privacy, authorization, and data-handling requirements.
+- AI email drafting
+- AI-generated replies
+- Smart Reply suggestions
+- Context-aware responses
+- Personalized writing assistance
+- Email summarization
+- Conversation summarization
+- Short and detailed summary modes
+- Action-item extraction
+- Natural-language inbox questions
+- AI-assisted email search
+- AI information retrieval
+- AI attachment summarization
+- Grammar improvement
+- Spelling correction
+- Writing clarity improvements
+- Email rewriting
+- Tone adjustment
+- Formal writing assistance
+- Friendly writing assistance
+- Concise message generation
+- Draft expansion
+- Language translation
+- AI template generation
+- Context-aware template personalization
+- Suggested follow-up messages
+- Intelligent message classification
+- AI priority recommendations
+- Meeting information extraction
+- Calendar context assistance
+- Meeting transcription through approved external integrations
+- Meeting summary generation through approved integrations
+- User-controlled AI processing
+- Optional privacy-preserving local AI processing where feasible
+- AI activity transparency and permission controls
+- AI features require separate architecture, privacy, model-selection, and acceptance decisions before being treated as delivered functionality.
+
+## 9. Contacts and Address Book Management
+- Integration with GoreeCloud Contacts and compatible external contact sources.
+- Integrated contact access
+- Contact creation
+- Contact editing
+- Contact deletion
+- Contact importing
+- Contact exporting
+- vCard import and export
+- CSV contact import and export
+- CardDAV synchronization
+- Compatible external address books
+- Local contact access
+- Recipient autocomplete
+- Contact groups
+- Distribution lists
+- Contact profile photos
+- Contact avatars
+- Multiple addresses per contact
+- Contact notes
+- Organization information
+- Job titles
+- Phone numbers
+- Contact search
+- Duplicate contact identification
+- Contact merging through authorized contact services
+- Contact-related conversation history
+- Contact profile enrichment through approved sources
+- Social profile links
+- Frequent-contact suggestions
+- Sender information panels
+- Contact identity verification
+- Encryption-key association with contacts
+- Integration with GoreeCloud Contacts
+
+## 10. Calendar, Events, Meetings, and Tasks
+- Integration between email communication, GoreeCloud Calendar, and GoreeCloud Tasks.
+- Calendar integration
+- Multiple calendar account support
+- CalDAV synchronization
+- Google Calendar compatibility
+- Microsoft calendar compatibility where supported
+- iCloud calendar compatibility
+- GoreeCloud Calendar integration
+- Daily calendar views through the calendar integration
+- Weekly calendar views
+- Monthly calendar views
+- Agenda views
+- Calendar event creation
+- Event editing
+- Event deletion
+- Recurring events
+- Meeting invitations
+- Invitation acceptance
+- Invitation decline
+- Tentative responses
+- Meeting reminders
+- Event notifications
+- Automatic meeting invitation recognition
+- Create events from emails
+- Link conversations to calendar events
+- Meeting link recognition
+- Video meeting integration
+- Google Meet and Zoom link handling
+- Meeting availability sharing through compatible services
+- Task creation from email
+- Task due dates
+- Task reminders
+- Task completion tracking
+- Source-message linking
+- GoreeCloud Tasks integration
+- Authorized meeting transcription integrations
+- Authorized AI meeting summaries
+
+## 11. Collaboration and Shared Email Management
+- Proposed collaborative email workflows using authorized provider delegation and approved GoreeCloud-managed collaboration services.
+- Shared inbox integration
+- Shared team mailbox access
+- Shared communication workspaces
+- Multiple authorized users accessing a shared mailbox
+- Team membership management
+- Team invitation workflows
+- Role-based collaboration permissions
+- Message assignments
+- Email delegation
+- Assignment ownership
+- Assignment deadlines
+- Assignment completion tracking
+- Personal assigned-message views
+- Team assigned-message views
+- Collaborative email drafting
+- Real-time draft collaboration
+- Private internal comments on conversations
+- Shared email templates
+- Authorized conversation sharing
+- Controlled message-sharing links
+- Team inbox progress tracking
+- Shared sender identity support
+- Duplicate-response prevention
+- Shared mailbox permission management
+- Separation of team roles from mailbox credentials
+- Auditable collaboration actions
+- Shared inbox capabilities must preserve account and user isolation, using provider-authorized delegation or a separately approved collaboration architecture.
+
+## 12. Attachments and File Management
+- Secure attachment processing, storage, and approved file-service integration.
+- File attachments
+- Multiple attachments
+- Drag-and-drop uploads
+- Attachment names and file-type indicators
+- Attachment size display
+- File preview support
+- Image previews
+- PDF previews
+- Inline media previews
+- Individual attachment downloads
+- Multiple attachment downloads
+- Save-all attachment actions
+- Attachment removal from drafts
+- Attachment detachment where supported
+- Attachment forwarding
+- Email forwarding as files
+- Missing attachment detection
+- File size warnings
+- Large-file transfer links
+- External storage upload integrations
+- GoreeCloud Drive integration
+- Google Drive integration where authorized
+- Dropbox integration where authorized
+- Locally cached attachments
+- Offline attachment access
+- Attachment search
+- Attachment risk detection
+- Dangerous file-type warnings
+- Secure file opening
+- Attachment filename validation
+- Attachment size-limit enforcement
+- Attachment access isolation
+- Protection against path traversal
+- Safe preview and download boundaries
+
+## 13. Wardveil Security and Email Threat Protection
+- Wardveil Security is the designated email security and protection identity.
+- Secure message rendering
+- HTML sanitization
+- Protection against unsafe embedded content
+- Phishing warning indicators
+- Suspicious sender warnings
+- Suspicious URL detection
+- Link destination inspection
+- Deceptive link warnings
+- Unsafe redirect protection
+- Dangerous attachment warnings
+- Attachment risk classification
+- Malware screening through approved protection mechanisms
+- Spam management
+- Junk-mail classification
+- Sender blocklists
+- Sender allowlists
+- Unknown sender controls
+- Domain authentication indicators where reliable information exists
+- Email transport-security indicators
+- Authentication failure warnings
+- Account security notifications
+- Secure credential storage
+- OAuth authentication support
+- Provider-supported two-factor authentication
+- Provider-supported passkeys
+- Hardware security-key compatibility
+- Device authentication controls
+- Biometric application access where implemented
+- Session security
+- Device access management
+- Security event visibility
+- Email signature verification
+- Public-key identity verification
+- Account-level security isolation
+- Protection against cross-account data disclosure
+- Secure attachment processing
+- Secure message parsing
+- Secure local search indexing
+- Wardveil protection claims must be supported by tested implementations, not decorative security indicators.
+
+## 14. Email Encryption and Confidential Communication
+- Compatible transport, local data, and end-to-end encryption technologies.
+- TLS-protected communication
+- Secure IMAP connections
+- Secure SMTP submission
+- Protected local credential storage
+- Local email database encryption where implemented
+- Protected local message caches
+- OpenPGP message encryption
+- OpenPGP digital signatures
+- S/MIME compatibility
+- Cryptographic signature verification
+- Public-key management
+- Private-key management
+- Encryption key generation
+- Key import and export
+- Recipient encryption-key discovery
+- Key fingerprint verification
+- Trusted key management
+- Encrypted attachment handling
+- End-to-end encrypted messaging with compatible recipients and protocols
+- Integration with supported encrypted email providers
+- Password-protected message exchange through compatible providers
+- Provider-supported message expiration
+- Confidential message workflows
+- Encryption status indicators
+- Secure local protocol gateways where required
+- Provider-dependent advanced cryptographic protection
+- Distinguish transport encryption, storage encryption, provider-managed confidential messaging, and true end-to-end encryption.
+
+## 15. Privacy Shield and Anti-Tracking Protection
+- Privacy-preserving defaults and user controls under GoreeCloud Privacy Shield.
+- Remote image blocking
+- External content loading controls
+- Tracking-pixel detection
+- Tracking-pixel suppression
+- Known tracker blocking
+- Link tracking-parameter removal where safe
+- Remote-content proxy support where approved
+- Email-reading privacy controls
+- IP exposure reduction for remote content
+- Message-specific remote-content preferences
+- Sender-specific remote-content controls
+- Primary email address protection
+- Email alias compatibility
+- Disposable alias compatibility
+- Alias management through supported providers
+- Reduced application telemetry
+- Privacy-preserving diagnostic logging
+- User-controlled analytics preferences
+- Advertising-free application design
+- Local data retention controls
+- Cache expiration policies
+- Privacy-aware notification previews
+- Secure message storage
+- Protected attachment caches
+- User-controlled synchronization windows
+- Privacy controls for AI processing
+- Explicit consent for sensitive message processing
+- Clear indicators when third-party services receive data
+- Tracking protection enabled by default where technically appropriate
+- Recipient privacy protections take precedence over optional outbound tracking features.
+
+## 16. Offline Email and Synchronization
+- Controlled offline operation, safe queue replay, and reliable provider synchronization.
+- Offline email reading
+- Cached message content
+- Cached message metadata
+- Offline draft creation
+- Offline message composition
+- Outgoing message queues
+- Pending action queues
+- Synchronization after reconnecting
+- Automatic background synchronization
+- Manual synchronization
+- Independent account synchronization
+- Folder synchronization
+- Label synchronization
+- Draft synchronization
+- Sent message synchronization
+- Read-status synchronization
+- Flag synchronization
+- Incremental synchronization
+- Configurable synchronization windows
+- Configurable local storage
+- Attachment caching options
+- Offline attachment access
+- Local full-text search
+- Synchronization retry handling
+- Synchronization error reporting
+- Conflict detection
+- Conflict reconciliation
+- Safe queued-action replay
+- Synchronization progress indicators
+- Explicit distinction between locally queued and provider-confirmed actions
+- Reliable recovery following interrupted synchronization
+- Account-specific local data isolation
+
+## 17. Notifications and Alerts
+- Configurable notifications, with GoreeCloud Notify integration where approved.
+- New email notifications
+- Desktop notifications
+- Mobile push notifications
+- Browser notifications
+- Unread message badges
+- Taskbar badges
+- Dock indicators
+- Account-specific notifications
+- Folder-specific notifications
+- Priority message alerts
+- VIP sender notifications
+- Sender-based notification preferences
+- Message notification previews
+- Sensitive-content preview restrictions
+- Configurable notification sounds
+- Quiet hours
+- Do Not Disturb integration
+- Muted conversation notifications
+- Follow-up reminders
+- Task reminders
+- Meeting invitation alerts
+- Calendar reminders
+- Synchronization failure notifications
+- Authentication alerts
+- Account security alerts
+- Optional recipient-activity notifications where permitted
+- GoreeCloud Notify integration
+
+## 18. Glaze User Interface and Personalization
+- Targets GoreeCloud Glaze 1.7.0 under the proposed rebuild plan, with application-specific design and accessibility acceptance.
+- Consistent GoreeCloud product identity
+- Glaze-based user interface
+- Responsive email layouts
+- Three-pane desktop layout
+- Adaptive tablet layout
+- Mobile-optimized layouts
+- Unified navigation
+- Account and folder sidebar
+- Configurable reading panes
+- Full-width conversation views
+- Sidebar customization
+- Compact display mode
+- Comfortable display mode
+- Light appearance
+- Dark appearance
+- Theme customization
+- Accent-color customization
+- Account-specific colors
+- Typography customization
+- Adjustable text sizes
+- Multiple inbox layouts
+- Keyboard shortcuts
+- Custom shortcut mappings
+- Gmail-style shortcut compatibility
+- Outlook-style shortcut compatibility
+- Apple Mail-style shortcut compatibility
+- Command palette
+- Touchscreen gesture support
+- Custom swipe actions
+- Drag-and-drop interactions
+- Context menus
+- Search suggestions
+- Configurable message previews
+- Sender profile photos
+- Contact avatars
+- Localization and language support
+- Right-to-left language support
+- Screen-reader support
+- Keyboard-only navigation
+- Visible keyboard focus
+- Accessible forms and dialogs
+- High-contrast presentation
+- Scalable text
+- Reduced-motion support
+- Accessible touch targets
+- Operating-system appearance integration
+- Desktop window management
+- Consistent loading, empty, warning, and error states
+- Every supported client interface requires application-specific Glaze design and accessibility acceptance.
+
+## 19. GoreeCloud Suite and External Integrations
+- Integrations must use documented, approved, least-privilege interfaces.
+- GoreeCloud integrations
+- GoreeCloud Contacts — Recipient autocomplete, contact records, contact identities, profile information, and address selection
+- GoreeCloud Calendar — Meeting invitations, event recognition, event creation, event updates, and calendar context
+- GoreeCloud Tasks — Email-to-task creation, follow-up workflows, task deadlines, and source-message linking
+- GoreeCloud Notes and Memos — Authorized saving of message excerpts, references, links, and notes
+- GoreeCloud Notify — Notifications, alerts, and notification-policy integration
+- GoreeCloud Identity — Future application identity and authentication integration, separate from email-provider credentials
+- Wardveil Security — Security protection, suspicious-content warnings, and email threat handling
+- Privacy Shield — Remote-content protection, tracking controls, privacy preferences, and data minimization
+- Everkeep — Application-state continuity, export, configuration preservation, and recovery requirements
+- GoreeCloud Drive — Approved attachment-storage and file-sharing workflows
+- GoreeCloud AI — Potential approved AI assistance and intelligent email features
+- External integration capabilities
+- Google Contacts
+- Google Calendar
+- Google Drive
+- Google Meet
+- Microsoft 365
+- Microsoft Exchange
+- iCloud services
+- CardDAV address books
+- CalDAV calendars
+- Proton-compatible services
+- Dropbox storage
+- external cloud storage
+- task-management applications
+- note-taking applications
+- approved automation services
+- operating-system notifications
+- default email application registration
+- mailto link handling
+- file-sharing and operating-system share integration
+- authorized plugins and extensions
+- third-party application APIs
+
+## 20. Email Analytics and Communication Insights
+- Proposed local, privacy-preserving communication insights.
+- Mailbox activity summaries
+- Message volume statistics
+- Incoming message trends
+- Outgoing message trends
+- Daily email activity
+- Weekly email activity
+- Hourly email activity
+- Unread message trends
+- Message response tracking
+- Follow-up completion reporting
+- Contact interaction history
+- Message organization statistics
+- Inbox processing summaries
+- Personal productivity indicators
+- Template usage insights
+- Searchable activity history
+- Optional tracking — separate approval required
+- outgoing message read tracking
+- read-receipt requests
+- recipient open notifications
+- link-click tracking
+- recipient engagement measurements
+- open-rate reporting
+- link-click reporting
+- email template performance
+- subject-line performance
+- These capabilities are optional proposals, not baseline requirements; they require privacy review, consent, disclosure design, and compatibility with Privacy Shield.
+
+## 21. Business, Administration, and Enterprise Integration
+- Compatibility with business email providers and approved organizational workflows.
+- Custom business email domain compatibility
+- Multiple organizational email accounts
+- Departmental mailbox access
+- Shared email inboxes where supported
+- Authorized sender identities
+- Sender aliases
+- Distribution groups
+- Organizational contact directories
+- Provider-supported catch-all addresses
+- Provider-managed forwarding rules
+- Shared mailbox delegation
+- Access permissions
+- Team roles
+- Collaboration permissions
+- Centralized account configuration where supported
+- Organizational authentication integration
+- Provider-supported enterprise security policies
+- Provider-supported encryption requirements
+- Enterprise S/MIME compatibility
+- Compatible data-protection policies
+- Provider-managed spam protection
+- Provider-managed phishing protection
+- Provider-managed malware scanning
+- Personalized business mail merge
+- Branded business email templates
+- Organization-specific signatures
+- Compliance and retention integration where supported
+- Audit visibility for GoreeCloud-owned collaboration actions
+- Provider administrative console integration where authorized
+- GoreeCloud Mail does not independently claim enforcement of provider-managed administrative or compliance policies.
+
+## 22. Advanced Technical and Desktop Capabilities
+- Desktop compatibility, interoperability, local data management, and extensibility.
+- First-party desktop application
+- Web application access
+- Native mobile client architecture
+- Multi-account local mail engine
+- Indexed local message search
+- Standards-based email connectivity
+- Provider adapter architecture
+- Secure operating-system credential integration
+- Desktop notifications
+- Mailto protocol handling
+- System file-opening integration
+- Local message storage
+- Offline mailbox access
+- Configurable keyboard shortcuts
+- Customizable interface themes
+- Application extension interfaces where approved
+- Plugin compatibility where retained
+- Message-source inspection
+- Technical header inspection
+- Mailbox migration tools
+- Data import and export
+- Local configuration management
+- RSS and Atom feed integration as an optional extension
+- NNTP newsgroup access as an optional extension
+- Chat integration through approved communication protocols as an optional extension
+- CardDAV and CalDAV compatibility
+- Advanced email filtering
+- Local PDF attachment previews
+- Desktop window management
+- Linux package support
+- Secure application updates
+- Version information and update status
+- Update rollback support
+- Crash recovery
+- Performance diagnostics that minimize sensitive data exposure
+
+## 23. Email Import, Export, Backup, and Recovery
+- Portability and state continuity consistent with approved Everkeep requirements.
+- Email data import
+- Email data export
+- Compatible mailbox migration
+- EML message export
+- MBOX mailbox import and export where implemented
+- Contact import and export
+- Email configuration export
+- Local profile migration
+- Attachment export
+- Local backup support
+- Recovery of GoreeCloud-owned application state
+- Configuration preservation
+- Draft preservation
+- Local data integrity verification
+- Backup retention controls
+- Recovery documentation
+- Restore validation
+- Data portability
+- Secure account removal
+- Local cache cleanup
+- User-controlled local data deletion
+- Recovery after interrupted operations
+- Application update rollback
+- Migration version compatibility
+- Provider-authoritative mail remains governed by its provider. Application backups are not independent full hosted-mailbox backups unless specifically implemented and verified.
+
+## 24. Platforms and Cross-Device Experience
+- Consistent experiences across supported target platforms, subject to platform security and operating-system constraints.
+- Web
+- Browser-accessible email application
+- Responsive desktop and tablet interface
+- Mobile browser compatibility
+- Secure account access
+- Unified navigation
+- Provider-independent email management
+- Linux Desktop
+- First-party Linux application
+- Debian-compatible packaging
+- Potential DEB, Flatpak, and AppImage distributions
+- Desktop notifications
+- Keyboard shortcuts
+- Offline operation
+- Local attachment handling
+- Operating-system integration
+- Secure credential storage
+- Default email application integration
+- Android
+- First-party Android application
+- Account management
+- Message reading and composition
+- Background synchronization
+- Mobile notifications
+- Offline email access
+- Mobile attachment handling
+- Android sharing integration
+- Secure mobile authentication
+- Touch-optimized interface
+- iOS — Long-term target
+- Native iOS email experience
+- Secure account authentication
+- Mobile email synchronization
+- Push notifications
+- Offline email reading
+- Attachment management
+- iOS sharing integration
+- Accessible and adaptive layouts
+- Feature parity must be evaluated against each supported platform’s operating-system capabilities and security requirements.
+
+## 25. GoreeCloud Mail Architecture and Product Principles
+- Non-negotiable design principles for a provider-independent, GoreeCloud-owned email client.
+- Provider Independence  —  Use compatible external email services for mailbox hosting, storage authority, and Internet email transport
+- GoreeCloud Ownership  —  GoreeCloud controls the application experience, approved service integrations, product identity, and progressively rebuilt architecture
+- Privacy by Default  —  Govern remote content, tracking, telemetry, caches, sensitive logs, and data retention
+- Security by Design  —  Treat email content, links, attachments, authentication activities, and provider responses as untrusted inputs
+- Strict Data Isolation  —  Isolate credentials, messages, attachments, search indexes, caches, notifications, and synchronization states between accounts and users
+- Interoperability  —  Use appropriate open protocols, provider APIs, and documented contracts
+- Offline Reliability  —  Distinguish locally queued operations from actions accepted by the provider
+- Accessibility  —  Meet applicable design and accessibility acceptance for desktop, web, and mobile
+- Extensibility  —  Add provider adapters and integrations without coupling the core to any one provider
+- Data Portability  —  Enable supported migration, export, preservation, and recovery of GoreeCloud-controlled application data
+- Transparent Capability Handling  —  Never present unsupported, provider-dependent, or not-yet-implemented functions as operational
+- Product Scope and Delivery Status
+- The catalog combines existing project requirements and additional proposed enhancements. It defines a target—not a declaration of current implementation.
+- GoreeCloud Mail remains an active development project. Inclusion in this catalog does not establish implementation, platform availability, successful testing, security acceptance, or production readiness.
+- Standing Boundary Conditions
+- •  Mailbox hosting and Internet email transport remain the responsibility of authorized external email providers.
+- •  GoreeCloud Identity is distinct from provider account authentication and does not replace provider OAuth or other required authentication methods.
+- •  Optional AI, collaboration, tracking and advanced encryption must complete separate design, privacy, security and acceptance reviews.
+- •  Existing app builds, inherited Mailspring features, and individual CI results are not proof of Stable or cross-platform delivery.
+- •  Release claims require verified Wardveil, Privacy Shield, Everkeep, Glaze, provider, security, installer and platform acceptance as applicable.
+- SCOPE LAYER
+- INTENDED DELIVERY BOUNDARY
+- Core target
+- Provider-independent email access, composition, organization, synchronization, searching, attachments, and account management.
+- GoreeCloud integrations
+- Contacts, Calendar, Tasks, Notes/Memos, Notify, Privacy Shield, Wardveil, and applicable platform systems.
+- Advanced enhancements
+- AI assistance, collaborative inboxes, communication analytics, optional extensions, and expanded workflow automation.
+- Provider-dependent features
+- Hosted encryption services, custom-domain administration, server-side filtering, enterprise compliance, shared mailbox delegation, and provider-managed security.
+- Future or conditional capabilities
+- Additional platforms, advanced AI, extended protocol support, and features requiring separate product, privacy, security, or architecture approval.
