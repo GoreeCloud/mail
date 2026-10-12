@@ -352,6 +352,39 @@ describe('stageMessagesAsEml', function () {
     expect(path.basename(staged[0].filePath)).toEqual('Written.eml');
   });
 
+  it('does not export or retain a zero-byte remote fetch', async () => {
+    (TaskQueue.waitForPerformRemote as any).andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, '');
+      return Promise.resolve();
+    });
+    const staged = await stageMessagesAsEml([
+      new Message({ id: 'empty', accountId: 'a1', subject: 'Empty' }),
+    ]);
+    expect(staged).toEqual([]);
+    expect(fs.existsSync(path.dirname(queued[0].filepath))).toBe(false);
+  });
+
+  it('rejects a staged symlink without reading or deleting its target', async () => {
+    if (process.platform === 'win32') return; // Creating symlinks may need elevated rights.
+    const keeper = fs.mkdtempSync(path.join(os.tmpdir(), 'mail-safe-target-'));
+    const target = path.join(keeper, 'unrelated.eml');
+    fs.writeFileSync(target, 'private local file');
+    try {
+      (TaskQueue.waitForPerformRemote as any).andCallFake((task: GetMessageRFC2822Task) => {
+        fs.symlinkSync(target, task.filepath);
+        return Promise.resolve();
+      });
+      const staged = await stageMessagesAsEml([
+        new Message({ id: 'symlink', accountId: 'a1', subject: 'Example' }),
+      ]);
+      expect(staged).toEqual([]);
+      expect(fs.existsSync(path.dirname(queued[0].filepath))).toBe(false);
+      expect(fs.readFileSync(target, 'utf8')).toEqual('private local file');
+    } finally {
+      fs.rmSync(keeper, { recursive: true, force: true });
+    }
+  });
+
   it('removes every staged file after a remote fetch fails', async () => {
     let releaseSuccessfulFetch: () => void;
     const gate = new Promise<void>((resolve) => (releaseSuccessfulFetch = resolve));
