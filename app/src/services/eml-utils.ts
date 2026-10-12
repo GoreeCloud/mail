@@ -168,7 +168,16 @@ export async function stageMessagesAsEml(
 
   // Directories whose file never arrived are dead weight — drop them now, and
   // leave the rest to discardStagedEml once the caller is done with the file.
-  const [written, missing] = _.partition(staged, ({ filePath }) => fs.existsSync(filePath));
+  const [written, missing] = _.partition(staged, ({ filePath }) => {
+    try {
+      // A native fetch can complete without a valid RFC2822 file. Do not
+      // follow symlinks into unrelated files or export empty placeholder data.
+      const info = fs.lstatSync(filePath);
+      return info.isFile() && info.size > 0;
+    } catch (ignored) {
+      return false;
+    }
+  });
   missing.forEach(({ dir }) => removeStagingDirectory(dir));
 
   return written.map(({ message, filePath }) => ({ message, filePath }));
