@@ -498,14 +498,34 @@ describe('stageMessagesAsEml', function () {
 });
 
 describe('discardStagedEml', function () {
-  it('removes the file and the staging directory around it', () => {
+  it('discards a genuine completed staging file but not a sibling', async () => {
+    spyOn(Actions, 'queueTask');
+    spyOn(TaskQueue, 'waitForPerformRemote').andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, 'raw');
+      return Promise.resolve();
+    });
+    const staged = await stageMessageAsEml(
+      new Message({ id: 'm-owned', accountId: 'a1', subject: 'Hello' })
+    );
+    const dir = path.dirname(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(path.join(dir, 'different.eml'));
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it('keeps a similarly named folder that the process did not stage', () => {
     const dir = path.join(os.tmpdir(), 'mailspring-eml-' + 'a'.repeat(24));
     const filePath = path.join(dir, 'Hello.eml');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filePath, 'raw');
-
-    discardStagedEml(filePath);
-    expect(fs.existsSync(dir)).toBe(false);
+    fs.writeFileSync(filePath, 'leave intact');
+    try {
+      discardStagedEml(filePath);
+      expect(fs.readFileSync(filePath, 'utf8')).toEqual('leave intact');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('refuses to touch a directory it did not create', () => {
