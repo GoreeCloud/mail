@@ -127,6 +127,12 @@ describe('defaultEmlFilename', function () {
       }
     });
 
+    it('removes Arabic letter marks, bidi display marks and Unicode line separators', () => {
+      expect(defaultEmlFilename('ab\u061c\u200e\u200f\u2028\u2029\u206a\u206fcd')).toEqual(
+        'abcd.eml'
+      );
+    });
+
     it('removes bidirectional overrides, isolates, and C1 controls', () => {
       expect(defaultEmlFilename('annual\u202Efdp.exe\u2066\u0081')).toEqual(
         'annualfdp.exe.eml'
