@@ -121,6 +121,7 @@ export async function stageMessagesAsEml(
       // Fail closed on a collision; private RFC2822 sources must never be
       // readable through a shared temporary directory.
       fs.mkdirSync(dir, { mode: 0o700 });
+      ownedPaths.set(path.resolve(dir), path.resolve(filePath));
       createdDirs.push(dir);
       const task = new GetMessageRFC2822Task({
         messageId: message.id,
@@ -208,10 +209,12 @@ export async function stageThreadAsEml(
  * worth interrupting the user over.
  */
 export function discardStagedEml(filePath: string) {
-  removeStagingDirectory(path.dirname(filePath));
+  const dir = path.resolve(path.dirname(filePath));
+  if (ownedPaths.get(dir) === path.resolve(filePath)) removeStagingDirectory(dir);
 }
 
 const STAGING_DIR_PREFIX = 'mailspring-eml-';
+const ownedPaths = new Map<string, string>();
 
 function removeStagingDirectory(dir: string) {
   // Guard against deleting anything we didn't create ourselves — callers hand
@@ -219,10 +222,12 @@ function removeStagingDirectory(dir: string) {
   const resolved = path.resolve(dir);
   if (
     path.dirname(resolved) !== path.resolve(os.tmpdir()) ||
-    !/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(resolved))
+    !/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(resolved)) ||
+    !ownedPaths.has(resolved)
   ) {
     return;
   }
+  ownedPaths.delete(resolved);
   try {
     fs.rmSync(dir, { recursive: true, force: true });
   } catch (err) {
