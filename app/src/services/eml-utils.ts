@@ -28,11 +28,12 @@ export function defaultEmlFilename(subject: string): string {
   name = Array.from(name).slice(0, 80).join('');
   name = name.replace(/[/?<>\\:*|"]/g, '_');
   // Strip control characters and Unicode direction overrides from untrusted subjects.
-  // eslint-disable-next-line no-control-regex
+  /* eslint-disable no-control-regex */
   name = name.replace(
     /[\u0000-\u001f\u007f-\u009f\u061c\u200e-\u200f\u2028-\u202e\u2066-\u206f]/g,
     ''
   );
+  /* eslint-enable no-control-regex */
   name = name.replace(/[.\s]+$/, '');
   if (!name) {
     name = 'untitled';
