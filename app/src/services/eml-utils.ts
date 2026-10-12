@@ -42,6 +42,18 @@ export function defaultEmlFilename(subject: string): string {
   if (/^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?: *\.|$)/i.test(name)) {
     name = 'file-' + name;
   }
+  // Even 80 Unicode characters can exceed the common 255-byte filename
+  // component limit (for example, 80 emoji require 320 UTF-8 bytes).
+  // Reserve four bytes for .eml and do not split Unicode code points.
+  let nameBytes = 0;
+  let boundedName = '';
+  for (const scalar of name) {
+    const scalarBytes = Buffer.byteLength(scalar, 'utf8');
+    if (nameBytes + scalarBytes > 251) break;
+    boundedName += scalar;
+    nameBytes += scalarBytes;
+  }
+  name = boundedName.replace(/[.\\s]+$/, '') || 'untitled';
   return `${name}.eml`;
 }
 
