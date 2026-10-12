@@ -115,6 +115,16 @@ describe('defaultEmlFilename', function () {
   });
 
   describe('cross-platform filename boundaries', () => {
+    it('keeps multibyte subjects within the filesystem UTF-8 component limit', () => {
+      const filename = defaultEmlFilename('🐱'.repeat(80));
+      expect(filename).toEqual('🐱'.repeat(62) + '.eml');
+      expect(Buffer.byteLength(filename, 'utf8')).toBeLessThan(256);
+    });
+
+    it('preserves short multibyte subjects without unnecessary truncation', () => {
+      expect(defaultEmlFilename('🌍 hello')).toEqual('🌍 hello.eml');
+    });
+
     it('does not split an emoji at the maximum basename length', () => {
       expect(defaultEmlFilename('a'.repeat(79) + '🐱' + 'ignored')).toEqual(
         'a'.repeat(79) + '🐱.eml'
