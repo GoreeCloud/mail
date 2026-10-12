@@ -24,16 +24,36 @@ export function defaultEmlFilename(subject: string): string {
   if (name.length === 0) {
     name = 'untitled';
   }
-  if (name.length > 80) {
-    name = name.substring(0, 80);
-  }
+  // Never split a surrogate pair at the truncation boundary.
+  name = Array.from(name).slice(0, 80).join('');
   name = name.replace(/[/?<>\\:*|"]/g, '_');
-  // eslint-disable-next-line no-control-regex
-  name = name.replace(/[\u0000-\u001f\u007f]/g, '');
+  // Strip control characters and Unicode direction overrides from untrusted subjects.
+  /* eslint-disable no-control-regex */
+  name = name.replace(
+    /[\u0000-\u001f\u007f-\u009f\u061c\u200e-\u200f\u2028-\u202e\u2066-\u206f]/g,
+    ''
+  );
+  /* eslint-enable no-control-regex */
   name = name.replace(/[.\s]+$/, '');
   if (!name) {
     name = 'untitled';
   }
+  // Windows device names stay reserved even when a file extension is appended.
+  if (/^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?: *\.|$)/i.test(name)) {
+    name = 'file-' + name;
+  }
+  // Even 80 Unicode characters can exceed the common 255-byte filename
+  // component limit (for example, 80 emoji require 320 UTF-8 bytes).
+  // Reserve four bytes for .eml and do not split Unicode code points.
+  let nameBytes = 0;
+  let boundedName = '';
+  for (const scalar of name) {
+    const scalarBytes = Buffer.byteLength(scalar, 'utf8');
+    if (nameBytes + scalarBytes > 251) break;
+    boundedName += scalar;
+    nameBytes += scalarBytes;
+  }
+  name = boundedName.replace(/[.\s]+$/, '') || 'untitled';
   return `${name}.eml`;
 }
 
@@ -110,12 +130,15 @@ export async function stageMessagesAsEml(
   // Queue every fetch before awaiting any of them so a multi-message stage
   // isn't serialized on the sync engine's round trips.
   const queuedTasks: GetMessageRFC2822Task[] = [];
+  const createdDirs: string[] = [];
   let allQueued = false;
   try {
     staged.forEach(({ message, dir, filePath }) => {
       // Fail closed on a collision; private RFC2822 sources must never be
       // readable through a shared temporary directory.
       fs.mkdirSync(dir, { mode: 0o700 });
+      ownedPaths.set(path.resolve(dir), path.resolve(filePath));
+      createdDirs.push(dir);
       const task = new GetMessageRFC2822Task({
         messageId: message.id,
         accountId: message.accountId,
@@ -154,13 +177,23 @@ export async function stageMessagesAsEml(
         })
       );
     }
-    staged.forEach(({ dir }) => removeStagingDirectory(dir));
+    // Never delete a preexisting directory after mkdirSync fails on a collision.
+    createdDirs.forEach(removeStagingDirectory);
     throw err;
   }
 
   // Directories whose file never arrived are dead weight — drop them now, and
   // leave the rest to discardStagedEml once the caller is done with the file.
-  const [written, missing] = _.partition(staged, ({ filePath }) => fs.existsSync(filePath));
+  const [written, missing] = _.partition(staged, ({ filePath }) => {
+    try {
+      // A native fetch can complete without a valid RFC2822 file. Do not
+      // follow symlinks into unrelated files or export empty placeholder data.
+      const info = fs.lstatSync(filePath);
+      return info.isFile() && info.size > 0;
+    } catch (ignored) {
+      return false;
+    }
+  });
   missing.forEach(({ dir }) => removeStagingDirectory(dir));
 
   return written.map(({ message, filePath }) => ({ message, filePath }));
@@ -201,10 +234,12 @@ export async function stageThreadAsEml(
  * worth interrupting the user over.
  */
 export function discardStagedEml(filePath: string) {
-  removeStagingDirectory(path.dirname(filePath));
+  const dir = path.resolve(path.dirname(filePath));
+  if (ownedPaths.get(dir) === path.resolve(filePath)) removeStagingDirectory(dir);
 }
 
 const STAGING_DIR_PREFIX = 'mailspring-eml-';
+const ownedPaths = new Map<string, string>();
 
 function removeStagingDirectory(dir: string) {
   // Guard against deleting anything we didn't create ourselves — callers hand
@@ -212,12 +247,16 @@ function removeStagingDirectory(dir: string) {
   const resolved = path.resolve(dir);
   if (
     path.dirname(resolved) !== path.resolve(os.tmpdir()) ||
-    !/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(resolved))
+    !/^mailspring-eml-[a-f0-9]{24}$/.test(path.basename(resolved)) ||
+    !ownedPaths.has(resolved)
   ) {
     return;
   }
   try {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(resolved, { recursive: true, force: true });
+    // Only revoke the cleanup grant after a successful filesystem removal.
+    // A transient error must not prevent the caller from retrying cleanup.
+    ownedPaths.delete(resolved);
   } catch (err) {
     // best effort
   }

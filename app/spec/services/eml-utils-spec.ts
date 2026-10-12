@@ -114,6 +114,42 @@ describe('defaultEmlFilename', function () {
     });
   });
 
+  describe('cross-platform filename boundaries', () => {
+    it('keeps multibyte subjects within the filesystem UTF-8 component limit', () => {
+      const filename = defaultEmlFilename('🐱'.repeat(80));
+      expect(filename).toEqual('🐱'.repeat(62) + '.eml');
+      expect(Buffer.byteLength(filename, 'utf8')).toBeLessThan(256);
+    });
+
+    it('preserves short multibyte subjects without unnecessary truncation', () => {
+      expect(defaultEmlFilename('🌍 hello')).toEqual('🌍 hello.eml');
+    });
+
+    it('does not split an emoji at the maximum basename length', () => {
+      expect(defaultEmlFilename('a'.repeat(79) + '🐱' + 'ignored')).toEqual(
+        'a'.repeat(79) + '🐱.eml'
+      );
+    });
+
+    it('prefixes Windows-reserved names even with a subject extension', () => {
+      for (const subject of ['CON', 'aux', 'Com9', 'LPT1', 'NUL.txt', 'COM¹', 'LPT².txt', 'com³', 'CON .txt']) {
+        expect(defaultEmlFilename(subject)).toEqual('file-' + subject + '.eml');
+      }
+    });
+
+    it('removes Arabic letter marks, bidi display marks and Unicode line separators', () => {
+      expect(defaultEmlFilename('ab\u061c\u200e\u200f\u2028\u2029\u206a\u206fcd')).toEqual(
+        'abcd.eml'
+      );
+    });
+
+    it('removes bidirectional overrides, isolates, and C1 controls', () => {
+      expect(defaultEmlFilename('annual\u202Efdp.exe\u2066\u0081')).toEqual(
+        'annualfdp.exe.eml'
+      );
+    });
+  });
+
   describe('control character stripping', () => {
     it('strips null byte (U+0000)', () => {
       expect(defaultEmlFilename('hello\u0000world')).toEqual('helloworld.eml');
@@ -332,6 +368,39 @@ describe('stageMessagesAsEml', function () {
     expect(path.basename(staged[0].filePath)).toEqual('Written.eml');
   });
 
+  it('does not export or retain a zero-byte remote fetch', async () => {
+    (TaskQueue.waitForPerformRemote as any).andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, '');
+      return Promise.resolve();
+    });
+    const staged = await stageMessagesAsEml([
+      new Message({ id: 'empty', accountId: 'a1', subject: 'Empty' }),
+    ]);
+    expect(staged).toEqual([]);
+    expect(fs.existsSync(path.dirname(queued[0].filepath))).toBe(false);
+  });
+
+  it('rejects a staged symlink without reading or deleting its target', async () => {
+    if (process.platform === 'win32') return; // Creating symlinks may need elevated rights.
+    const keeper = fs.mkdtempSync(path.join(os.tmpdir(), 'mail-safe-target-'));
+    const target = path.join(keeper, 'unrelated.eml');
+    fs.writeFileSync(target, 'private local file');
+    try {
+      (TaskQueue.waitForPerformRemote as any).andCallFake((task: GetMessageRFC2822Task) => {
+        fs.symlinkSync(target, task.filepath);
+        return Promise.resolve();
+      });
+      const staged = await stageMessagesAsEml([
+        new Message({ id: 'symlink', accountId: 'a1', subject: 'Example' }),
+      ]);
+      expect(staged).toEqual([]);
+      expect(fs.existsSync(path.dirname(queued[0].filepath))).toBe(false);
+      expect(fs.readFileSync(target, 'utf8')).toEqual('private local file');
+    } finally {
+      fs.rmSync(keeper, { recursive: true, force: true });
+    }
+  });
+
   it('removes every staged file after a remote fetch fails', async () => {
     let releaseSuccessfulFetch: () => void;
     const gate = new Promise<void>((resolve) => (releaseSuccessfulFetch = resolve));
@@ -409,6 +478,24 @@ describe('stageMessagesAsEml', function () {
     queued.forEach((task) => expect(fs.existsSync(path.dirname(task.filepath))).toBe(false));
   });
 
+  it('does not remove an existing directory if private staging creation fails', async () => {
+    spyOn(fs, 'mkdirSync').andCallFake(() => {
+      throw new Error('EEXIST');
+    });
+    spyOn(fs, 'rmSync');
+
+    let error: Error = null;
+    try {
+      await stageMessagesAsEml([new Message({ id: 'm1', accountId: 'a1', subject: 'Test' })]);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error.message).toBe('EEXIST');
+    expect(fs.rmSync).not.toHaveBeenCalled();
+    expect(Actions.queueTask).not.toHaveBeenCalled();
+  });
+
   it('cleans created staging directories if queue submission itself fails', async () => {
     (Actions.queueTask as any).andCallFake((task: GetMessageRFC2822Task) => {
       queued.push(task);
@@ -460,14 +547,59 @@ describe('stageMessagesAsEml', function () {
 });
 
 describe('discardStagedEml', function () {
-  it('removes the file and the staging directory around it', () => {
+  it('discards a genuine completed staging file but not a sibling', async () => {
+    spyOn(Actions, 'queueTask');
+    spyOn(TaskQueue, 'waitForPerformRemote').andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, 'raw');
+      return Promise.resolve();
+    });
+    const staged = await stageMessageAsEml(
+      new Message({ id: 'm-owned', accountId: 'a1', subject: 'Hello' })
+    );
+    const dir = path.dirname(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(path.join(dir, 'different.eml'));
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it('retries owned staged-file cleanup after a transient filesystem error', async () => {
+    spyOn(Actions, 'queueTask');
+    spyOn(TaskQueue, 'waitForPerformRemote').andCallFake((task: GetMessageRFC2822Task) => {
+      fs.writeFileSync(task.filepath, 'raw');
+      return Promise.resolve();
+    });
+    const staged = await stageMessageAsEml(
+      new Message({ id: 'retry-owned', accountId: 'a1', subject: 'Retry' })
+    );
+    const dir = path.dirname(staged.filePath);
+    const originalRemove = fs.rmSync.bind(fs);
+    let calls = 0;
+    spyOn(fs, 'rmSync').andCallFake((target: string, options: any) => {
+      calls += 1;
+      if (calls === 1) throw new Error('transient file lock');
+      return originalRemove(target, options);
+    });
+
+    expect(() => discardStagedEml(staged.filePath)).not.toThrow();
+    expect(fs.existsSync(dir)).toBe(true);
+    discardStagedEml(staged.filePath);
+    expect(fs.existsSync(dir)).toBe(false);
+    expect(calls).toBe(2);
+  });
+
+  it('keeps a similarly named folder that the process did not stage', () => {
     const dir = path.join(os.tmpdir(), 'mailspring-eml-' + 'a'.repeat(24));
     const filePath = path.join(dir, 'Hello.eml');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filePath, 'raw');
-
-    discardStagedEml(filePath);
-    expect(fs.existsSync(dir)).toBe(false);
+    fs.writeFileSync(filePath, 'leave intact');
+    try {
+      discardStagedEml(filePath);
+      expect(fs.readFileSync(filePath, 'utf8')).toEqual('leave intact');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('refuses to touch a directory it did not create', () => {
