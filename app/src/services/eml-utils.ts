@@ -252,9 +252,11 @@ function removeStagingDirectory(dir: string) {
   ) {
     return;
   }
-  ownedPaths.delete(resolved);
   try {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(resolved, { recursive: true, force: true });
+    // Only revoke the cleanup grant after a successful filesystem removal.
+    // A transient error must not prevent the caller from retrying cleanup.
+    ownedPaths.delete(resolved);
   } catch (err) {
     // best effort
   }
