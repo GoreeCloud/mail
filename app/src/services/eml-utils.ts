@@ -53,7 +53,7 @@ export function defaultEmlFilename(subject: string): string {
     boundedName += scalar;
     nameBytes += scalarBytes;
   }
-  name = boundedName.replace(/[.\\s]+$/, '') || 'untitled';
+  name = boundedName.replace(/[.\s]+$/, '') || 'untitled';
   return `${name}.eml`;
 }
 
