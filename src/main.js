@@ -2,7 +2,11 @@ import { connectGoogle, connected, disconnect } from './auth.js';
 import { getProfile, listMessages, getMessage, modifyMessage, sendMessage } from './gmail.js';
 
 const $ = (id) => document.getElementById(id);
-const state = { view: 'INBOX', messages: [], active: null, email: '', busy: false, sequence: 0 };
+const state = {
+  view: 'INBOX', messages: [], active: null, email: '', busy: false, sequence: 0,
+  readerSequence: 0, listController: null, readerController: null,
+  nextPageToken: '', loading: false
+};
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
@@ -22,6 +26,9 @@ function shortSender(value) {
   return value.replace(/<[^>]+>/g, '').replace(/^"|"$/g, '').trim() || value;
 }
 function clearReader() {
+  state.readerSequence++;
+  state.readerController?.abort();
+  state.readerController = null;
   state.active = null;
   for (const id of ['reader-subject', 'reader-from', 'reader-date', 'reader-body', 'reader-avatar']) $(id).textContent = '';
   $('reader').hidden = true;
@@ -31,8 +38,12 @@ function clearReader() {
 function renderList() {
   panel.replaceChildren();
   $('list-empty').hidden = state.messages.length > 0;
-  $('list-empty').querySelector('strong').textContent = connected() ? 'All clear here.' : 'Your mail, your space.';
-  $('list-empty').querySelector('span').textContent = connected() ? 'No messages in this view.' : 'Connect an account to view messages securely.';
+  $('list-empty').querySelector('strong').textContent = state.loading ? 'Loading messages…' : connected() ? 'All clear here.' : 'Your mail, your space.';
+  $('list-empty').querySelector('span').textContent = state.loading
+    ? 'Retrieving messages from your email provider.'
+    : connected() ? 'No messages in this view.' : 'Connect an account to view messages securely.';
+  $('load-more').hidden = !connected() || !state.nextPageToken;
+  $('load-more').disabled = state.loading;
   $('list-meta').textContent = state.messages.length + ' shown';
   $('inbox-count').textContent = state.view === 'INBOX' ? String(state.messages.filter((m) => m.labels.includes('UNREAD')).length) : '';
   for (const message of state.messages) {
@@ -56,44 +67,80 @@ function renderList() {
     item.append(button); panel.append(item);
   }
 }
-async function loadMailbox() {
+async function loadMailbox({ append = false } = {}) {
   if (!connected()) { announce('Connect to Google to view messages.'); return; }
-  const seq = ++state.sequence;
+  if (append && (!state.nextPageToken || state.loading)) return;
+  const sequence = ++state.sequence;
+  state.listController?.abort();
+  const controller = new AbortController();
+  state.listController = controller;
+  const pageToken = append ? state.nextPageToken : '';
+  if (!append) {
+    state.messages = [];
+    state.nextPageToken = '';
+    clearReader();
+  }
+  state.loading = true;
   $('refresh').disabled = true;
-  announce('Syncing selected messages…');
+  renderList();
+  announce(append ? 'Loading more messages…' : 'Syncing selected messages…');
   try {
-    const data = await listMessages(state.view, $('search').value);
-    if (seq !== state.sequence) return;
-    state.messages = data.messages;
-    clearReader(); renderList();
-    announce(state.email + ' · Connected. ' + data.messages.length + ' messages loaded.' + (data.failedCount ? ' ' + data.failedCount + ' message previews failed.' : ''));
+    const page = await listMessages(state.view, $('search').value, pageToken, { signal: controller.signal });
+    if (controller.signal.aborted || sequence !== state.sequence || !connected()) return;
+    const existingIds = new Set(state.messages.map((message) => message.id));
+    const fresh = page.messages.filter((message) => !existingIds.has(message.id));
+    state.messages = append ? [...state.messages, ...fresh] : page.messages;
+    state.nextPageToken = page.nextPageToken;
+    const failures = page.failedCount
+      ? ' ' + page.failedCount + ' message previews failed; retry to recover them.' : '';
+    announce(state.email + ' · ' + state.messages.length + ' messages loaded.' + failures, page.failedCount > 0);
   } catch (error) {
-    if (seq === state.sequence) announce(error.message, true);
-  } finally { if (seq === state.sequence) $('refresh').disabled = false; }
+    if (sequence === state.sequence && error.name !== 'AbortError') announce(error.message, true);
+  } finally {
+    if (sequence === state.sequence) {
+      state.loading = false;
+      state.listController = null;
+      $('refresh').disabled = false;
+      renderList();
+    }
+  }
 }
 async function showMessage(id) {
   if (!connected()) return;
+  const listSequence = state.sequence;
+  const readSequence = ++state.readerSequence;
+  state.readerController?.abort();
+  const controller = new AbortController();
+  state.readerController = controller;
+  const isCurrent = () => !controller.signal.aborted && connected()
+    && listSequence === state.sequence && readSequence === state.readerSequence;
   announce('Opening message…');
   try {
-    const data = await getMessage(id);
+    const data = await getMessage(id, { signal: controller.signal });
+    if (!isCurrent()) return;
     state.active = data;
     $('reader-subject').textContent = data.subject;
     $('reader-from').textContent = data.from;
     $('reader-avatar').textContent = shortSender(data.from).slice(0, 1).toUpperCase();
     $('reader-date').textContent = data.date || 'Date unavailable';
-    $('reader-body').textContent = data.body || '[Plain-text body unavailable. For safety this early client does not render HTML messages.]';
+    $('reader-body').textContent = data.body || '[Plain-text body unavailable; this alpha does not display HTML.]';
     $('reader').hidden = false; $('reader-empty').hidden = true;
     document.body.classList.add('reading');
     updateActions(); renderList();
     if (data.labels.includes('UNREAD')) {
       await modifyMessage(id, { removeLabelIds: ['UNREAD'] });
+      if (!isCurrent()) return;
       data.labels = data.labels.filter((label) => label !== 'UNREAD');
       const listed = state.messages.find((message) => message.id === id);
       if (listed) listed.labels = data.labels;
       renderList();
     }
-    announce('Message opened.');
-  } catch (error) { announce(error.message, true); }
+    if (isCurrent()) announce('Message opened.');
+  } catch (error) {
+    if (isCurrent() && error.name !== 'AbortError') announce(error.message, true);
+  } finally {
+    if (readSequence === state.readerSequence) state.readerController = null;
+  }
 }
 function updateActions() {
   if (!state.active) return;
@@ -104,12 +151,16 @@ async function actOnMessage(kind) {
   if (!state.active || state.busy) return;
   state.busy = true;
   const old = state.active;
+  const listSequence = state.sequence;
+  const readSequence = state.readerSequence;
   try {
     let addLabelIds = [], removeLabelIds = [];
     if (kind === 'star') (old.labels.includes('STARRED') ? removeLabelIds : addLabelIds).push('STARRED');
     if (kind === 'unread') (old.labels.includes('UNREAD') ? removeLabelIds : addLabelIds).push('UNREAD');
     if (kind === 'archive') removeLabelIds.push('INBOX');
     await modifyMessage(old.id, { addLabelIds, removeLabelIds });
+    if (!connected() || listSequence !== state.sequence
+        || readSequence !== state.readerSequence || state.active?.id !== old.id) return;
     state.active.labels = [...state.active.labels.filter((label) => !removeLabelIds.includes(label)), ...addLabelIds];
     const listed = state.messages.find((message) => message.id === old.id);
     if (listed) listed.labels = state.active.labels;
@@ -183,10 +234,14 @@ document.querySelectorAll('[data-view]').forEach((button) => button.addEventList
   $('list-subtitle').textContent = titles[state.view] + ' messages';
   loadMailbox();
 }));
-$('refresh').addEventListener('click', loadMailbox);
+$('refresh').addEventListener('click', () => loadMailbox());
+$('load-more').addEventListener('click', () => loadMailbox({ append: true }));
 $('connect').addEventListener('click', connect);
 $('disconnect').addEventListener('click', () => {
   disconnect(); state.messages = []; state.email = ''; state.sequence++;
+  state.listController?.abort();
+  state.nextPageToken = '';
+  state.loading = false;
   $('compose-form').reset(); $('search').value = '';
   if ($('composer-dialog').open) $('composer-dialog').close();
   clearReader(); renderList(); reflectConnection(); announce('Disconnected; local in-memory mail and tokens cleared.');
@@ -217,7 +272,7 @@ $('back').addEventListener('click', clearReader);
 let timer;
 $('search').addEventListener('input', () => {
   clearTimeout(timer);
-  timer = setTimeout(loadMailbox, 400);
+  timer = setTimeout(() => loadMailbox(), 400);
 });
 document.addEventListener('keydown', (event) => {
   const target = event.target;
