@@ -8,12 +8,12 @@
 
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
 - Gmail API connection through Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
-- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits); user-triggered read/unread, star/unstar, archive, and plain-text send.
+- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview); user-triggered read/unread, star/unstar, archive, and plain-text send.
 - A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
 - Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
 - Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
 
-**Not implemented yet:** multi-provider adapters, full encrypted offline mailbox storage, sync queue, autosaved/provider-synchronized drafts, threaded view, attachments, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
+**Not implemented yet:** multi-provider adapters, full encrypted offline mailbox storage, sync queue, autosaved/provider-synchronized drafts, threaded view, attachment download/upload/preview, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
 
 ## Run locally
 
@@ -40,6 +40,7 @@ Compose offers **Save encrypted draft** and **Restore local draft**, using a use
 - [Founder's product specification](docs/PRODUCT_SPECIFICATION.md)
 - [Architecture and provider boundaries](docs/ARCHITECTURE.md)
 - [Security and privacy model](docs/SECURITY.md)
+- [Read-only attachment summaries and limitations](docs/ATTACHMENT_METADATA.md)
 - [Encrypted local drafts and limitations](docs/ENCRYPTED_DRAFTS.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Release plan and default mail gate](docs/ROADMAP.md)
