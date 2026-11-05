@@ -46,6 +46,8 @@ function message(id, full = false) {
       headers: [
         { name: 'From', value: 'sender@example.com' },
         { name: 'Subject', value: 'Test message' },
+        { name: 'Reply-To', value: 'reply@example.com' },
+        { name: 'Authentication-Results', value: 'mx.example; spf=pass' },
         { name: 'Date', value: 'Thu, 05 Nov 2026 12:00:00 GMT' }
       ]
     }
@@ -105,6 +107,12 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
 
     await elements.get('message-list').children[0].children[0].emit('click');
     assert.equal(elements.get('reader-body').textContent, 'Hello');
+    assert.equal(elements.get('reader-header-details').hidden, false);
+    assert.equal(elements.get('reader-header-details').open, false, 'details remains collapsed');
+    const headerRows = elements.get('reader-header-list').children;
+    assert.equal(headerRows.length, 5);
+    assert.ok(headerRows.some((row) => row.children[0].textContent === 'Reply-To'
+      && row.children[1].textContent === 'reply@example.com'));
     assert.equal(elements.get('reader-attachments').hidden, false);
     assert.equal(elements.get('reader-attachment-list').children.length, 1);
     assert.equal(elements.get('reader-attachment-list').children[0].children[0].textContent, 'unsafe�.pdf');
@@ -126,6 +134,8 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     assert.ok(scopes[2].includes(SCOPES.send), 'send permission only requested at send time');
     assert.equal(calls.filter((path) => path.includes('/messages/send')).length, 0, 'different account must not receive mail');
     assert.equal(elements.get('reader-body').textContent, '');
+    assert.equal(elements.get('reader-header-details').hidden, true);
+    assert.equal(elements.get('reader-header-list').children.length, 0);
     assert.equal(elements.get('message-list').children.length, 0);
     assert.equal(elements.get('connect').hidden, false);
 
