@@ -7,10 +7,10 @@
 ## Available first milestone
 
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
-- Gmail API connection through Google Identity Services OAuth token flow, with explicit consent; public OAuth client ID supplied at runtime.
-- Inbox, starred, sent, all mail; server-side search; read plain-text mail safely; mark read/unread; star/unstar; archive; and send plain-text email.
+- Gmail API connection through Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
+- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination; safe plain-text reading; user-triggered read/unread, star/unstar, archive, and plain-text send.
 - Ephemeral OAuth tokens and messages in memory (not persisted); external images, message HTML, and tracking pixels are never rendered.
-- Automated unit tests for MIME construction, base64url decoding, plain-text selection and defensive header validation.
+- Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
 
 **Not implemented yet:** multi-provider adapters, true encrypted offline storage, sync queue, durable drafts, threaded view, attachments, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
 
@@ -20,8 +20,8 @@ Requires Node.js 22+ for tests, and any static HTTP server to serve the web app.
 
 1. Configure a Google Cloud OAuth 2.0 **Web application** client ID with the exact authorized JavaScript origin (for example http://localhost:4173). Gmail API access and the required scopes must be enabled for the account / consent configuration. Client IDs are public identifiers; never put client secrets in this app.
 2. Run `python3 -m http.server 4173` at the repository root and open http://localhost:4173.
-3. Choose **Configure**, enter your public OAuth client ID, save it, then choose **Connect Google**. Consent requests Gmail modify and send permissions for this experimental client; review before granting.
-4. Use **Disconnect** to clear tokens and loaded messages from memory. The public client ID can be cleared from settings.
+3. Choose **Configure**, enter your public OAuth client ID, save it, then choose **Connect Google**. Initial consent requests Gmail read-only access. Explicit message changes request Gmail modify; sending requests Gmail send. Gmail modify is a broad provider permission which also grants other capabilities; review the Google consent screen before granting.
+4. Use **Disconnect** to clear local tokens and loaded messages from memory. This is not revocation of Google OAuth grants; revoke access separately through your Google Account if needed. The public client ID can be cleared from settings.
 
 ```sh
 npm run check
