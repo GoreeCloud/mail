@@ -83,11 +83,13 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
     setItem() {},
     removeItem() {}
   };
-  const readPending = deferred();
+  let readPending = deferred();
+  let listPending = null;
   globalThis.fetch = async (url) => {
     const request = String(url);
     if (request.endsWith('/profile')) return response({ emailAddress: 'test@example.com' });
     if (request.includes('/messages?')) {
+      if (listPending) return listPending.promise;
       const parsed = new URL(request);
       return response(parsed.searchParams.has('pageToken')
         ? { messages: [{ id: 'two' }] }
@@ -116,4 +118,23 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
   assert.equal(elements.get('reader-body').textContent, '');
   assert.equal(elements.get('reader').hidden, true);
   assert.equal(elements.get('message-list').children.length, 0);
+
+  // A previously selected message cannot overwrite the reader after a mailbox switch.
+  await elements.get('connect').click();
+  readPending = deferred();
+  const anotherRead = elements.get('message-list').children[0].children[0].click();
+  await nav[1].click();
+  readPending.resolve(response(metadata('one')));
+  await anotherRead;
+  assert.equal(elements.get('reader-body').textContent, '');
+  assert.equal(elements.get('reader').hidden, true);
+
+  // A delayed mailbox listing must not restore messages after disconnect.
+  listPending = deferred();
+  await nav[0].click();
+  await elements.get('disconnect').click();
+  listPending.resolve(response({ messages: [{ id: 'one' }] }));
+  await new Promise((done) => setTimeout(done, 0));
+  assert.equal(elements.get('message-list').children.length, 0);
+  assert.equal(elements.get('load-more').hidden, true);
 });
