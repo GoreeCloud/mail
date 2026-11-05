@@ -10,7 +10,7 @@ async function withFakeGoogle(handler) {
   globalThis.window = {
     google: { accounts: { oauth2: { initTokenClient: (configuration) => ({
       requestAccessToken() {
-        configuration.callback({ access_token: 'TEST-NOT-REAL', expires_in: 3600 });
+        configuration.callback({ access_token: 'TEST-NOT-REAL', expires_in: 3600, scope: configuration.scope });
       }
     }) } } }
   };
