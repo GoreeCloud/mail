@@ -63,9 +63,9 @@ async function loadMailbox() {
   try {
     const data = await listMessages(state.view, $('search').value);
     if (seq !== state.sequence) return;
-    state.messages = data;
+    state.messages = data.messages;
     clearReader(); renderList();
-    announce(state.email + ' · Connected. ' + data.length + ' messages loaded.');
+    announce(state.email + ' · Connected. ' + data.messages.length + ' messages loaded.' + (data.failedCount ? ' ' + data.failedCount + ' message previews failed.' : ''));
   } catch (error) {
     if (seq === state.sequence) announce(error.message, true);
   } finally { if (seq === state.sequence) $('refresh').disabled = false; }
