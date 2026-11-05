@@ -35,7 +35,27 @@ function clearReader() {
   for (const id of ['reader-subject', 'reader-from', 'reader-date', 'reader-body', 'reader-avatar']) $(id).textContent = '';
   $('reader').hidden = true;
   $('reader-empty').hidden = false;
+  $('reader-attachment-list').replaceChildren();
+  $('reader-attachments').hidden = true;
+  $('reader-attachments-more').hidden = true;
   document.body.classList.remove('reading');
+}
+function renderAttachments(message) {
+  const list = $('reader-attachment-list');
+  list.replaceChildren();
+  const entries = Array.isArray(message.attachments) ? message.attachments : [];
+  for (const attachment of entries) {
+    const item = document.createElement('li');
+    const name = document.createElement('strong');
+    const details = document.createElement('span');
+    name.textContent = attachment.name;
+    details.textContent = attachment.mediaType + ' · '
+      + (attachment.size === null ? 'Size unavailable' : attachment.size.toLocaleString() + ' bytes');
+    item.append(name, details);
+    list.append(item);
+  }
+  $('reader-attachments').hidden = entries.length === 0;
+  $('reader-attachments-more').hidden = !message.attachmentsTruncated;
 }
 function renderList() {
   panel.replaceChildren();
@@ -134,6 +154,7 @@ async function showMessage(id) {
     $('reader-avatar').textContent = shortSender(data.from).slice(0, 1).toUpperCase();
     $('reader-date').textContent = data.date || 'Date unavailable';
     $('reader-body').textContent = data.body || '[Plain-text body unavailable; this alpha does not display HTML.]';
+    renderAttachments(data);
     $('reader').hidden = false; $('reader-empty').hidden = true;
     document.body.classList.add('reading');
     updateActions(); renderList();
