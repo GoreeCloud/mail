@@ -5,6 +5,7 @@ const $ = (id) => document.getElementById(id);
 const state = { view: 'INBOX', messages: [], active: null, email: '', busy: false, sequence: 0 };
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
+let configuredClientId = '';
 const panel = $('message-list');
 
 function announce(message, error = false) {
@@ -21,6 +22,7 @@ function shortSender(value) {
 }
 function clearReader() {
   state.active = null;
+  for (const id of ['reader-subject', 'reader-from', 'reader-date', 'reader-body', 'reader-avatar']) $(id).textContent = '';
   $('reader').hidden = true;
   $('reader-empty').hidden = false;
   document.body.classList.remove('reading');
@@ -125,7 +127,7 @@ function reflectConnection() {
   $('compose-account').textContent = connected() ? 'Sending from ' + state.email + ' through Gmail.' : 'Connect an account before composing.';
 }
 function openSettings() {
-  try { $('client-id').value = localStorage.getItem(KEY) || ''; } catch { $('client-id').value = ''; }
+  try { $('client-id').value = configuredClientId || localStorage.getItem(KEY) || ''; } catch { $('client-id').value = configuredClientId; }
   $('settings-dialog').showModal();
 }
 function saveSettings(event) {
@@ -133,12 +135,13 @@ function saveSettings(event) {
   const value = $('client-id').value.trim();
   if (!/^[a-zA-Z0-9.-]+\.apps\.googleusercontent\.com$/.test(value)) { $('client-id').setCustomValidity('Enter a Google OAuth Web client ID.'); $('client-id').reportValidity(); return; }
   $('client-id').setCustomValidity('');
-  try { localStorage.setItem(KEY, value); } catch { announce('Browser storage unavailable; the client ID was not saved.', true); }
+  configuredClientId = value;
+  try { localStorage.setItem(KEY, value); } catch { /* use this browser session only */ }
   $('settings-dialog').close(); announce('OAuth client ID configured. Connect to authorize Gmail.');
 }
 async function connect() {
-  let clientId = '';
-  try { clientId = localStorage.getItem(KEY) || ''; } catch { /* private browsing */ }
+  let clientId = configuredClientId;
+  if (!clientId) try { clientId = localStorage.getItem(KEY) || ''; } catch { /* private browsing */ }
   if (!clientId) { openSettings(); return; }
   $('connect').disabled = true;
   announce('Opening Google consent…');
@@ -183,6 +186,8 @@ $('refresh').addEventListener('click', loadMailbox);
 $('connect').addEventListener('click', connect);
 $('disconnect').addEventListener('click', () => {
   disconnect(); state.messages = []; state.email = ''; state.sequence++;
+  $('compose-form').reset(); $('search').value = '';
+  if ($('composer-dialog').open) $('composer-dialog').close();
   clearReader(); renderList(); reflectConnection(); announce('Disconnected; local in-memory mail and tokens cleared.');
 });
 $('settings').addEventListener('click', openSettings);
@@ -190,6 +195,7 @@ $('settings-form').addEventListener('submit', saveSettings);
 $('close-settings').addEventListener('click', () => $('settings-dialog').close());
 $('client-id').addEventListener('input', () => $('client-id').setCustomValidity(''));
 $('clear-config').addEventListener('click', () => {
+  configuredClientId = '';
   try { localStorage.removeItem(KEY); } catch { /* storage unavailable */ }
   $('client-id').value = ''; announce('Saved public client ID cleared.');
 });
