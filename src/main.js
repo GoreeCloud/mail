@@ -158,12 +158,15 @@ function resetSession(message) {
   reflectConnection();
   announce(message);
 }
-async function confirmAuthorizedAccount(expectedEmail) {
+async function confirmAuthorizedAccount(expectedEmail, expectedSequence) {
+  if (!connected() || state.sequence !== expectedSequence) return false;
   const profile = await getProfile();
+  if (!connected() || state.sequence !== expectedSequence) return false;
   if (!connected() || !profile.emailAddress || profile.emailAddress.toLowerCase() !== expectedEmail.toLowerCase()) {
     resetSession('Google authorization changed accounts. Disconnected to protect the original mailbox.');
     throw new Error('Google authorization returned a different account; reconnect intentionally.');
   }
+  return true;
 }
 async function actOnMessage(kind) {
   if (!state.active || state.busy) return;
@@ -175,7 +178,7 @@ async function actOnMessage(kind) {
   try {
     await requestCapability('modify');
     if (!connected() || listSequence !== state.sequence || readSequence !== state.readerSequence) return;
-    await confirmAuthorizedAccount(expectedEmail);
+    if (!await confirmAuthorizedAccount(expectedEmail, listSequence)) return;
     if (!connected() || listSequence !== state.sequence || readSequence !== state.readerSequence) return;
     let addLabelIds = [], removeLabelIds = [];
     if (kind === 'star') (old.labels.includes('STARRED') ? removeLabelIds : addLabelIds).push('STARRED');
@@ -218,18 +221,20 @@ async function connect() {
   let clientId = configuredClientId;
   if (!clientId) try { clientId = localStorage.getItem(KEY) || ''; } catch { /* private browsing */ }
   if (!clientId) { openSettings(); return; }
+  const connectSequence = state.sequence;
   $('connect').disabled = true;
   announce('Opening Google consent…');
   try {
     await connectGoogle(clientId);
     const profile = await getProfile();
+    if (!connected() || state.sequence !== connectSequence) return;
     if (!profile.emailAddress || typeof profile.emailAddress !== 'string') {
       throw new Error('Google did not return a verified account email. Disconnect and try again.');
     }
     state.email = profile.emailAddress;
     reflectConnection();
     await loadMailbox();
-  } catch (error) { announce(error.message, true); }
+  } catch (error) { if (state.sequence === connectSequence) announce(error.message, true); }
   finally { $('connect').disabled = false; }
 }
 function closeDraftDialog() {
@@ -342,7 +347,7 @@ async function submitCompose(event) {
     const listSequence = state.sequence;
     await requestCapability('send');
     if (!connected() || listSequence !== state.sequence) return;
-    await confirmAuthorizedAccount(expectedEmail);
+    if (!await confirmAuthorizedAccount(expectedEmail, listSequence)) return;
     if (!connected() || listSequence !== state.sequence) return;
     await sendMessage(input);
     if (!connected() || listSequence !== state.sequence) return;
