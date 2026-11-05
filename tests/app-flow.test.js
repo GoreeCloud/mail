@@ -85,6 +85,7 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
   };
   let readPending = deferred();
   let listPending = null;
+  let metadataFailuresRemaining = 3;
   globalThis.fetch = async (url) => {
     const request = String(url);
     if (request.endsWith('/profile')) return response({ emailAddress: 'test@example.com' });
@@ -98,6 +99,9 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
     if (request.includes('/messages/one?format=full')) return readPending.promise;
     if (request.includes('format=metadata')) {
       const id = request.split('/messages/')[1].split('?')[0];
+      if (id === 'two' && metadataFailuresRemaining-- > 0) {
+        return { status: 503, ok: false, json: async () => ({}) };
+      }
       return response(metadata(id));
     }
     if (request.includes('/modify')) return response({});
@@ -107,6 +111,11 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
   await elements.get('connect').click();
   assert.equal(elements.get('message-list').children.length, 1);
   assert.equal(elements.get('load-more').hidden, false);
+  await elements.get('load-more').click();
+  assert.equal(elements.get('message-list').children.length, 1, 'failed second page leaves previous page intact');
+  assert.equal(elements.get('load-more').hidden, false, 'failed page cursor must remain available');
+  assert.equal(elements.get('load-more').textContent, 'Retry this page');
+  assert.match(elements.get('notice').textContent, /Retry the same page/);
   await elements.get('load-more').click();
   assert.equal(elements.get('message-list').children.length, 2);
   assert.equal(elements.get('load-more').hidden, true);
