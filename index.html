@@ -7,6 +7,7 @@
   <meta name="description" content="GoreeCloud Mail — private, focused, connected email. Experimental web client.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://gmail.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>GoreeCloud Mail · Inbox</title>
+  <link rel="icon" href="./assets/mail.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles/app.css">
   <script type="module" src="./src/main.js"></script>
 </head>
@@ -44,6 +45,7 @@
         <section class="mail-list-panel" aria-label="Messages">
           <div class="list-heading"><span id="list-subtitle">Messages</span><span class="list-tag" id="list-meta">No account</span></div>
           <ul id="message-list" class="message-list" aria-label="Email messages"></ul>
+          <button id="load-more" class="outline load-more" type="button" hidden>Load more messages</button>
           <div id="list-empty" class="empty-list"><div class="empty-orb" aria-hidden="true">✉</div><strong>Your mail, your space.</strong><span>Connect an account to view messages securely.</span></div>
         </section>
         <section class="reader-panel" aria-label="Message reading pane">
@@ -52,7 +54,7 @@
             <span class="eyebrow">GORE ECOSYSTEM • MAIL</span>
             <h2>A quieter way to handle your inbox.</h2>
             <p>Read, find, and act on your email from one thoughtful workspace. Your account remains with your provider.</p>
-            <div class="feature-pills"><span>Private by default</span><span>Keyboard friendly</span><span>Provider connected</span></div>
+            <div class="feature-pills"><span>Private by default</span><span>Keyboard friendly</span><span>No mail hosting</span></div>
           </div>
           <article id="reader" class="reader-content" hidden>
             <div class="reader-top"><button id="back" class="quiet reader-back" type="button">← Back to messages</button><span class="eyebrow">CONVERSATION</span><div class="reader-actions">
