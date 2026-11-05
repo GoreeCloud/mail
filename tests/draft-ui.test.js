@@ -54,13 +54,16 @@ test('manual draft save/restore uses ciphertext and rejects a changed account', 
     createElement: () => new Element(), addEventListener() {}
   };
   let currentEmail = 'first@example.com';
+  let allowDiscard = false;
+  const windowEvents = new Map();
   globalThis.window = {
+    addEventListener: (event, callback) => windowEvents.set(event, callback),
     google: { accounts: { oauth2: { initTokenClient(config) {
       return { requestAccessToken() {
         config.callback({ access_token: 'TEST-NOT-A-REAL-TOKEN', expires_in: 3600, scope: config.scope });
       } };
     } } } },
-    confirm: () => true
+    confirm: () => allowDiscard
   };
   globalThis.fetch = async (url) => {
     if (String(url).endsWith('/profile')) return {
@@ -75,6 +78,27 @@ test('manual draft save/restore uses ciphertext and rejects a changed account', 
   try {
     await import('../src/main.js');
     await elements.get('connect').emit('click');
+    await elements.get('compose').emit('click');
+    assert.equal(elements.get('composer-dialog').open, true);
+
+    elements.get('to').value = 'recipient-only@example.com';
+    await elements.get('close-compose').emit('click');
+    assert.equal(elements.get('composer-dialog').open, true, 'Discard should warn if only To is filled');
+    elements.get('to').value = '';
+    elements.get('subject').value = 'A subject without body';
+    await elements.get('composer-dialog').emit('cancel');
+    assert.equal(elements.get('composer-dialog').open, true, 'Escape should not silently discard subject');
+    const beforeUnload = windowEvents.get('beforeunload');
+    assert.equal(typeof beforeUnload, 'function');
+    const navigation = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    beforeUnload(navigation);
+    assert.equal(navigation.defaultPrevented, true);
+    assert.equal(navigation.returnValue, '');
+
+    allowDiscard = true;
+    await elements.get('composer-dialog').emit('cancel');
+    assert.equal(elements.get('composer-dialog').open, false);
+    elements.get('subject').value = '';
     await elements.get('compose').emit('click');
     assert.equal(elements.get('composer-dialog').open, true);
     elements.get('to').value = 'someone@example.com';
