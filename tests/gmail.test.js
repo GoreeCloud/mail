@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage } from '../src/gmail.js';
+import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage, extractAttachmentSummaries } from '../src/gmail.js';
 
 test('base64url encodes and decodes UTF-8 safely', () => {
   const value = 'Hello, Görée ✉️';
@@ -72,4 +72,55 @@ test('MIME preview bounds prohibit extremely deep or broad structures', () => {
 
 test('MIME text decoder refuses oversized base64 bodies before decoding', () => {
   assert.throws(() => decodeB64Url('A'.repeat(6 * 1024 * 1024)), /4 MiB viewing limit/);
+});
+
+
+test('attachments are metadata only and untrusted names are normalized safely', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: [
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Readable text') } },
+    { mimeType: 'application/pdf', filename: 'invoice\u202Efdp.pdf\r\n<script>', body: { attachmentId: 'SECRET-ID', size: 4096 } },
+    { mimeType: 'image/png', body: { attachmentId: 'SECRET-OTHER', size: 0 } }
+  ] };
+  const summary = extractAttachmentSummaries(payload);
+  assert.equal(summary.items.length, 2);
+  assert.equal(summary.items[0].name, 'invoice�fdp.pdf��<script>');
+  assert.equal(summary.items[0].mediaType, 'application/pdf');
+  assert.equal(summary.items[0].size, 4096);
+  assert.equal(summary.items[1].name, 'Unnamed attachment');
+  assert.equal(summary.items[1].size, 0);
+  assert.equal(summary.truncated, false);
+  assert.ok(!JSON.stringify(summary).includes('SECRET-ID'));
+  assert.equal(extractPlainText(payload), 'Readable text');
+});
+
+test('attachment metadata is capped and does not fetch content or traverse attached submessages', () => {
+  const parts = Array.from({ length: 25 }, (_, i) => ({
+    mimeType: 'application/octet-stream', filename: 'item-' + i + '.bin',
+    body: { attachmentId: 'id-' + i, size: i }
+  }));
+  parts[0].parts = [{ mimeType: 'text/plain', body: { data: base64UrlEncode('not a message body') } }];
+  const summaries = extractAttachmentSummaries({ mimeType: 'multipart/mixed', parts });
+  assert.equal(summaries.items.length, 24);
+  assert.equal(summaries.truncated, true);
+  assert.equal(extractPlainText({ mimeType: 'multipart/mixed', parts }), '');
+});
+
+test('attachment summary rejects MIME trees exceeding structural limits', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: Array.from({ length: 257 },
+    () => ({ mimeType: 'text/plain', filename: 'x.bin' })) };
+  assert.throws(() => extractAttachmentSummaries(payload), /MIME structure exceeds/);
+});
+
+test('normalized messages include only inert attachment summaries', () => {
+  const message = normalizeMessage({
+    id: 'synthetic',
+    payload: { mimeType: 'multipart/mixed', parts: [
+      { mimeType: 'text/plain', body: { data: base64UrlEncode('Safe text') } },
+      { mimeType: 'application/pdf', filename: 'receipt.pdf', body: { attachmentId: 'HIDDEN-ID', size: 11 } }
+    ] }
+  });
+  assert.equal(message.body, 'Safe text');
+  assert.equal(message.attachments[0].name, 'receipt.pdf');
+  assert.equal(message.attachments[0].size, 11);
+  assert.ok(!JSON.stringify(message).includes('HIDDEN-ID'));
 });
