@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id);
 const state = {
   view: 'INBOX', messages: [], active: null, email: '', busy: false, sequence: 0,
   readerSequence: 0, listController: null, readerController: null,
-  nextPageToken: '', loading: false
+  nextPageToken: '', loading: false, pageError: false
 };
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
@@ -40,12 +40,15 @@ function clearReader() {
 function renderList() {
   panel.replaceChildren();
   $('list-empty').hidden = state.messages.length > 0;
-  $('list-empty').querySelector('strong').textContent = state.loading ? 'Loading messages…' : connected() ? 'All clear here.' : 'Your mail, your space.';
+  $('list-empty').querySelector('strong').textContent = state.loading ? 'Loading messages…'
+    : state.pageError && connected() ? 'Unable to load messages' : connected() ? 'All clear here.' : 'Your mail, your space.';
   $('list-empty').querySelector('span').textContent = state.loading
     ? 'Retrieving messages from your email provider.'
+    : state.pageError && connected() ? 'Use Refresh to retry this mailbox.'
     : connected() ? 'No messages in this view.' : 'Connect an account to view messages securely.';
   $('load-more').hidden = !connected() || !state.nextPageToken;
   $('load-more').disabled = state.loading;
+  $('load-more').textContent = state.pageError ? 'Retry this page' : 'Load more messages';
   $('list-meta').textContent = state.messages.length + ' shown';
   $('inbox-count').textContent = state.view === 'INBOX' ? String(state.messages.filter((m) => m.labels.includes('UNREAD')).length) : '';
   for (const message of state.messages) {
@@ -80,6 +83,7 @@ async function loadMailbox({ append = false } = {}) {
   if (!append) {
     state.messages = [];
     state.nextPageToken = '';
+    state.pageError = false;
     clearReader();
   }
   state.loading = true;
@@ -93,11 +97,15 @@ async function loadMailbox({ append = false } = {}) {
     const fresh = page.messages.filter((message) => !existingIds.has(message.id));
     state.messages = append ? [...state.messages, ...fresh] : page.messages;
     state.nextPageToken = page.nextPageToken;
+    state.pageError = false;
     const failures = page.failedCount
       ? ' ' + page.failedCount + ' message previews failed; retry to recover them.' : '';
     announce(state.email + ' · ' + state.messages.length + ' messages loaded.' + failures, page.failedCount > 0);
   } catch (error) {
-    if (sequence === state.sequence && error.name !== 'AbortError') announce(error.message, true);
+    if (sequence === state.sequence && error.name !== 'AbortError') {
+      state.pageError = true;
+      announce(error.message, true);
+    }
   } finally {
     if (sequence === state.sequence) {
       state.loading = false;
@@ -148,6 +156,7 @@ function resetSession(message) {
   state.sequence++;
   state.listController?.abort();
   state.nextPageToken = '';
+  state.pageError = false;
   state.loading = false;
   $('compose-form').reset();
   $('search').value = '';
