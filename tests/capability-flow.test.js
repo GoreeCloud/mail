@@ -123,6 +123,45 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     assert.equal(elements.get('reader-body').textContent, '');
     assert.equal(elements.get('message-list').children.length, 0);
     assert.equal(elements.get('connect').hidden, false);
+
+    // Delayed profile responses must not restore account details after disconnect.
+    const previousFetch = globalThis.fetch;
+    let holdNextProfile = true;
+    let completeProfile = null;
+    globalThis.fetch = async (url) => {
+      if (String(url).endsWith('/profile') && holdNextProfile) {
+        holdNextProfile = false;
+        return new Promise((resolve) => { completeProfile = resolve; });
+      }
+      return previousFetch(url);
+    };
+    const firstConnection = elements.get('connect').emit('click');
+    for (let i = 0; i < 30 && !completeProfile; i++) await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(completeProfile);
+    await elements.get('disconnect').emit('click');
+    completeProfile(json({ emailAddress: 'old@example.com' }));
+    await firstConnection;
+    assert.equal(elements.get('connect').hidden, false);
+    assert.doesNotMatch(elements.get('compose-account').textContent, /old@example.com/);
+
+    // A delayed mutation profile check must never disconnect a newly authorized account.
+    account = 'second@example.com';
+    await elements.get('connect').emit('click');
+    await elements.get('message-list').children[0].children[0].emit('click');
+    holdNextProfile = true;
+    completeProfile = null;
+    const oldModificationCount = calls.filter((path) => path.includes('/modify')).length;
+    const pendingModification = elements.get('unread').emit('click');
+    for (let i = 0; i < 30 && !completeProfile; i++) await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(completeProfile);
+    await elements.get('disconnect').emit('click');
+    account = 'third@example.com';
+    await elements.get('connect').emit('click');
+    completeProfile(json({ emailAddress: 'second@example.com' }));
+    await pendingModification;
+    assert.equal(calls.filter((path) => path.includes('/modify')).length, oldModificationCount);
+    assert.equal(elements.get('connect').hidden, true);
+    assert.match(elements.get('compose-account').textContent, /third@example.com/);
   } finally {
     disconnect();
   }
