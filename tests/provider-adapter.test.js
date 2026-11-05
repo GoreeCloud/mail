@@ -71,6 +71,24 @@ test('v1 adapter rejects incomplete or falsely advertised implementations', () =
   assert.throws(() => defineMailAdapter(malformed), /lowercase slug/);
 });
 
+test('provider contracts fail closed for inherited declarations and undeclared mutations', () => {
+  const inherited = basicConfig();
+  inherited.capabilities = Object.create(inherited.capabilities);
+  assert.throws(() => defineMailAdapter(inherited), /Missing boolean capability/);
+
+  const hiddenSend = basicConfig();
+  hiddenSend.methods.sendMessage = () => {};
+  assert.throws(() => defineMailAdapter(hiddenSend), /declared unsupported/);
+
+  const hiddenModify = basicConfig();
+  hiddenModify.methods.modifyMessage = () => {};
+  assert.throws(() => defineMailAdapter(hiddenModify), /declared unsupported/);
+
+  const inheritedMethod = basicConfig();
+  inheritedMethod.methods = Object.create(inheritedMethod.methods);
+  assert.throws(() => defineMailAdapter(inheritedMethod), /Missing required mail adapter method/);
+});
+
 test('synthetic read-only adapters can validate without granting mail mutations', () => {
   const adapter = defineMailAdapter(basicConfig());
   assert.equal(adapter.capabilities.read, true);
