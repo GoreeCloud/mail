@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { webcrypto } from 'node:crypto';
 import { disconnect } from '../src/auth.js';
 
 const ids = [...readFileSync(new URL('../index.html', import.meta.url), 'utf8')
@@ -37,7 +36,6 @@ class Element {
 }
 
 test('manual draft save/restore uses ciphertext and rejects a changed account', async () => {
-  globalThis.crypto = webcrypto;
   const elements = new Map(ids.map((id) => [id, new Element()]));
   const nav = ['INBOX', 'STARRED', 'SENT', 'ALL'].map((view) => {
     const element = new Element(); element.dataset.view = view; return element;
