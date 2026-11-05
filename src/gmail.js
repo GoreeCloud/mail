@@ -93,7 +93,7 @@ export async function listMessages(view, query = '', pageToken = '', { signal } 
     }
   }
   if (ids.length && !messages.length) throw new Error('Message metadata could not be loaded. Retry this mailbox.');
-  return { messages, nextPageToken: result.nextPageToken || '', failedCount };
+  return { messages, nextPageToken: result.nextPageToken || '', failedCount, messageIds: ids.map((item) => item.id) };
 }
 
 export async function getMessage(id, { signal } = {}) {
