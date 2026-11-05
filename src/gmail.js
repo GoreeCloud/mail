@@ -297,5 +297,24 @@ export function buildRawMessage({ to, subject, body }) {
 }
 
 export async function sendMessage(input) {
-  return api('/messages/send', { method: 'POST', body: { raw: buildRawMessage(input) }, capability: 'send' });
+  // Validate before any network request. Gmail accepted/submitted is not final delivery.
+  const raw = buildRawMessage(input);
+  let receipt;
+  try {
+    receipt = await api('/messages/send', {
+      method: 'POST', body: { raw }, capability: 'send'
+    });
+  } catch (error) {
+    // Explicit auth failures are not ambiguous delivery receipts.
+    if ([401, 403].includes(error.status) || /^(Your Google session expired|Additional Gmail permission|Unsupported Gmail capability)/.test(error.message)) {
+      throw error;
+    }
+    // A lost response after submission may follow a successfully accepted send.
+    // There is no automatic retry: that could duplicate mail.
+    throw new Error('Gmail submission could not be confirmed. Check Sent before retrying to avoid duplicates.');
+  }
+  if (!receipt || typeof receipt.id !== 'string' || !receipt.id.trim() || receipt.id.length > 256) {
+    throw new Error('Gmail did not confirm a message ID. Check Sent before retrying to avoid duplicates.');
+  }
+  return { id: receipt.id, threadId: receipt.threadId || null, status: 'accepted_by_provider' };
 }
