@@ -370,6 +370,17 @@ $('save-draft').addEventListener('click', () => openDraftDialog('save'));
 $('restore-draft').addEventListener('click', () => openDraftDialog('restore'));
 $('draft-form').addEventListener('submit', submitDraft);
 $('cancel-draft').addEventListener('click', closeDraftDialog);
+$('draft-dialog').addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeDraftDialog();
+});
+$('draft-dialog').addEventListener('close', () => {
+  // Browser-driven dialog closure must never leave a passphrase in the input.
+  $('draft-passphrase').value = '';
+  activeDraftController?.abort();
+  activeDraftController = null;
+  draftMode = null;
+});
 $('delete-draft').addEventListener('click', removeLocalDraft);
 $('close-compose').addEventListener('click', () => {
   if (!$('body').value || window.confirm('Discard this unsaved message?')) {
