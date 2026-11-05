@@ -23,6 +23,7 @@
 
 - Repository source and five product/engineering documents committed to [GoreeCloud/mail](https://github.com/GoreeCloud/mail); latest test-bearing commit verified by fresh remote clone. [Five follow-up GitHub issues](https://github.com/GoreeCloud/mail/issues) and matching GoreeCloud Mail Todoist tasks track remaining acceptance work.
 - Node syntax and **9/9 unit/structural tests: PASS** from a fresh checkout of commit `227c1d985b7dedc407a590f0e1609fea0aad4a86` on the authorized Linux laptop (Node.js v24.19.0; 2026-11-04). Coverage includes UTF-8 MIME/base64url, header injection, attachment-vs-body parsing, unique DOM IDs, CSP and responsive GC UI token presence.
+- Headless **Flatpak Chrome** static-shell smoke screenshots at **1440×900 desktop** and **390×844 mobile** (disconnected dark appearance) on authorized personal Linux laptop, 2026-11-04: HTML, CSS, and three JavaScript modules returned HTTP 200 and the expected application shell and mobile navigation were visibly present. A browser request for /favicon.ico returned 404; nonblocking polish issue. This does **not** verify actual Gmail OAuth or connected-message states, AT, all themes, UI premium signoff or full responsiveness.
 - No live email sending, account access, browser visual acceptance, native runtime or production deployment claimed.
 
 ## Open high-priority work
