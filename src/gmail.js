@@ -18,7 +18,11 @@ async function api(path, init = {}) {
     redirect: 'error'
   });
   if (response.status === 401) throw new Error('Google session expired. Please reconnect.');
-  if (!response.ok) throw new Error('Gmail request failed (HTTP ' + response.status + ').');
+  if (!response.ok) {
+    const error = new Error('Gmail request failed (HTTP ' + response.status + ').');
+    error.status = response.status;
+    throw error;
+  }
   return response.status === 204 ? {} : response.json();
 }
 
@@ -67,7 +71,34 @@ export async function getProfile({ signal } = {}) {
   return api('/profile', { signal });
 }
 
-// Pagination is explicit; partial metadata failures must not look like an empty inbox.
+// Retry transient provider failures briefly. Abort removes the scheduled retry promptly.
+function retryDelay(milliseconds, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new DOMException('Request cancelled', 'AbortError')); return; }
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', cancel); resolve(); }, milliseconds);
+    function cancel() {
+      clearTimeout(timer);
+      reject(new DOMException('Request cancelled', 'AbortError'));
+    }
+    signal?.addEventListener('abort', cancel, { once: true });
+  });
+}
+
+async function fetchMetadata(id, signal) {
+  const path = '/messages/' + encodeURIComponent(id)
+    + '?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date';
+  const retryable = new Set([429, 500, 502, 503, 504]);
+  for (let attempt = 0; ; attempt++) {
+    try { return await api(path, { signal }); }
+    catch (error) {
+      if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
+      if (attempt >= 2 || !retryable.has(error.status)) throw error;
+      await retryDelay([200, 600][attempt], signal);
+    }
+  }
+}
+
+// Pagination is transactional: never return or advance an incomplete metadata page.
 export async function listMessages(view, query = '', pageToken = '', { signal } = {}) {
   const params = new URLSearchParams({ maxResults: String(PAGE_SIZE) });
   if (view && view !== 'ALL') params.set('labelIds', view);
@@ -81,8 +112,7 @@ export async function listMessages(view, query = '', pageToken = '', { signal } 
   for (let i = 0; i < ids.length; i += 5) {
     if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
     const batch = await Promise.allSettled(ids.slice(i, i + 5).map((item) =>
-      api('/messages/' + encodeURIComponent(item.id)
-        + '?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date', { signal })
+      fetchMetadata(item.id, signal)
     ));
     for (const entry of batch) {
       if (entry.status === 'fulfilled') messages.push(normalizeMessage(entry.value));
@@ -92,8 +122,10 @@ export async function listMessages(view, query = '', pageToken = '', { signal } 
       }
     }
   }
-  if (ids.length && !messages.length) throw new Error('Message metadata could not be loaded. Retry this mailbox.');
-  return { messages, nextPageToken: result.nextPageToken || '', failedCount, messageIds: ids.map((item) => item.id) };
+  // Return nothing on a partial failure: the UI keeps the previous page cursor.
+  if (failedCount) throw new Error('Unable to load ' + failedCount
+    + ' message previews. Retry the same page; no messages were skipped.');
+  return { messages, nextPageToken: result.nextPageToken || '', failedCount: 0 };
 }
 
 export async function getMessage(id, { signal } = {}) {
