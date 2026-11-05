@@ -32,7 +32,16 @@ async function api(path, init = {}) {
 }
 
 function headerValue(headers, key) {
-  return (headers || []).find((item) => item.name?.toLowerCase() === key.toLowerCase())?.value || '';
+  if (!Array.isArray(headers)) return '';
+  for (let index = 0; index < Math.min(headers.length, 256); index++) {
+    const entry = headers[index];
+    if (entry && typeof entry.name === 'string'
+        && typeof entry.value === 'string'
+        && entry.name.toLowerCase() === key.toLowerCase()) {
+      return entry.value.slice(0, 8192);
+    }
+  }
+  return '';
 }
 
 // Read MIME text defensively. The alpha deliberately does not render HTML or download
