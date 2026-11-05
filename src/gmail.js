@@ -17,7 +17,11 @@ async function api(path, init = {}) {
     credentials: 'omit',
     redirect: 'error'
   });
-  if (response.status === 401) throw new Error('Google session expired. Please reconnect.');
+  if (response.status === 401) {
+    const error = new Error('Google session expired. Please reconnect.');
+    error.status = 401;
+    throw error;
+  }
   if (!response.ok) {
     const error = new Error('Gmail request failed (HTTP ' + response.status + ').');
     error.status = response.status;
@@ -117,6 +121,8 @@ export async function listMessages(view, query = '', pageToken = '', { signal } 
     for (const entry of batch) {
       if (entry.status === 'fulfilled') messages.push(normalizeMessage(entry.value));
       else {
+        // Expired or denied authorization is not an ordinary transient preview error.
+        if ([401, 403].includes(entry.reason?.status)) throw entry.reason;
         if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
         failedCount++;
       }
