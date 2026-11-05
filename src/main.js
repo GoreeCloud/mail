@@ -1,5 +1,8 @@
-import { connectGoogle, connected, disconnect, requestCapability } from './auth.js';
-import { getProfile, listMessages, getMessage, modifyMessage, sendMessage } from './gmail.js';
+import { gmailAdapter } from './providers/gmail.js';
+const {
+  connect: connectGoogle, connected, disconnect, requestCapability,
+  getProfile, listMessages, getMessage, modifyMessage, sendMessage
+} = gmailAdapter;
 import { hasEncryptedDraft, saveEncryptedDraft, restoreEncryptedDraft, deleteEncryptedDraft } from './drafts.js';
 
 const $ = (id) => document.getElementById(id);
