@@ -9,6 +9,7 @@
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
 - Gmail API connection through Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
 - Inbox, starred, sent, all mail; server-side search and explicit Load more pagination; safe plain-text reading; user-triggered read/unread, star/unstar, archive, and plain-text send.
+- A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
 - Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
 - Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
 
