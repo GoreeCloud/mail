@@ -11,6 +11,7 @@
 - Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview) and a collapsed, read-only message-header inspector; user-triggered read/unread, star/unstar, archive, and plain-text send with confirmed Gmail message IDs and explicit uncertain-status warnings.
 - A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
 - Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
+- Provider metadata type checks and bounded display fields reduce UI failure risk from malformed Gmail responses.
 - Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
 
 **Sending caveat:** Gmail accepting a message ID confirms provider submission, **not** recipient delivery. A lost or malformed send response produces an unknown-status warning. Check Gmail Sent before retrying to avoid duplicates; the client never automatically retries sending.
