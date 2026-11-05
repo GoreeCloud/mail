@@ -9,10 +9,10 @@
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
 - Gmail API connection through Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
 - Inbox, starred, sent, all mail; server-side search and explicit Load more pagination; safe plain-text reading; user-triggered read/unread, star/unstar, archive, and plain-text send.
-- Ephemeral OAuth tokens and messages in memory (not persisted); external images, message HTML, and tracking pixels are never rendered.
+- Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
 - Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
 
-**Not implemented yet:** multi-provider adapters, true encrypted offline storage, sync queue, durable drafts, threaded view, attachments, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
+**Not implemented yet:** multi-provider adapters, full encrypted offline mailbox storage, sync queue, autosaved/provider-synchronized drafts, threaded view, attachments, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
 
 ## Run locally
 
@@ -30,11 +30,16 @@ npm test
 
 Sending is a user-triggered provider operation, with no hidden relay or server. Email content is not stored on a GoreeCloud server. This browser-only foundation is **not yet audited** for production use or Gmail OAuth verification.
 
+## Local encrypted drafts
+
+Compose offers **Save encrypted draft** and **Restore local draft**, using a user-chosen passphrase. Only one encrypted snapshot can be kept per browser origin; it is **not** Gmail Drafts or automatic autosave. Local Disconnect does not erase the ciphertext. See [Encrypted Drafts](docs/ENCRYPTED_DRAFTS.md) before using it for important messages.
+
 ## Documentation
 
 - [Founder's product specification](docs/PRODUCT_SPECIFICATION.md)
 - [Architecture and provider boundaries](docs/ARCHITECTURE.md)
 - [Security and privacy model](docs/SECURITY.md)
+- [Encrypted local drafts and limitations](docs/ENCRYPTED_DRAFTS.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Release plan and default mail gate](docs/ROADMAP.md)
 - [GoreeCloud UI reference](https://github.com/GoreeCloud/gc-ui)
