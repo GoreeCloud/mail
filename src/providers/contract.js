@@ -32,7 +32,9 @@ export function defineMailAdapter({ id, displayName, transport, capabilities, me
     if (!MAIL_CAPABILITIES.includes(key)) throw new Error('Unknown mail capability: ' + key);
   }
   for (const key of MAIL_CAPABILITIES) {
-    if (typeof capabilities[key] !== 'boolean') throw new Error('Missing boolean capability: ' + key);
+    if (!Object.hasOwn(capabilities, key) || typeof capabilities[key] !== 'boolean') {
+      throw new Error('Missing boolean capability: ' + key);
+    }
   }
   if (!capabilities.read) {
     throw new Error('Mail adapter v1 requires read capability.');
@@ -44,7 +46,7 @@ export function defineMailAdapter({ id, displayName, transport, capabilities, me
     if (!ALL_METHODS.has(key)) throw new Error('Unapproved mail adapter method: ' + key);
   }
   for (const method of REQUIRED_METHODS) {
-    if (typeof methods[method] !== 'function') {
+    if (!Object.hasOwn(methods, method) || typeof methods[method] !== 'function') {
       throw new Error('Missing required mail adapter method: ' + method);
     }
   }
@@ -53,6 +55,11 @@ export function defineMailAdapter({ id, displayName, transport, capabilities, me
     || ((capabilities.modify || capabilities.send)
       && typeof methods.requestCapability !== 'function')) {
     throw new Error('Mail adapter claims an operation without its implementation.');
+  }
+
+  if ((!capabilities.modify && Object.hasOwn(methods, 'modifyMessage'))
+    || (!capabilities.send && Object.hasOwn(methods, 'sendMessage'))) {
+    throw new Error('Mail adapter exposes an operation declared unsupported.');
   }
 
   return Object.freeze({
