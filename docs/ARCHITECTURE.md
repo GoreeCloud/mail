@@ -19,10 +19,11 @@ The product is a **mail user agent** (MUA). It does not host accounts or deliver
 ## Current implementation
 
 - Static ES modules and CSS. No app backend, custom SMTP relay, framework runtime, cookies, analytics SDK or external message cache.
-- **Auth:** Google Identity Services OAuth token client, public client ID entered per browser; token is held only in JavaScript memory, cleared on disconnect/expiry. Public client ID alone is stored in localStorage.
-- **Gmail:** requests to https://gmail.googleapis.com/gmail/v1/users/me only, with explicit modify/send scopes; the API is the server, not GoreeCloud. Bounded message-metadata retrieval and server-side search.
+- **Auth:** Google Identity Services OAuth token client, public client ID entered per browser; token is held only in JavaScript memory, cleared on disconnect/expiry. Initial consent requests gmail.readonly; explicit user-triggered actions request gmail.modify or gmail.send alongside readonly. Granular consent scope receipts are checked. Public client ID alone is stored in localStorage.
+- **Gmail:** requests to https://gmail.googleapis.com/gmail/v1/users/me only, with capability-checked scopes; the API is the server, not GoreeCloud. Five-at-a-time metadata retrieval, 30-message pages, explicit Load more, partial-failure reporting and server-side search.
 - **Reading:** Gmail text/plain MIME parts decoded to Unicode and assigned with textContent; HTML bodies and remote images are never executed or loaded.
 - **Writing:** plain-text MIME built with header checks and UTF-8 base64 transfer encoding; Gmail accepts submission and returns an ID. No promise of final delivery or remote recall.
+- **Asynchronous safety:** AbortControllers and request-generation checks suppress stale reader/list responses. Account email is rechecked after privilege escalation before a sensitive action; a changed account disconnects locally. Provider-side accepted operations cannot be undone by cancellation.
 - **Storage:** in-memory messages and composer. No encrypted persistent offline mail yet; switching/reloading loses unsent local compose text. The CSS and HTML app shell may be cached by browser normally, not message data.
 - **UI:** GC UI semantic palette, spacing and radius snapshot; migrate to the released shared token distribution when integration is verified.
 
