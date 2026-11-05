@@ -93,3 +93,53 @@ test('malformed encrypted draft headers are rejected without overwriting', async
   items.set(key, JSON.stringify(envelope));
   await assert.rejects(restoreEncryptedDraft(draft.account, 'secure passphrase 123', options), /format is not supported/);
 });
+
+
+test('cancelled save cannot persist ciphertext even after encryption completes', async () => {
+  const { options, draft } = fixture();
+  const controller = new AbortController();
+  const cryptoWithAbort = {
+    getRandomValues: (value) => webcrypto.getRandomValues(value),
+    subtle: {
+      importKey: (...args) => webcrypto.subtle.importKey(...args),
+      deriveKey: (...args) => webcrypto.subtle.deriveKey(...args),
+      encrypt: async (...args) => {
+        const ciphertext = await webcrypto.subtle.encrypt(...args);
+        controller.abort();
+        return ciphertext;
+      }
+    }
+  };
+  await assert.rejects(
+    saveEncryptedDraft(draft, 'secure passphrase 123', {
+      ...options, cryptography: cryptoWithAbort, signal: controller.signal
+    }),
+    (error) => error.name === 'AbortError'
+  );
+  assert.equal(hasEncryptedDraft(options), false);
+});
+
+test('cancelled restore cannot repopulate data after decryption completes', async () => {
+  const { options, draft } = fixture();
+  await saveEncryptedDraft(draft, 'secure passphrase 123', options);
+  const controller = new AbortController();
+  const cryptoWithAbort = {
+    getRandomValues: (value) => webcrypto.getRandomValues(value),
+    subtle: {
+      importKey: (...args) => webcrypto.subtle.importKey(...args),
+      deriveKey: (...args) => webcrypto.subtle.deriveKey(...args),
+      decrypt: async (...args) => {
+        const cleartext = await webcrypto.subtle.decrypt(...args);
+        controller.abort();
+        return cleartext;
+      }
+    }
+  };
+  await assert.rejects(
+    restoreEncryptedDraft(draft.account, 'secure passphrase 123', {
+      ...options, cryptography: cryptoWithAbort, signal: controller.signal
+    }),
+    (error) => error.name === 'AbortError'
+  );
+  assert.equal(hasEncryptedDraft(options), true);
+});
