@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { connectGoogle, disconnect } from '../src/auth.js';
-import { listMessages } from '../src/gmail.js';
+import { connectGoogle, disconnect, requestCapability } from '../src/auth.js';
+import { listMessages, sendMessage } from '../src/gmail.js';
 
 const originalFetch = globalThis.fetch;
 const originalWindow = globalThis.window;
@@ -120,5 +120,73 @@ test('Gmail metadata retry backoff is cancellable', async () => {
     await assert.rejects(listMessages('INBOX', '', '', { signal: controller.signal }),
       (error) => error.name === 'AbortError');
     assert.equal(attempts, 1, 'aborted retry must not issue another HTTP request');
+  });
+});
+
+
+const draft = { to: 'test@example.com', subject: 'Synthetic test', body: 'No real email was sent.' };
+
+test('Gmail submission requires a message ID and distinguishes accepted from delivered', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async (url, init) => {
+      requests++;
+      assert.ok(String(url).endsWith('/messages/send'));
+      assert.equal(init.method, 'POST');
+      assert.equal(init.credentials, 'omit');
+      const submitted = JSON.parse(init.body);
+      assert.match(submitted.raw, /^[A-Za-z0-9_-]+$/);
+      assert.ok(!submitted.raw.includes('No real email was sent'));
+      return response({ id: 'synthetic-message-123', threadId: 'synthetic-thread-1' });
+    };
+    const result = await sendMessage(draft);
+    assert.deepEqual(result, {
+      id: 'synthetic-message-123',
+      threadId: 'synthetic-thread-1',
+      status: 'accepted_by_provider'
+    });
+    assert.equal(requests, 1);
+  });
+});
+
+test('Gmail 200 without a message ID is an unknown submission, not confirmation', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({}); };
+    await assert.rejects(sendMessage(draft), /Check Sent before retrying/);
+    assert.equal(requests, 1, 'never auto-retry an ambiguous submission');
+  });
+});
+
+test('lost Gmail send responses are treated as ambiguous with no automatic retries', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async () => {
+      requests++;
+      throw new TypeError('Simulated connection loss after send');
+    };
+    await assert.rejects(sendMessage(draft), /Check Sent before retrying/);
+    assert.equal(requests, 1);
+  });
+});
+
+test('explicit Gmail authorization denial is surfaced without an ambiguous-send claim', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    globalThis.fetch = async () => response({}, 403);
+    await assert.rejects(sendMessage(draft), (error) => error.status === 403);
+  });
+});
+
+test('invalid sending input is rejected before any provider network call', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({ id: 'never' }); };
+    await assert.rejects(sendMessage({ ...draft, to: 'bad-address' }), /ASCII email addresses/);
+    assert.equal(requests, 0);
   });
 });
