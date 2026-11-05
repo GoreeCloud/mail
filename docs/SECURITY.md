@@ -6,6 +6,7 @@
 
 - Treat provider responses, message subjects, headers, bodies, attachments, and all external links as untrusted data.
 - Do not execute HTML, inline event handlers, scripts, active attachments, remote images, or tracking pixels from mail.
+- The message reader's attachment section displays at most 24 inert, untrusted metadata summaries, never attachment IDs or active download controls. Filenames have control/bidi characters neutralized. No malware scanning is claimed and a listed filename does not imply safety.
 - Current message viewer uses textContent only; text/plain content may include malicious wording, so it is never trusted as commands. Preview MIME traversal and body decoding are bounded (256 nodes, 32 nesting levels, 4 MiB decoded text); unsupported charsets fall back to UTF-8.
 - OAuth access tokens are short-lived and **in memory only**, never in URL parameters, localStorage, logs or repository.
 - The public Google OAuth client ID is stored locally; additionally, a user may deliberately store **one encrypted local draft snapshot**. Received mail and access tokens are never saved to browser storage. The draft's address and contents are encrypted, but browser extensions and malicious same-origin scripts remain in the threat model.
@@ -20,7 +21,7 @@
 
 1. Google Identity Services compatibility, consent screen verification and app-origin configuration require real-browser testing.
 2. The browser has **manual passphrase-encrypted local draft save/restore**, not automatic drafts or provider synchronization. No persistent received-mail cache or full offline mailbox is implemented. Saved ciphertext remains after local Disconnect until explicitly deleted or browser storage is cleared.
-3. Plain text only: HTML-only emails display a safety notice; rich message rendering and attachments are not yet supported. The bounded charset-aware viewer may reject unusually large or deeply nested legitimate email and is not an RFC-complete MIME implementation.
+3. Plain text only: HTML-only emails display a safety notice; rich message rendering and attachment content handling are not yet supported. Read-only attachment summaries now display sanitized filenames, media types and provider-reported sizes, **without fetching or previewing file content**. The bounded charset-aware viewer may reject unusually large or deeply nested legitimate email and is not an RFC-complete MIME implementation.
 4. Incremental read/modify/send permission requests, receipt validation, and account continuity checks are implemented and tested with mocks. Real Google OAuth consent, scope verification, restricted-scope app verification, and account-switch behavior still require live-browser testing.
 5. Sending accepts recipient list and subject with basic validation, but production MIME headers, internationalized mailboxes and all edge cases require a reviewed mail library and fuzz testing. Manual encrypted drafts use PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM; user passphrases are not stored or recoverable. This crypto module has unit tests, **not** an independent audit.
 6. The current code does not yet implement CSP reporting, phishing scanning, key management, malware scanning, certificate pinning, S/MIME or OpenPGP.
