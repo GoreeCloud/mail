@@ -1,4 +1,5 @@
 import { getToken } from './auth.js';
+import { summarizeMessageHeaders } from './message-headers.js';
 
 const BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const PAGE_SIZE = 30;
@@ -142,7 +143,10 @@ export function extractAttachmentSummaries(payload) {
 export function normalizeMessage(message) {
   const headers = message.payload?.headers || [];
   const attachmentInfo = extractAttachmentSummaries(message.payload);
+  const safeHeaders = summarizeMessageHeaders(headers);
   return {
+    headers: safeHeaders.items,
+    headersTruncated: safeHeaders.truncated,
     attachments: attachmentInfo.items,
     attachmentsTruncated: attachmentInfo.truncated,
     id: message.id,
