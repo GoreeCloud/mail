@@ -180,3 +180,14 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 
 .mobile-settings{display:none}
 @media(max-width:680px){.mobile-settings{display:inline-flex;align-items:center;justify-content:center;min-width:40px;padding:5px 8px}}
+
+/* Deliberate local encrypted-draft actions; no automatic plaintext persistence. */
+.composer-dialog .dialog-footer{align-items:center}
+#draft-dialog .dialog-footer{align-items:center}
+@media(max-width:680px){
+  .composer-dialog .dialog-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .composer-dialog .dialog-footer button{width:100%;min-width:0;padding:10px 8px;font-size:12px}
+  #draft-dialog .dialog-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  #draft-dialog .dialog-footer button{width:100%;min-width:0;padding:10px 7px}
+  #delete-draft{grid-column:1 / -1}
+}
