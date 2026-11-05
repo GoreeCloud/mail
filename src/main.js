@@ -206,6 +206,7 @@ $('close-compose').addEventListener('click', () => {
 $('star').addEventListener('click', () => actOnMessage('star'));
 $('unread').addEventListener('click', () => actOnMessage('unread'));
 $('archive').addEventListener('click', () => actOnMessage('archive'));
+$('back').addEventListener('click', clearReader);
 let timer;
 $('search').addEventListener('input', () => {
   clearTimeout(timer);
