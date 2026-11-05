@@ -26,6 +26,8 @@ Only **one** draft snapshot is kept per browser origin. Saving another requires 
 
 Encryption protects a stored draft snapshot against casual inspection of browser storage without the passphrase. It **does not** protect against compromised browser extensions, malicious same-origin JavaScript, a compromised device, password interception while typing, or loss of browser storage.
 
+The composer warns before discarding unsent recipient, subject or body text (including Escape) and asks the browser for a generic navigation warning when possible. These warnings do **not** replace manual encrypted saving, and some mobile/browser navigation can still lose unsaved data.
+
 The passphrase is held in the form only while used and the field is cleared afterward; JavaScript runtime memory wiping cannot be guaranteed. Use a long, unique passphrase. A forgotten passphrase cannot be recovered. Browser storage quotas and private-browsing policies may prevent persistence.
 
 Web Crypto plus PBKDF2 is an alpha compatibility approach; before Stable, evaluate stronger password-hardening KDFs, native device-backed key storage, recovery policy, migration, crash consistency, vault isolation, accessibility, browser state retention, and independent security review.
