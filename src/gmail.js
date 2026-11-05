@@ -8,7 +8,7 @@ async function api(path, init = {}) {
   const response = await fetch(BASE + path, {
     method: init.method || 'GET',
     headers: {
-      Authorization: 'Bearer ' + getToken(),
+      Authorization: 'Bearer ' + getToken(init.capability || 'read'),
       ...(init.body ? { 'Content-Type': 'application/json' } : {})
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
@@ -103,7 +103,7 @@ export async function getMessage(id, { signal } = {}) {
 
 export async function modifyMessage(id, { addLabelIds = [], removeLabelIds = [] }) {
   return api('/messages/' + encodeURIComponent(id) + '/modify', {
-    method: 'POST', body: { addLabelIds, removeLabelIds }
+    method: 'POST', body: { addLabelIds, removeLabelIds }, capability: 'modify'
   });
 }
 
@@ -174,5 +174,5 @@ export function buildRawMessage({ to, subject, body }) {
 }
 
 export async function sendMessage(input) {
-  return api('/messages/send', { method: 'POST', body: { raw: buildRawMessage(input) } });
+  return api('/messages/send', { method: 'POST', body: { raw: buildRawMessage(input) }, capability: 'send' });
 }
