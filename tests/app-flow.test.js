@@ -74,7 +74,7 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
   };
   globalThis.window = {
     google: { accounts: { oauth2: { initTokenClient: (options) => ({
-      requestAccessToken: () => options.callback({ access_token: 'fake-token', expires_in: 3600 })
+      requestAccessToken: () => options.callback({ access_token: 'fake-token', expires_in: 3600, scope: options.scope })
     }) } } },
     confirm: () => true
   };
