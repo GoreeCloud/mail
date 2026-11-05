@@ -4,7 +4,7 @@
   "version": "0.1.0-alpha.1",
   "type": "module",
   "scripts": {
-    "check": "node --check src/auth.js && node --check src/gmail.js && node --check src/drafts.js && node --check src/main.js",
+    "check": "node --check src/auth.js && node --check src/gmail.js && node --check src/drafts.js && node --check src/main.js && node --check src/providers/contract.js && node --check src/providers/gmail.js",
     "test": "node --test tests/*.test.js"
   },
   "engines": {
