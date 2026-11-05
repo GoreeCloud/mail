@@ -14,6 +14,7 @@
 - Requests are HTTPS-only to the configured Gmail API origin. CSP restricts script, frame and connect origins, with no inline JS.
 - Opening an email is read-only and does not mark it read. Initial Gmail authorization requests gmail.readonly only; explicit mutation and sending request gmail.modify and gmail.send respectively. Gmail.modify is itself a broad restricted scope that also permits sending, so user-facing consent must explain the provider's full grant.
 - No external analytics/tracking SDK. No remote mail storage owned by GoreeCloud.
+- Gmail send attempts never retry automatically. Only a nonempty returned Gmail message ID is treated as provider-accepted; ambiguous responses or network errors preserve the composer and tell the user to check Gmail Sent before retrying, because duplicates are possible. Provider acceptance is not recipient delivery.
 - Error messages intentionally omit Gmail response bodies to reduce accidental private-data leakage.
 - Nonempty composer dismissal now requires user confirmation on Discard/Escape; a standard before-unload request is issued where supported, but does not guarantee recovery on mobile crashes or unsupported navigation paths.
 - In-flight mailbox/reader requests are cancelled or invalidated on disconnect and view change, and stale Gmail account-profile responses are ignored rather than altering a newer session. UI race tests confirm stale results remain hidden, but this does not undo server-side actions already submitted.
