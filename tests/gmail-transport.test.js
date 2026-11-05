@@ -33,9 +33,10 @@ function metadata(id) {
   ] } };
 }
 
-test('Gmail page preserves cursors and reports partial metadata errors', async () => {
+test('Gmail page retries a transient metadata failure without skipping messages', async () => {
   await withFakeGoogle(async () => {
     const visited = [];
+    let failedOnce = false;
     globalThis.fetch = async (url, init) => {
       visited.push(String(url));
       assert.equal(init.headers.Authorization, 'Bearer TEST-NOT-REAL');
@@ -44,12 +45,13 @@ test('Gmail page preserves cursors and reports partial metadata errors', async (
         messages: [{ id: 'one' }, { id: 'two' }, { id: 'three' }],
         nextPageToken: 'next-cursor'
       });
-      if (String(url).includes('/messages/two')) return response({}, 503);
+      if (String(url).includes('/messages/two') && !failedOnce) { failedOnce = true; return response({}, 503); }
       return response(metadata(String(url).split('/messages/')[1].split('?')[0]));
     };
     const page = await listMessages('INBOX', 'from:sample@example.com');
-    assert.equal(page.messages.length, 2);
-    assert.equal(page.failedCount, 1);
+    assert.equal(page.messages.length, 3);
+    assert.equal(page.failedCount, 0);
+    assert.equal(failedOnce, true);
     assert.equal(page.nextPageToken, 'next-cursor');
     assert.ok(visited[0].includes('q=from%3Asample%40example.com'));
     assert.ok(visited[0].includes('labelIds=INBOX'));
@@ -63,7 +65,7 @@ test('all failed Gmail metadata requests never masquerade as an empty inbox', as
   await withFakeGoogle(async () => {
     globalThis.fetch = async (url) => String(url).includes('/messages?')
       ? response({ messages: [{ id: 'one' }] }) : response({}, 429);
-    await assert.rejects(listMessages('INBOX'), /metadata could not be loaded/i);
+    await assert.rejects(listMessages('INBOX'), /Unable to load 1 message previews/i);
   });
 });
 
@@ -72,5 +74,20 @@ test('empty Gmail pages remain successful and unpaginated', async () => {
     globalThis.fetch = async () => response({ resultSizeEstimate: 0 });
     const page = await listMessages('SENT');
     assert.deepEqual(page, { messages: [], nextPageToken: '', failedCount: 0 });
+  });
+});
+
+test('persistent partial metadata failures reject the whole page instead of advancing the cursor', async () => {
+  await withFakeGoogle(async () => {
+    let attempts = 0;
+    globalThis.fetch = async (url) => {
+      if (String(url).includes('/messages?')) return response({
+        messages: [{ id: 'one' }, { id: 'two' }], nextPageToken: 'would-skip-two'
+      });
+      if (String(url).includes('/messages/two')) { attempts++; return response({}, 503); }
+      return response(metadata('one'));
+    };
+    await assert.rejects(listMessages('INBOX'), /Unable to load 1 message previews/);
+    assert.equal(attempts, 3, 'bounded retries: first request and two retries');
   });
 });
