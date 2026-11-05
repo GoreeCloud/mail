@@ -13,6 +13,7 @@
 - Gmail modifies and sends only on explicit user interactions. Mail reading and modify/send scopes require high-trust OAuth consent.
 - No external analytics/tracking SDK. No remote mail storage owned by GoreeCloud.
 - Error messages intentionally omit Gmail response bodies to reduce accidental private-data leakage.
+- In-flight mailbox/reader requests are cancelled or invalidated on disconnect and view change; UI race tests confirm stale results remain hidden, but this does not undo server-side actions already submitted.
 
 ## Known limits and open risks
 
@@ -22,9 +23,9 @@
 4. Gmail modify/send scopes are broad for a prototype. Split read/send scopes and use incremental authorization before release.
 5. Sending accepts recipient list and subject with basic validation, but production MIME headers, internationalized mailboxes and all edge cases require a reviewed mail library and fuzz testing.
 6. The current code does not yet implement CSP reporting, phishing scanning, key management, malware scanning, certificate pinning, S/MIME or OpenPGP.
-7. Metadata retrieval may be partial on rate limiting; improve per-item error visibility and paginated loading.
+7. Metadata failures are counted and disclosed, and list pagination is available; introduce quota-aware retry and better recovery UX, with tests against live provider errors.
 8. Revocation currently discards local tokens; users may need to revoke OAuth grants at their Google account settings.
-9. No system-level browser cache audit, screen-reader audit or penetration test has been completed.
+9. Headless Chrome shell screenshots and simulated asynchronous UI tests have been performed, but no system-level browser cache audit, real-Gmail acceptance, screen-reader audit or penetration test is complete.
 
 ## Development and contribution safeguards
 
