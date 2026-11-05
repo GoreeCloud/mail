@@ -88,7 +88,26 @@
       <label for="to">To</label><input id="to" name="to" type="text" placeholder="recipient@example.com" required>
       <label for="subject">Subject</label><input id="subject" name="subject" type="text" maxlength="300" required>
       <label for="body">Message</label><textarea id="body" name="body" rows="10" required></textarea>
-      <div class="dialog-footer"><button type="button" id="close-compose" class="outline">Discard</button><button id="send" type="submit" class="primary">Send with Gmail</button></div>
+      <div class="dialog-footer">
+        <button type="button" id="close-compose" class="outline">Discard</button>
+        <button type="button" id="restore-draft" class="outline">Restore local draft</button>
+        <button type="button" id="save-draft" class="outline">Save encrypted draft</button>
+        <button id="send" type="submit" class="primary">Send with Gmail</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="draft-dialog" class="dialog" aria-labelledby="draft-title">
+    <form id="draft-form">
+      <div class="dialog-heading"><span class="eyebrow">PRIVATE LOCAL SNAPSHOT</span><h2 id="draft-title">Encrypted draft</h2></div>
+      <p id="draft-help">Save or restore one browser-local encrypted draft with a passphrase you choose.</p>
+      <label for="draft-passphrase">Draft passphrase (12 or more characters)</label>
+      <input id="draft-passphrase" type="password" autocomplete="off" minlength="12" maxlength="1024" required>
+      <p class="support">Only one encrypted snapshot is kept in this browser. No recovery is possible if you forget your passphrase. This is not a Gmail draft or automatic autosave.</p>
+      <div class="dialog-footer">
+        <button id="delete-draft" type="button" class="quiet">Delete saved draft</button>
+        <button id="cancel-draft" type="button" class="outline">Cancel</button>
+        <button id="confirm-draft" type="submit" class="primary">Save encrypted draft</button>
+      </div>
     </form>
   </dialog>
   <div id="alert" class="sr-only" role="alert" aria-live="assertive"></div>
