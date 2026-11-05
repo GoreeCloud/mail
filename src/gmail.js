@@ -151,9 +151,15 @@ export function extractAttachmentSummaries(payload) {
 }
 
 export function normalizeMessage(message) {
-  const headers = message.payload?.headers || [];
+  if (!message || typeof message !== 'object'
+    || typeof message.id !== 'string' || !message.id.trim() || message.id.length > 256) {
+    throw new Error('Provider returned invalid message metadata. Retry this mailbox.');
+  }
+  const headers = Array.isArray(message.payload?.headers) ? message.payload.headers : [];
   const attachmentInfo = extractAttachmentSummaries(message.payload);
   const safeHeaders = summarizeMessageHeaders(headers);
+  const displayHeader = (key) => safeHeaders.items.find((item) =>
+    item.name.toLowerCase() === key.toLowerCase())?.value || '';
   return {
     headers: safeHeaders.items,
     headersTruncated: safeHeaders.truncated,
