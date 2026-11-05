@@ -24,7 +24,8 @@ The product is a **mail user agent** (MUA). It does not host accounts or deliver
 - **Reading:** Gmail text/plain MIME parts decoded to Unicode and assigned with textContent; HTML bodies and remote images are never executed or loaded.
 - **Writing:** plain-text MIME built with header checks and UTF-8 base64 transfer encoding; Gmail accepts submission and returns an ID. No promise of final delivery or remote recall.
 - **Asynchronous safety:** AbortControllers and request-generation checks suppress stale reader/list responses. Account email is rechecked after privilege escalation before a sensitive action; a changed account disconnects locally. Provider-side accepted operations cannot be undone by cancellation.
-- **Storage:** in-memory messages and composer. No encrypted persistent offline mail yet; switching/reloading loses unsent local compose text. The CSS and HTML app shell may be cached by browser normally, not message data.
+- **Storage:** received messages, OAuth tokens, and active composer content remain in memory. A deliberate **Save encrypted draft** action stores one PBKDF2-SHA256/AES-256-GCM encrypted snapshot in local browser storage; contents and account identity are authenticated and encrypted. No autosave, Gmail draft syncing, encrypted offline mailbox, or robust backup is implemented. See [ENCRYPTED_DRAFTS.md](ENCRYPTED_DRAFTS.md).
+- **Encrypted draft lifecycle:** user-supplied passphrase only, one snapshot per origin, explicit replacement/deletion, account-bound decryption and cancellation safety. Does not survive cleared browser data; local disconnect intentionally preserves an explicitly saved ciphertext snapshot.
 - **UI:** GC UI semantic palette, spacing and radius snapshot; migrate to the released shared token distribution when integration is verified.
 
 ## Provider adapter evolution
