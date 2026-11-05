@@ -6,6 +6,7 @@ const state = { view: 'INBOX', messages: [], active: null, email: '', busy: fals
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
+let readingGeneration = 0;
 const panel = $('message-list');
 
 function announce(message, error = false) {
