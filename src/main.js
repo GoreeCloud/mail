@@ -12,6 +12,7 @@ const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mai
 const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
 let draftMode = null;
+let activeDraftController = null;
 const panel = $('message-list');
 
 function announce(message, error = false) {
@@ -151,9 +152,7 @@ function resetSession(message) {
   $('compose-form').reset();
   $('search').value = '';
   if ($('composer-dialog').open) $('composer-dialog').close();
-  if ($('draft-dialog').open) $('draft-dialog').close();
-  $('draft-passphrase').value = '';
-  draftMode = null;
+  closeDraftDialog();
   clearReader();
   renderList();
   reflectConnection();
@@ -234,6 +233,8 @@ async function connect() {
   finally { $('connect').disabled = false; }
 }
 function closeDraftDialog() {
+  activeDraftController?.abort();
+  activeDraftController = null;
   $('draft-passphrase').value = '';
   draftMode = null;
   if ($('draft-dialog').open) $('draft-dialog').close();
@@ -268,28 +269,31 @@ async function submitDraft(event) {
   const account = state.email;
   const seq = state.sequence;
   const passphrase = $('draft-passphrase').value;
+  const controller = new AbortController();
+  activeDraftController = controller;
   state.busy = true;
   $('confirm-draft').disabled = true;
   announce(mode === 'save' ? 'Encrypting local draft…' : 'Unlocking local draft…');
   try {
     if (mode === 'save') {
       const draft = { account, to: $('to').value, subject: $('subject').value, body: $('body').value };
-      await saveEncryptedDraft(draft, passphrase);
+      await saveEncryptedDraft(draft, passphrase, { signal: controller.signal });
     } else {
-      const draft = await restoreEncryptedDraft(account, passphrase);
-      if (!connected() || seq !== state.sequence) return;
+      const draft = await restoreEncryptedDraft(account, passphrase, { signal: controller.signal });
+      if (controller.signal.aborted || !connected() || seq !== state.sequence) return;
       $('to').value = draft.to;
       $('subject').value = draft.subject;
       $('body').value = draft.body;
     }
-    if (connected() && seq === state.sequence) {
+    if (!controller.signal.aborted && connected() && seq === state.sequence) {
       closeDraftDialog();
       announce(mode === 'save' ? 'Encrypted local draft saved in this browser.'
         : 'Encrypted draft unlocked for this account.');
     }
   } catch (error) {
-    if (connected() && seq === state.sequence) announce(error.message, true);
+    if (error.name !== 'AbortError' && connected() && seq === state.sequence) announce(error.message, true);
   } finally {
+    if (activeDraftController === controller) activeDraftController = null;
     // Passwords must not remain in the passphrase form after success or failure.
     $('draft-passphrase').value = '';
     $('confirm-draft').disabled = false;
@@ -298,6 +302,7 @@ async function submitDraft(event) {
 }
 
 function removeLocalDraft() {
+  if (state.busy) { announce('Complete or cancel the current draft operation first.', true); return; }
   try {
     if (!hasEncryptedDraft()) { announce('No encrypted local draft to delete.'); return; }
     if (!window.confirm('Permanently delete this browser-local encrypted draft?')) return;
