@@ -34,3 +34,13 @@ test('GC UI semantic tokens and mobile navigation are represented', () => {
   assert.match(css, /prefers-reduced-motion/);
   assert.match(read('index.html'), /id="back"/);
 });
+
+test('mobile configuration remains reachable with a labeled toolbar control', () => {
+  const html = read('index.html');
+  const css = read('styles/app.css');
+  const js = read('src/main.js');
+  assert.match(html, /id="settings-mobile"[^>]+aria-label="Configure connection"/);
+  assert.match(css, /\.mobile-settings\{display:none\}/);
+  assert.match(css, /@media\(max-width:680px\)\{\.mobile-settings\{display:inline-flex/);
+  assert.match(js, /'settings-mobile'\)\.addEventListener\('click', openSettings\)/);
+});
