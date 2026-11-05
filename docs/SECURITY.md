@@ -26,7 +26,7 @@
 6. The current code does not yet implement CSP reporting, phishing scanning, key management, malware scanning, certificate pinning, S/MIME or OpenPGP.
 7. Metadata failures are counted and disclosed, and list pagination is available; introduce quota-aware retry and better recovery UX, with tests against live provider errors.
 8. Local disconnect discards tokens but does not revoke Google OAuth grants. Users must revoke the app in Google Account permissions if they want to remove prior consent. A user-selectable revoke feature may follow after review.
-9. Headless Chrome shell screenshots, asynchronous UI tests, granular-consent tests, denial handling and account-mismatch tests have been performed. No real-Gmail consent, connected-browser acceptance, cache audit, screen-reader audit or penetration test has been completed.
+9. Headless Chrome shell screenshots, simulated UI tests, granular-consent/denial/account-mismatch tests and a synthetic headless Chrome Web Crypto/localStorage smoke test have been performed. No real-Gmail consent, fully connected browser acceptance, storage quota/cache audit, screen-reader audit or penetration test has been completed.
 
 ## Development and contribution safeguards
 
