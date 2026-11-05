@@ -12,7 +12,7 @@ test('header inspector unfolds lines and neutralizes controls and bidirectional 
   ]);
   assert.deepEqual(result.items.map((x) => x.name),
     ['Authentication-Results', 'X-Test', 'Received', 'Received']);
-  assert.equal(result.items[0].value, 'mx.example; spf=pass;  dkim=pass');
+  assert.equal(result.items[0].value, 'mx.example; spf=pass; dkim=pass');
   assert.equal(result.items[1].value, 'Before�after�<script>alert(1)</script>');
   assert.equal(result.truncated, false);
 });
