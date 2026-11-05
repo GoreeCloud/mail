@@ -33,3 +33,12 @@ test('rejects email header injection and invalid recipients', () => {
   assert.throws(() => buildRawMessage({ to: 'not-an-email', subject: 'ok', body: 'yes' }));
   assert.throws(() => buildRawMessage({ to: 'x@example.com', subject: 'ok', body: ' ' }));
 });
+
+test('MIME parser never treats a text attachment as the email body', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: [
+    { mimeType: 'text/plain', filename: 'secret.txt', body: { data: base64UrlEncode('attachment') } },
+    { mimeType: 'text/plain', headers: [{ name: 'Content-Disposition', value: 'attachment; filename="hi.txt"' }], body: { data: base64UrlEncode('attached') } },
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Actual body') } }
+  ] };
+  assert.equal(extractPlainText(payload), 'Actual body');
+});
