@@ -29,6 +29,7 @@
 - Both the encrypted draft implementation and composer discard guard are merged into `main`; cancellation and Escape/native dialog close clear the passphrase and prevent late crypto results from writing or restoring data. One local encrypted snapshot requires explicit Save/Restore and a passphrase; it is **not** automatic or provider-synchronized. The user can delete it explicitly. Local Disconnect preserves the encrypted snapshot but clears in-memory contents and token state.
 - The composer now warns on Discard or Escape if recipient, subject or body is present. The browser also receives a standard before-unload warning request while a nonempty composer is open; some browsers can ignore it. Simulated UI tests cover recipient-only and subject-only cases.
 - Headless Chrome mobile layout previews at **390×844** showed the four-action composer and draft passphrase dialog legible and within the viewport. These were **static preview dialogs**, not a connected end-to-end browser workflow or accessibility sign-off.
+- A separate **headless Flatpak Chrome Web Crypto + localStorage smoke test passed** on 2026-11-05, using a synthetic draft and an isolated localhost origin. It verified encrypted persistence, authenticated restoration, wrong-passphrase denial, account mismatch denial and deletion. The test did **not** connect Gmail, use actual email or perform interactive form/accessibility acceptance. The temporary Chrome debug service, local HTTP servers, scripts and isolated browser profiles were cleaned up.
 - No live email sending, actual account access, complete browser acceptance, native runtime or production deployment claimed.
 
 ## Open high-priority work
@@ -36,7 +37,7 @@
 1. Real browser/OAuth verification with a test Gmail account, explicit consent, and no production mailbox use.
 2. Complete mobile/desktop interactive visual inspection, keyboard/AT audits, loading/error states and high-zoom behavior.
 3. Verify incremental scopes, granular consent behavior and identity continuity against a real dedicated test Gmail account, including provider-level grant semantics.
-4. Verify encrypted local draft behavior in real browsers and mobile, passphrase/user-experience risks, storage quota/retention, and recovery. Add reliable automatic and provider-synchronized drafts only after their own security/storage acceptance.
+4. Expand the single headless Chrome crypto smoke test into real-browser UI/form/storage acceptance across Chrome/Firefox/Safari/mobile, passphrase and storage quota/retention audits, and recovery. Add reliable automatic and provider-synchronized drafts only after their own security/storage acceptance.
 5. Add robust MIME parsing, attachment handling, threading, deeper pagination recovery, and sender identities.
 6. Build and verify desktop/mobile provider adapters with security and device test plans.
 7. Follow full GC UI visual/accessibility acceptance and platform-specific Stable gates.
