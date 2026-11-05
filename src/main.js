@@ -312,6 +312,21 @@ function removeLocalDraft() {
   } catch (error) { announce(error.message, true); }
 }
 
+function hasUnsentComposition() {
+  return ['to', 'subject', 'body'].some((id) => $(id).value.trim().length > 0);
+}
+function discardComposition() {
+  if (state.busy) {
+    announce('Complete or cancel the current mail operation before discarding.', true);
+    return;
+  }
+  if (hasUnsentComposition() && !window.confirm(
+    'Discard this unsent message? Choose Save encrypted draft to keep a local copy.'
+  )) return;
+  $('composer-dialog').close();
+  $('compose-form').reset();
+}
+
 function openCompose() {
   if (!connected()) return;
   $('composer-dialog').showModal(); $('to').focus();
@@ -382,9 +397,15 @@ $('draft-dialog').addEventListener('close', () => {
   draftMode = null;
 });
 $('delete-draft').addEventListener('click', removeLocalDraft);
-$('close-compose').addEventListener('click', () => {
-  if (!$('body').value || window.confirm('Discard this unsaved message?')) {
-    $('composer-dialog').close(); $('compose-form').reset();
+$('close-compose').addEventListener('click', discardComposition);
+$('composer-dialog').addEventListener('cancel', (event) => {
+  event.preventDefault();
+  discardComposition();
+});
+window.addEventListener?.('beforeunload', (event) => {
+  if ($('composer-dialog').open && hasUnsentComposition()) {
+    event.preventDefault();
+    event.returnValue = '';
   }
 });
 $('star').addEventListener('click', () => actOnMessage('star'));
