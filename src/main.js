@@ -265,6 +265,7 @@ $('load-more').addEventListener('click', () => loadMailbox({ append: true }));
 $('connect').addEventListener('click', connect);
 $('disconnect').addEventListener('click', () => resetSession('Disconnected; local in-memory mail and tokens cleared. Google grants remain managed in your Google Account.'));
 $('settings').addEventListener('click', openSettings);
+$('settings-mobile').addEventListener('click', openSettings);
 $('settings-form').addEventListener('submit', saveSettings);
 $('close-settings').addEventListener('click', () => $('settings-dialog').close());
 $('client-id').addEventListener('input', () => $('client-id').setCustomValidity(''));
