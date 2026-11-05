@@ -75,7 +75,7 @@
   <dialog id="settings-dialog" class="dialog">
     <form id="settings-form" method="dialog">
       <div class="dialog-heading"><span class="eyebrow">ACCOUNT SETUP</span><h2>Connect your existing Gmail</h2></div>
-      <p>Enter the public OAuth Web client ID from your own Google Cloud project. Connecting requests read-only Gmail access; sending or changing messages requests additional Google consent. Tokens and message contents stay in memory only. The public client ID can be saved on this device.</p>
+      <p>Enter the public OAuth Web client ID from your own Google Cloud project. Connecting requests read-only Gmail access; sending or changing messages requests additional Google consent. OAuth tokens and received mail stay in memory; only the public client ID and encrypted drafts you explicitly save can persist on this device.</p>
       <label for="client-id">Google OAuth client ID</label>
       <input type="text" id="client-id" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false" required>
       <div class="dialog-footer"><button id="clear-config" type="button" class="quiet">Clear saved ID</button><button type="button" class="outline" id="close-settings">Cancel</button><button class="primary" type="submit">Save settings</button></div>
