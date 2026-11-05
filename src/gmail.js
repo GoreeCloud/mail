@@ -34,25 +34,57 @@ function headerValue(headers, key) {
   return (headers || []).find((item) => item.name?.toLowerCase() === key.toLowerCase())?.value || '';
 }
 
-// Gmail uses base64url for MIME payloads. Never pass decoded HTML to the DOM.
-export function decodeB64Url(value) {
+// Read MIME text defensively. The alpha deliberately does not render HTML or download
+// attachment bodies. These bounds prevent recursive or oversized payloads from freezing UI.
+const MAX_TEXT_BYTES = 4 * 1024 * 1024;
+const MAX_MIME_NODES = 256;
+const MAX_MIME_DEPTH = 32;
+
+export function decodeB64Url(value, charset = 'utf-8') {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]*={0,2}$/.test(value)) return '';
+  if (value.length > Math.ceil(MAX_TEXT_BYTES / 3) * 4 + 4) {
+    throw new Error('Message text exceeds this alpha\'s 4 MiB viewing limit.');
+  }
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='));
-  return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+  if (binary.length > MAX_TEXT_BYTES) {
+    throw new Error('Message text exceeds this alpha\'s 4 MiB viewing limit.');
+  }
+  let decoder;
+  try { decoder = new TextDecoder(charset); } catch { decoder = new TextDecoder(); }
+  return decoder.decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+}
+
+function textCharset(part) {
+  const contentType = headerValue(part.headers, 'Content-Type') || part.mimeType || '';
+  const match = /(?:^|;)\s*charset\s*=\s*(?:"([^"]{1,64})"|([^;\s]{1,64}))/i.exec(contentType);
+  return match?.[1] || match?.[2] || 'utf-8';
 }
 
 export function extractPlainText(payload) {
-  if (!payload || payload.filename || payload.body?.attachmentId) return '';
-  if ((payload.headers || []).some((header) =>
-    header.name?.toLowerCase() === 'content-disposition' && /^attachment\b/i.test(header.value?.trim() || '')
-  )) return '';
-  if (payload.mimeType?.toLowerCase() === 'text/plain' && payload.body?.data) {
-    return decodeB64Url(payload.body.data);
-  }
-  for (const part of payload.parts || []) {
-    const text = extractPlainText(part);
-    if (text) return text;
+  if (!payload) return '';
+  const pending = [{ part: payload, depth: 0 }];
+  let visited = 0;
+  while (pending.length) {
+    const { part, depth } = pending.pop();
+    if (++visited > MAX_MIME_NODES || depth > MAX_MIME_DEPTH) {
+      throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
+    }
+    if (!part || typeof part !== 'object' || part.filename || part.body?.attachmentId) continue;
+    const disposition = headerValue(part.headers, 'Content-Disposition').trim();
+    if (/^attachment(?:\s|;|$)/i.test(disposition)) continue;
+    if (part.mimeType?.split(';')[0].trim().toLowerCase() === 'text/plain'
+      && typeof part.body?.data === 'string' && part.body.data) {
+      return decodeB64Url(part.body.data, textCharset(part));
+    }
+    const children = Array.isArray(part.parts) ? part.parts : [];
+    if (visited + pending.length + children.length > MAX_MIME_NODES
+        || (depth >= MAX_MIME_DEPTH && children.length)) {
+      throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
+    }
+    for (let i = children.length - 1; i >= 0; i--) {
+      pending.push({ part: children[i], depth: depth + 1 });
+    }
   }
   return '';
 }
