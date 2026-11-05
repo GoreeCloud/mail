@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-mode="dark" data-accent="lagoon">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131e">
+  <meta name="description" content="GoreeCloud Mail — private, focused, connected email. Experimental web client.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://gmail.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>GoreeCloud Mail · Inbox</title>
+  <link rel="stylesheet" href="./styles/app.css">
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to mail</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Mail navigation">
+      <div class="brand"><div class="mark" aria-hidden="true">g</div><div><strong>GoreeCloud</strong><span>MAIL <span class="beta">ALPHA</span></span></div></div>
+      <button class="primary compose-trigger" id="compose" type="button">+ &nbsp; Compose</button>
+      <nav class="nav" aria-label="Mailbox">
+        <button type="button" data-view="INBOX" aria-current="page"><span aria-hidden="true">▣</span> Inbox <span class="count" id="inbox-count"></span></button>
+        <button type="button" data-view="STARRED"><span aria-hidden="true">☆</span> Starred</button>
+        <button type="button" data-view="SENT"><span aria-hidden="true">↗</span> Sent</button>
+        <button type="button" data-view="ALL"><span aria-hidden="true">☰</span> All mail</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="privacy"><span class="privacy-dot"></span><div><strong>Privacy by design</strong><small>No message HTML or remote images</small></div></div>
+        <button class="quiet full" id="theme" type="button">Switch appearance</button>
+        <button class="quiet full" id="settings" type="button">Configure connection</button>
+      </div>
+    </aside>
+
+    <main id="main" class="workspace">
+      <header class="toolbar">
+        <div class="title-line"><span class="eyebrow">YOUR WORKSPACE</span><h1 id="view-title">Inbox</h1></div>
+        <div class="toolbar-actions">
+          <label class="searchbox" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search your email" autocomplete="off" aria-label="Search Gmail messages"></label>
+          <button id="refresh" class="tool-button" type="button" aria-label="Refresh messages" title="Refresh messages">↻</button>
+          <button id="connect" class="outline" type="button">Connect Google</button>
+          <button id="disconnect" class="outline" type="button" hidden>Disconnect</button>
+        </div>
+      </header>
+      <p id="notice" class="notice" role="status" aria-live="polite">Not connected. Configure a Google OAuth client ID to get started.</p>
+      <div class="mail-panels">
+        <section class="mail-list-panel" aria-label="Messages">
+          <div class="list-heading"><span id="list-subtitle">Messages</span><span class="list-tag" id="list-meta">No account</span></div>
+          <ul id="message-list" class="message-list" aria-label="Email messages"></ul>
+          <div id="list-empty" class="empty-list"><div class="empty-orb" aria-hidden="true">✉</div><strong>Your mail, your space.</strong><span>Connect an account to view messages securely.</span></div>
+        </section>
+        <section class="reader-panel" aria-label="Message reading pane">
+          <div id="reader-empty" class="reader-empty">
+            <div class="reader-illustration" aria-hidden="true">✉</div>
+            <span class="eyebrow">GORE ECOSYSTEM • MAIL</span>
+            <h2>A quieter way to handle your inbox.</h2>
+            <p>Read, find, and act on your email from one thoughtful workspace. Your account remains with your provider.</p>
+            <div class="feature-pills"><span>Private by default</span><span>Keyboard friendly</span><span>Provider connected</span></div>
+          </div>
+          <article id="reader" class="reader-content" hidden>
+            <div class="reader-top"><span class="eyebrow">CONVERSATION</span><div class="reader-actions">
+              <button id="star" class="quiet" type="button">☆ Star</button>
+              <button id="unread" class="quiet" type="button">Mark unread</button>
+              <button id="archive" class="quiet" type="button">Archive</button>
+            </div></div>
+            <h2 id="reader-subject"></h2>
+            <div class="sender-line"><span class="avatar" id="reader-avatar" aria-hidden="true"></span><div class="sender-info"><strong id="reader-from"></strong><span id="reader-date"></span></div></div>
+            <pre id="reader-body" class="message-body"></pre>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="settings-dialog" class="dialog">
+    <form id="settings-form" method="dialog">
+      <div class="dialog-heading"><span class="eyebrow">ACCOUNT SETUP</span><h2>Connect your existing Gmail</h2></div>
+      <p>Enter the public OAuth Web client ID from your own Google Cloud project. Tokens and email content stay in memory only; the client ID can be saved in this browser.</p>
+      <label for="client-id">Google OAuth client ID</label>
+      <input type="text" id="client-id" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false" required>
+      <div class="dialog-footer"><button id="clear-config" type="button" class="quiet">Clear saved ID</button><button type="button" class="outline" id="close-settings">Cancel</button><button class="primary" type="submit">Save settings</button></div>
+    </form>
+  </dialog>
+  <dialog id="composer-dialog" class="dialog composer-dialog">
+    <form id="compose-form">
+      <div class="dialog-heading"><span class="eyebrow">NEW MESSAGE</span><h2>Write an email</h2></div>
+      <p id="compose-account" class="support">Requires an active Gmail connection. Compose is plain text in this initial milestone.</p>
+      <label for="to">To</label><input id="to" name="to" type="text" placeholder="recipient@example.com" required>
+      <label for="subject">Subject</label><input id="subject" name="subject" type="text" maxlength="300" required>
+      <label for="body">Message</label><textarea id="body" name="body" rows="10" required></textarea>
+      <div class="dialog-footer"><button type="button" id="close-compose" class="outline">Discard</button><button id="send" type="submit" class="primary">Send with Gmail</button></div>
+    </form>
+  </dialog>
+  <div id="alert" class="sr-only" role="alert" aria-live="assertive"></div>
+</body>
+</html>
