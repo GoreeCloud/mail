@@ -66,6 +66,12 @@
             <h2 id="reader-subject"></h2>
             <div class="sender-line"><span class="avatar" id="reader-avatar" aria-hidden="true"></span><div class="sender-info"><strong id="reader-from"></strong><span id="reader-date"></span></div></div>
             <pre id="reader-body" class="message-body"></pre>
+            <details id="reader-header-details" class="reader-header-details" hidden>
+              <summary>Inspect message headers</summary>
+              <p class="header-disclaimer">Read-only provider metadata. Headers can be forged or misleading and do not independently prove sender identity or message safety. No remote content is opened.</p>
+              <dl id="reader-header-list" class="reader-header-list"></dl>
+              <p id="reader-headers-truncated" class="header-disclaimer" hidden>Some headers or header values were omitted or shortened in this limited view.</p>
+            </details>
             <section id="reader-attachments" class="reader-attachments" aria-labelledby="reader-attachments-title" hidden>
               <h3 id="reader-attachments-title">Attachments</h3>
               <p class="attachment-warning">Metadata only. Downloading and previewing files are disabled in this experimental client.</p>
