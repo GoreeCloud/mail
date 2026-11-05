@@ -166,12 +166,14 @@ export function normalizeMessage(message) {
     attachments: attachmentInfo.items,
     attachmentsTruncated: attachmentInfo.truncated,
     id: message.id,
-    threadId: message.threadId,
-    labels: message.labelIds || [],
-    from: headerValue(headers, 'From') || '(Unknown sender)',
-    subject: headerValue(headers, 'Subject') || '(No subject)',
-    date: headerValue(headers, 'Date'),
-    snippet: message.snippet || '',
+    threadId: typeof message.threadId === 'string' ? message.threadId.slice(0, 256) : '',
+    labels: Array.isArray(message.labelIds)
+      ? message.labelIds.filter((label) => typeof label === 'string' && label.length <= 64).slice(0, 128)
+      : [],
+    from: displayHeader('From') || '(Unknown sender)',
+    subject: displayHeader('Subject') || '(No subject)',
+    date: displayHeader('Date'),
+    snippet: typeof message.snippet === 'string' ? message.snippet.slice(0, 2048) : '',
     body: extractPlainText(message.payload)
   };
 }
