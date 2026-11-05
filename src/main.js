@@ -1,4 +1,4 @@
-import { connectGoogle, connected, disconnect } from './auth.js';
+import { connectGoogle, connected, disconnect, requestCapability } from './auth.js';
 import { getProfile, listMessages, getMessage, modifyMessage, sendMessage } from './gmail.js';
 
 const $ = (id) => document.getElementById(id);
@@ -10,7 +10,6 @@ const state = {
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
-let readingGeneration = 0;
 const panel = $('message-list');
 
 function announce(message, error = false) {
@@ -127,15 +126,7 @@ async function showMessage(id) {
     $('reader').hidden = false; $('reader-empty').hidden = true;
     document.body.classList.add('reading');
     updateActions(); renderList();
-    if (data.labels.includes('UNREAD')) {
-      await modifyMessage(id, { removeLabelIds: ['UNREAD'] });
-      if (!isCurrent()) return;
-      data.labels = data.labels.filter((label) => label !== 'UNREAD');
-      const listed = state.messages.find((message) => message.id === id);
-      if (listed) listed.labels = data.labels;
-      renderList();
-    }
-    if (isCurrent()) announce('Message opened.');
+    if (isCurrent()) announce('Message opened. Use Mark read to update Gmail.');
   } catch (error) {
     if (isCurrent() && error.name !== 'AbortError') announce(error.message, true);
   } finally {
@@ -147,13 +138,41 @@ function updateActions() {
   $('star').textContent = state.active.labels.includes('STARRED') ? '★ Unstar' : '☆ Star';
   $('unread').textContent = state.active.labels.includes('UNREAD') ? 'Mark read' : 'Mark unread';
 }
+function resetSession(message) {
+  disconnect();
+  state.messages = [];
+  state.email = '';
+  state.sequence++;
+  state.listController?.abort();
+  state.nextPageToken = '';
+  state.loading = false;
+  $('compose-form').reset();
+  $('search').value = '';
+  if ($('composer-dialog').open) $('composer-dialog').close();
+  clearReader();
+  renderList();
+  reflectConnection();
+  announce(message);
+}
+async function confirmAuthorizedAccount(expectedEmail) {
+  const profile = await getProfile();
+  if (!connected() || !profile.emailAddress || profile.emailAddress.toLowerCase() !== expectedEmail.toLowerCase()) {
+    resetSession('Google authorization changed accounts. Disconnected to protect the original mailbox.');
+    throw new Error('Google authorization returned a different account; reconnect intentionally.');
+  }
+}
 async function actOnMessage(kind) {
   if (!state.active || state.busy) return;
   state.busy = true;
   const old = state.active;
   const listSequence = state.sequence;
   const readSequence = state.readerSequence;
+  const expectedEmail = state.email;
   try {
+    await requestCapability('modify');
+    if (!connected() || listSequence !== state.sequence || readSequence !== state.readerSequence) return;
+    await confirmAuthorizedAccount(expectedEmail);
+    if (!connected() || listSequence !== state.sequence || readSequence !== state.readerSequence) return;
     let addLabelIds = [], removeLabelIds = [];
     if (kind === 'star') (old.labels.includes('STARRED') ? removeLabelIds : addLabelIds).push('STARRED');
     if (kind === 'unread') (old.labels.includes('UNREAD') ? removeLabelIds : addLabelIds).push('UNREAD');
@@ -176,7 +195,7 @@ function reflectConnection() {
   $('connect').hidden = connected();
   $('disconnect').hidden = !connected();
   $('compose').disabled = !connected();
-  $('compose-account').textContent = connected() ? 'Sending from ' + state.email + ' through Gmail.' : 'Connect an account before composing.';
+  $('compose-account').textContent = connected() ? 'Sending from ' + state.email + '. Google will request send permission when needed.' : 'Connect an account before composing.';
 }
 function openSettings() {
   try { $('client-id').value = configuredClientId || localStorage.getItem(KEY) || ''; } catch { $('client-id').value = configuredClientId; }
@@ -217,7 +236,14 @@ async function submitCompose(event) {
   const input = { to: $('to').value, subject: $('subject').value, body: $('body').value };
   announce('Submitting message to Gmail…');
   try {
+    const expectedEmail = state.email;
+    const listSequence = state.sequence;
+    await requestCapability('send');
+    if (!connected() || listSequence !== state.sequence) return;
+    await confirmAuthorizedAccount(expectedEmail);
+    if (!connected() || listSequence !== state.sequence) return;
     await sendMessage(input);
+    if (!connected() || listSequence !== state.sequence) return;
     $('composer-dialog').close(); $('compose-form').reset();
     announce('Gmail accepted your message for sending.');
     if (state.view === 'SENT') await loadMailbox();
@@ -237,15 +263,7 @@ document.querySelectorAll('[data-view]').forEach((button) => button.addEventList
 $('refresh').addEventListener('click', () => loadMailbox());
 $('load-more').addEventListener('click', () => loadMailbox({ append: true }));
 $('connect').addEventListener('click', connect);
-$('disconnect').addEventListener('click', () => {
-  disconnect(); state.messages = []; state.email = ''; state.sequence++;
-  state.listController?.abort();
-  state.nextPageToken = '';
-  state.loading = false;
-  $('compose-form').reset(); $('search').value = '';
-  if ($('composer-dialog').open) $('composer-dialog').close();
-  clearReader(); renderList(); reflectConnection(); announce('Disconnected; local in-memory mail and tokens cleared.');
-});
+$('disconnect').addEventListener('click', () => resetSession('Disconnected; local in-memory mail and tokens cleared. Google grants remain managed in your Google Account.'));
 $('settings').addEventListener('click', openSettings);
 $('settings-form').addEventListener('submit', saveSettings);
 $('close-settings').addEventListener('click', () => $('settings-dialog').close());
