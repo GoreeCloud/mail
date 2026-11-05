@@ -14,7 +14,7 @@
 - No external analytics/tracking SDK. No remote mail storage owned by GoreeCloud.
 - Error messages intentionally omit Gmail response bodies to reduce accidental private-data leakage.
 - Nonempty composer dismissal now requires user confirmation on Discard/Escape; a standard before-unload request is issued where supported, but does not guarantee recovery on mobile crashes or unsupported navigation paths.
-- In-flight mailbox/reader requests are cancelled or invalidated on disconnect and view change; UI race tests confirm stale results remain hidden, but this does not undo server-side actions already submitted.
+- In-flight mailbox/reader requests are cancelled or invalidated on disconnect and view change, and stale Gmail account-profile responses are ignored rather than altering a newer session. UI race tests confirm stale results remain hidden, but this does not undo server-side actions already submitted.
 
 ## Known limits and open risks
 
@@ -24,7 +24,7 @@
 4. Incremental read/modify/send permission requests, receipt validation, and account continuity checks are implemented and tested with mocks. Real Google OAuth consent, scope verification, restricted-scope app verification, and account-switch behavior still require live-browser testing.
 5. Sending accepts recipient list and subject with basic validation, but production MIME headers, internationalized mailboxes and all edge cases require a reviewed mail library and fuzz testing. Manual encrypted drafts use PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM; user passphrases are not stored or recoverable. This crypto module has unit tests, **not** an independent audit.
 6. The current code does not yet implement CSP reporting, phishing scanning, key management, malware scanning, certificate pinning, S/MIME or OpenPGP.
-7. Metadata failures are counted and disclosed, and list pagination is available; introduce quota-aware retry and better recovery UX, with tests against live provider errors.
+7. Gmail metadata 429/5xx failures receive up to two additional attempts with abortable delays; an incomplete page fails atomically without advancing its cursor, and 401/403 is not retried. This is only a bounded alpha mechanism, not full provider quota-aware scheduling or a guarantee of recovery. Test against real provider failures before Stable.
 8. Local disconnect discards tokens but does not revoke Google OAuth grants. Users must revoke the app in Google Account permissions if they want to remove prior consent. A user-selectable revoke feature may follow after review.
 9. Headless Chrome shell screenshots, simulated UI tests, granular-consent/denial/account-mismatch tests and a synthetic headless Chrome Web Crypto/localStorage smoke test have been performed. No real-Gmail consent, fully connected browser acceptance, storage quota/cache audit, screen-reader audit or penetration test has been completed.
 
