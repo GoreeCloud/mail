@@ -42,6 +42,7 @@ function message(id, full = false) {
     payload: {
       mimeType: full ? 'text/plain' : undefined,
       body: full ? { data: 'SGVsbG8=' } : undefined,
+      parts: full ? [{ mimeType: 'application/pdf', filename: 'unsafe\u202E.pdf', body: { attachmentId: 'not-downloaded', size: 250 } }] : undefined,
       headers: [
         { name: 'From', value: 'sender@example.com' },
         { name: 'Subject', value: 'Test message' },
@@ -104,6 +105,10 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
 
     await elements.get('message-list').children[0].children[0].emit('click');
     assert.equal(elements.get('reader-body').textContent, 'Hello');
+    assert.equal(elements.get('reader-attachments').hidden, false);
+    assert.equal(elements.get('reader-attachment-list').children.length, 1);
+    assert.equal(elements.get('reader-attachment-list').children[0].children[0].textContent, 'unsafe�.pdf');
+    assert.match(elements.get('reader-attachment-list').children[0].children[1].textContent, /250 bytes/);
     assert.equal(elements.get('unread').textContent, 'Mark read');
     assert.equal(calls.filter((path) => path.includes('/modify')).length, 0, 'opening must not write to Gmail');
 
