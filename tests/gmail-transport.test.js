@@ -91,3 +91,34 @@ test('persistent partial metadata failures reject the whole page instead of adva
     assert.equal(attempts, 3, 'bounded retries: first request and two retries');
   });
 });
+
+test('Gmail 401 and 403 metadata errors propagate without a retry loop', async () => {
+  await withFakeGoogle(async () => {
+    for (const status of [401, 403]) {
+      let attempts = 0;
+      globalThis.fetch = async (url) => {
+        if (String(url).includes('/messages?')) return response({ messages: [{ id: 'test' }] });
+        attempts++;
+        return response({}, status);
+      };
+      await assert.rejects(listMessages('INBOX'), (error) => error.status === status);
+      assert.equal(attempts, 1, 'authorization errors should not be retried');
+    }
+  });
+});
+
+test('Gmail metadata retry backoff is cancellable', async () => {
+  await withFakeGoogle(async () => {
+    const controller = new AbortController();
+    let attempts = 0;
+    globalThis.fetch = async (url) => {
+      if (String(url).includes('/messages?')) return response({ messages: [{ id: 'test' }] });
+      attempts++;
+      if (attempts === 1) setTimeout(() => controller.abort(), 10);
+      return response({}, 503);
+    };
+    await assert.rejects(listMessages('INBOX', '', '', { signal: controller.signal }),
+      (error) => error.name === 'AbortError');
+    assert.equal(attempts, 1, 'aborted retry must not issue another HTTP request');
+  });
+});
