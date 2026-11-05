@@ -81,6 +81,11 @@ test('manual draft save/restore uses ciphertext and rejects a changed account', 
     elements.get('subject').value = 'Private memo';
     elements.get('body').value = 'Do not persist this as plain text.';
     await elements.get('save-draft').emit('click');
+    elements.get('draft-passphrase').value = 'never retain this typed password';
+    await elements.get('draft-dialog').emit('cancel');
+    assert.equal(elements.get('draft-passphrase').value, '', 'Escape clears password');
+    assert.equal(elements.get('draft-dialog').open, false);
+    await elements.get('save-draft').emit('click');
     assert.equal(elements.get('draft-dialog').open, true);
     elements.get('draft-passphrase').value = 'a long secret passphrase';
     await elements.get('draft-form').emit('submit');
