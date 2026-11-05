@@ -1,5 +1,6 @@
 import { connectGoogle, connected, disconnect, requestCapability } from './auth.js';
 import { getProfile, listMessages, getMessage, modifyMessage, sendMessage } from './gmail.js';
+import { hasEncryptedDraft, saveEncryptedDraft, restoreEncryptedDraft, deleteEncryptedDraft } from './drafts.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -10,6 +11,7 @@ const state = {
 const titles = { INBOX: 'Inbox', STARRED: 'Starred', SENT: 'Sent', ALL: 'All mail' };
 const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
+let draftMode = null;
 const panel = $('message-list');
 
 function announce(message, error = false) {
@@ -149,6 +151,9 @@ function resetSession(message) {
   $('compose-form').reset();
   $('search').value = '';
   if ($('composer-dialog').open) $('composer-dialog').close();
+  if ($('draft-dialog').open) $('draft-dialog').close();
+  $('draft-passphrase').value = '';
+  draftMode = null;
   clearReader();
   renderList();
   reflectConnection();
@@ -219,12 +224,89 @@ async function connect() {
   try {
     await connectGoogle(clientId);
     const profile = await getProfile();
-    state.email = profile.emailAddress || 'Gmail account';
+    if (!profile.emailAddress || typeof profile.emailAddress !== 'string') {
+      throw new Error('Google did not return a verified account email. Disconnect and try again.');
+    }
+    state.email = profile.emailAddress;
     reflectConnection();
     await loadMailbox();
   } catch (error) { announce(error.message, true); }
   finally { $('connect').disabled = false; }
 }
+function closeDraftDialog() {
+  $('draft-passphrase').value = '';
+  draftMode = null;
+  if ($('draft-dialog').open) $('draft-dialog').close();
+}
+
+function openDraftDialog(mode) {
+  if (!connected()) { announce('Connect your existing email account before managing drafts.', true); return; }
+  if (state.busy) return;
+  try {
+    const exists = hasEncryptedDraft();
+    if (mode === 'restore' && !exists) {
+      announce('No encrypted draft is saved in this browser.', true);
+      return;
+    }
+    if (mode === 'save' && exists && !window.confirm('Replace the existing encrypted local draft? This cannot be undone.')) return;
+    draftMode = mode;
+    $('draft-title').textContent = mode === 'save' ? 'Save encrypted draft' : 'Restore encrypted draft';
+    $('draft-help').textContent = mode === 'save'
+      ? 'Encrypt this composition locally with a new passphrase. The previous draft snapshot will be replaced.'
+      : 'Enter the same passphrase used when saving. Only a draft for this connected account can be restored.';
+    $('confirm-draft').textContent = mode === 'save' ? 'Save encrypted draft' : 'Unlock draft';
+    $('draft-passphrase').value = '';
+    $('draft-dialog').showModal();
+    $('draft-passphrase').focus();
+  } catch (error) { announce(error.message, true); }
+}
+
+async function submitDraft(event) {
+  event.preventDefault();
+  if (!draftMode || state.busy || !connected()) return;
+  const mode = draftMode;
+  const account = state.email;
+  const seq = state.sequence;
+  const passphrase = $('draft-passphrase').value;
+  state.busy = true;
+  $('confirm-draft').disabled = true;
+  announce(mode === 'save' ? 'Encrypting local draft…' : 'Unlocking local draft…');
+  try {
+    if (mode === 'save') {
+      const draft = { account, to: $('to').value, subject: $('subject').value, body: $('body').value };
+      await saveEncryptedDraft(draft, passphrase);
+    } else {
+      const draft = await restoreEncryptedDraft(account, passphrase);
+      if (!connected() || seq !== state.sequence) return;
+      $('to').value = draft.to;
+      $('subject').value = draft.subject;
+      $('body').value = draft.body;
+    }
+    if (connected() && seq === state.sequence) {
+      closeDraftDialog();
+      announce(mode === 'save' ? 'Encrypted local draft saved in this browser.'
+        : 'Encrypted draft unlocked for this account.');
+    }
+  } catch (error) {
+    if (connected() && seq === state.sequence) announce(error.message, true);
+  } finally {
+    // Passwords must not remain in the passphrase form after success or failure.
+    $('draft-passphrase').value = '';
+    $('confirm-draft').disabled = false;
+    state.busy = false;
+  }
+}
+
+function removeLocalDraft() {
+  try {
+    if (!hasEncryptedDraft()) { announce('No encrypted local draft to delete.'); return; }
+    if (!window.confirm('Permanently delete this browser-local encrypted draft?')) return;
+    deleteEncryptedDraft();
+    closeDraftDialog();
+    announce('Encrypted local draft deleted from this browser.');
+  } catch (error) { announce(error.message, true); }
+}
+
 function openCompose() {
   if (!connected()) return;
   $('composer-dialog').showModal(); $('to').focus();
@@ -279,6 +361,11 @@ $('theme').addEventListener('click', () => {
 });
 $('compose').addEventListener('click', openCompose);
 $('compose-form').addEventListener('submit', submitCompose);
+$('save-draft').addEventListener('click', () => openDraftDialog('save'));
+$('restore-draft').addEventListener('click', () => openDraftDialog('restore'));
+$('draft-form').addEventListener('submit', submitDraft);
+$('cancel-draft').addEventListener('click', closeDraftDialog);
+$('delete-draft').addEventListener('click', removeLocalDraft);
 $('close-compose').addEventListener('click', () => {
   if (!$('body').value || window.confirm('Discard this unsaved message?')) {
     $('composer-dialog').close(); $('compose-form').reset();
