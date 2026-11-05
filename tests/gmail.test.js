@@ -124,3 +124,42 @@ test('normalized messages include only inert attachment summaries', () => {
   assert.equal(message.attachments[0].size, 11);
   assert.ok(!JSON.stringify(message).includes('HIDDEN-ID'));
 });
+
+
+test('malformed provider data does not crash message normalization', () => {
+  const item = normalizeMessage({
+    id: 'synthetic-1', threadId: 42, labelIds: 'INBOX', snippet: {},
+    payload: {
+      mimeType: 42,
+      headers: [null, { name: 99, value: 'bad' },
+        { name: 'From', value: 'safe\u202E@example.test' },
+        { name: 'Subject', value: 'Control\u0000character' }],
+      body: { data: base64UrlEncode('Do not display') }
+    }
+  });
+  assert.equal(item.from, 'safe�@example.test');
+  assert.equal(item.subject, 'Control�character');
+  assert.deepEqual(item.labels, []);
+  assert.equal(item.body, '');
+  assert.equal(item.snippet, '');
+});
+
+test('untrusted label and preview sizes are bounded', () => {
+  const item = normalizeMessage({
+    id: 'synthetic-2', threadId: 't'.repeat(300),
+    labelIds: ['INBOX', 123, 'x'.repeat(70), 'UNREAD'],
+    snippet: 's'.repeat(8000),
+    payload: { headers: 'not an array', mimeType: 'text/plain',
+      body: { data: base64UrlEncode('Safe') } }
+  });
+  assert.deepEqual(item.labels, ['INBOX', 'UNREAD']);
+  assert.equal(item.threadId.length, 256);
+  assert.equal(item.snippet.length, 2048);
+  assert.equal(item.body, 'Safe');
+});
+
+test('missing or oversized message identifiers are rejected', () => {
+  for (const item of [null, {}, { id: 12 }, { id: '' }, { id: 'z'.repeat(257) }]) {
+    assert.throws(() => normalizeMessage(item), /invalid message metadata/);
+  }
+});
