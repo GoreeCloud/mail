@@ -25,7 +25,8 @@ export function decodeB64Url(value) {
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 export function extractPlainText(payload) {
-  if (!payload) return '';
+  if (!payload || payload.filename || payload.body?.attachmentId) return '';
+  if ((payload.headers || []).some((header) => header.name.toLowerCase() === 'content-disposition' && /^attachment/i.test(header.value?.trim() || ''))) return '';
   if (payload.mimeType?.toLowerCase() === 'text/plain' && payload.body?.data) return decodeB64Url(payload.body.data);
   for (const part of payload.parts || []) {
     const text = extractPlainText(part);
