@@ -44,7 +44,8 @@ Web Crypto plus PBKDF2 is an alpha compatibility approach; before Stable, evalua
 - Cancellation during encryption and decryption.
 - Simulated composer save / restore / failed unlock / cross-account flow.
 - Existing message, OAuth, MIME and UI tests continue to pass.
+- A separate synthetic-data **headless Chrome Web Crypto/localStorage** smoke run on localhost passed: encrypted save/restore, refusal of wrong password and wrong account, and ciphertext deletion. This is browser crypto validation, **not** real OAuth, connected composer interactions or cross-browser audit.
 
-Open browser/device acceptance criteria: actual Chrome/Firefox/Safari Web Crypto and localStorage behavior, keyboard/focus and dialog nesting, mobile and high-zoom layout, tab restore, quota-exceeded behavior, browser-private-mode behavior, and data lifecycle audits.
+Open browser/device acceptance criteria: full interactive Chrome/Firefox/Safari Web Crypto and localStorage workflows, keyboard/focus and dialog nesting, mobile and high-zoom layout, tab restore, quota-exceeded behavior, browser-private-mode behavior, and data lifecycle audits.
 
 See [SECURITY.md](SECURITY.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), and the [product specification](PRODUCT_SPECIFICATION.md).
