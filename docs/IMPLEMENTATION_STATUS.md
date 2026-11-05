@@ -15,7 +15,7 @@
 | Message actions | Mark read/unread, star/unstar, archive via Gmail API | Live Gmail authorization not tested |
 | Sending | User-triggered Gmail raw MIME send and recipient validation; manual passphrase-encrypted local draft snapshot | Plain text only; no attachments, provider drafts or automatic draft saving; delivery not guaranteed |
 | Security foundation | Token and received mail in memory, textContent rendering, CSP, optional encrypted local draft with authenticated account binding | Cryptography and browser storage not independently audited |
-| Automated testing | Node syntax, MIME/HTTP and OAuth tests, simulated UI flows and encrypted draft crypto/cancellation tests | No live Google OAuth or actual browser draft/storage acceptance |
+| Automated testing | Node syntax, MIME/HTTP and OAuth tests, simulated UI flows, encrypted draft crypto/cancellation tests, and synthetic headless Chrome Web Crypto/localStorage smoke | No live Google OAuth, interactive composer acceptance, or cross-browser storage certification |
 | Desktop/mobile | Responsive web viewport only | No native packages, OS integration, or default registration |
 | Multi-provider/AI/offline | Defined in product specification | Not implemented |
 
