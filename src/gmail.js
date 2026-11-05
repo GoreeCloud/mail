@@ -89,9 +89,62 @@ export function extractPlainText(payload) {
   return '';
 }
 
+// These are inert metadata summaries, not attachments or downloaded bytes.
+const MAX_VISIBLE_ATTACHMENTS = 24;
+function safeAttachmentLabel(value) {
+  if (typeof value !== 'string') return 'Unnamed attachment';
+  const cleaned = value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '�').trim();
+  return Array.from(cleaned).slice(0, 120).join('') || 'Unnamed attachment';
+}
+
+export function extractAttachmentSummaries(payload) {
+  const items = [];
+  if (!payload) return { items, truncated: false };
+  const pending = [{ part: payload, depth: 0 }];
+  let visited = 0;
+  let truncated = false;
+  while (pending.length) {
+    const { part, depth } = pending.pop();
+    if (++visited > MAX_MIME_NODES || depth > MAX_MIME_DEPTH) {
+      throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
+    }
+    if (!part || typeof part !== 'object') continue;
+    const disposition = String(headerValue(part.headers, 'Content-Disposition') || '').trim();
+    const named = typeof part.filename === 'string' && part.filename.trim().length > 0;
+    const attached = named || /^attachment(?:\s|;|$)/i.test(disposition)
+      || (typeof part.body?.attachmentId === 'string' && part.body.attachmentId.length > 0);
+    if (attached) {
+      if (items.length < MAX_VISIBLE_ATTACHMENTS) {
+        const size = part.body?.size;
+        const mediaType = typeof part.mimeType === 'string' && /^[a-z0-9!#export function normalizeMessage(message) {^_.+-]+\/[a-z0-9!#export function normalizeMessage(message) {^_.+-]+$/i.test(part.mimeType)
+          ? part.mimeType.toLowerCase() : 'Unknown type';
+        items.push({
+          name: safeAttachmentLabel(part.filename),
+          mediaType,
+          size: Number.isSafeInteger(size) && size >= 0 ? size : null
+        });
+      } else truncated = true;
+      // Attached submessages are not recursively interpreted as message text.
+      continue;
+    }
+    const children = Array.isArray(part.parts) ? part.parts : [];
+    if (visited + pending.length + children.length > MAX_MIME_NODES
+      || (depth >= MAX_MIME_DEPTH && children.length)) {
+      throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
+    }
+    for (let i = children.length - 1; i >= 0; i--) {
+      pending.push({ part: children[i], depth: depth + 1 });
+    }
+  }
+  return { items, truncated };
+}
+
 export function normalizeMessage(message) {
   const headers = message.payload?.headers || [];
+  const attachmentInfo = extractAttachmentSummaries(message.payload);
   return {
+    attachments: attachmentInfo.items,
+    attachmentsTruncated: attachmentInfo.truncated,
     id: message.id,
     threadId: message.threadId,
     labels: message.labelIds || [],
