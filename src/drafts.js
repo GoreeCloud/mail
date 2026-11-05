@@ -7,6 +7,10 @@ const ASSOCIATED_DATA = 'GoreeCloud Mail local draft v1';
 const MAX_PLAINTEXT_BYTES = 1024 * 1024; // Prevent UI hangs and excessive browser storage.
 const MAX_ENVELOPE_BYTES = 2 * 1024 * 1024;
 
+function ensureActive(options) {
+  if (options.signal?.aborted) throw new DOMException('Encrypted draft operation cancelled.', 'AbortError');
+}
+
 function getDependencies(options = {}) {
   const cryptography = options.cryptography || globalThis.crypto;
   const storage = options.storage || globalThis.localStorage;
@@ -80,6 +84,7 @@ export async function saveEncryptedDraft(draft, passphrase, options = {}) {
   const { storage, cryptography } = getDependencies(options);
   ensurePassphrase(passphrase);
   ensureDraft(draft);
+  ensureActive(options);
   const account = normalizeAccount(draft.account);
   const text = JSON.stringify({
     account, to: draft.to, subject: draft.subject, body: draft.body
@@ -91,15 +96,19 @@ export async function saveEncryptedDraft(draft, passphrase, options = {}) {
   const salt = cryptography.getRandomValues(new Uint8Array(16));
   const iv = cryptography.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(passphrase, salt, cryptography);
+  ensureActive(options);
   const ciphertext = new Uint8Array(await cryptography.subtle.encrypt({
     name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(ASSOCIATED_DATA)
   }, key, plaintext));
+  ensureActive(options);
   const envelope = JSON.stringify({
     version: VERSION, kdf: 'PBKDF2-SHA256', iterations: PBKDF2_ITERATIONS,
     cipher: 'AES-256-GCM', salt: bytesToBase64(salt),
     iv: bytesToBase64(iv), payload: bytesToBase64(ciphertext)
   });
   if (envelope.length > MAX_ENVELOPE_BYTES) throw new Error('Encrypted draft exceeds the supported size.');
+  // Never write ciphertext after the user cancelled or disconnected.
+  ensureActive(options);
   // Storage assignment replaces the previous one-draft snapshot atomically.
   storage.setItem(STORAGE_KEY, envelope);
 }
@@ -107,6 +116,7 @@ export async function saveEncryptedDraft(draft, passphrase, options = {}) {
 export async function restoreEncryptedDraft(expectedAccount, passphrase, options = {}) {
   const { storage, cryptography } = getDependencies(options);
   ensurePassphrase(passphrase);
+  ensureActive(options);
   const account = normalizeAccount(expectedAccount);
   const serialized = storage.getItem(STORAGE_KEY);
   if (!serialized) throw new Error('No encrypted draft is saved in this browser.');
@@ -124,11 +134,14 @@ export async function restoreEncryptedDraft(expectedAccount, passphrase, options
   let data;
   try {
     const key = await deriveKey(passphrase, salt, cryptography);
+    ensureActive(options);
     const decrypted = await cryptography.subtle.decrypt({
       name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(ASSOCIATED_DATA)
     }, key, ciphertext);
+    ensureActive(options);
     data = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(decrypted));
-  } catch {
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
     // Deliberately avoid distinguishing wrong passwords from authentication failures.
     throw new Error('Unable to unlock draft. Check the passphrase or encrypted data.');
   }
@@ -136,6 +149,7 @@ export async function restoreEncryptedDraft(expectedAccount, passphrase, options
   if (normalizeAccount(data.account) !== account) {
     throw new Error('This draft belongs to another account. Connect that account to restore it.');
   }
+  ensureActive(options);
   return { to: data.to, subject: data.subject, body: data.body };
 }
 
