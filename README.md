@@ -8,10 +8,12 @@
 
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
 - Gmail API connection through a tested v1 provider adapter and Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
-- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview); user-triggered read/unread, star/unstar, archive, and plain-text send.
+- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview); user-triggered read/unread, star/unstar, archive, and plain-text send with confirmed Gmail message IDs and explicit uncertain-status warnings.
 - A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
 - Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
 - Automated MIME, Gmail API and authorization tests; simulated interaction tests for pagination, stale message responses, scope escalation and account switches.
+
+**Sending caveat:** Gmail accepting a message ID confirms provider submission, **not** recipient delivery. A lost or malformed send response produces an unknown-status warning. Check Gmail Sent before retrying to avoid duplicates; the client never automatically retries sending.
 
 **Not implemented yet:** adapters for providers other than Gmail, full encrypted offline mailbox storage, sync queue, autosaved/provider-synchronized drafts, threaded view, attachment download/upload/preview, notifications, calendars, AI, mobile/desktop native packages, default-mail registration. Do not rely on this milestone for production or critical correspondence.
 
