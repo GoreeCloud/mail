@@ -42,3 +42,34 @@ test('MIME parser never treats a text attachment as the email body', () => {
   ] };
   assert.equal(extractPlainText(payload), 'Actual body');
 });
+
+test('plain-text preview recognizes supported MIME charsets and safely falls back', () => {
+  const latin1 = Buffer.from([0x63, 0x61, 0x66, 0xe9]).toString('base64url');
+  const payload = {
+    mimeType: 'text/plain',
+    headers: [{ name: 'Content-Type', value: 'text/plain; charset="iso-8859-1"' }],
+    body: { data: latin1 }
+  };
+  assert.equal(extractPlainText(payload), 'café');
+  assert.equal(extractPlainText({
+    mimeType: 'text/plain',
+    headers: [{ name: 'Content-Type', value: 'text/plain; charset="unknown-encoding"' }],
+    body: { data: base64UrlEncode('UTF-8 fallback') }
+  }), 'UTF-8 fallback');
+});
+
+test('MIME preview bounds prohibit extremely deep or broad structures', () => {
+  let nested = { mimeType: 'text/plain', body: { data: base64UrlEncode('hidden') } };
+  for (let i = 0; i < 34; i++) {
+    nested = { mimeType: 'multipart/mixed', parts: [nested] };
+  }
+  assert.throws(() => extractPlainText(nested), /MIME structure exceeds/);
+  assert.throws(() => extractPlainText({
+    mimeType: 'multipart/mixed',
+    parts: Array.from({ length: 260 }, () => ({ mimeType: 'text/html' }))
+  }), /MIME structure exceeds/);
+});
+
+test('MIME text decoder refuses oversized base64 bodies before decoding', () => {
+  assert.throws(() => decodeB64Url('A'.repeat(6 * 1024 * 1024)), /4 MiB viewing limit/);
+});
