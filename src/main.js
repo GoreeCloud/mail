@@ -40,8 +40,30 @@ function clearReader() {
   $('reader-empty').hidden = false;
   $('reader-attachment-list').replaceChildren();
   $('reader-attachments').hidden = true;
+  $('reader-header-details').open = false;
+  $('reader-header-details').hidden = true;
+  $('reader-header-list').replaceChildren();
+  $('reader-headers-truncated').hidden = true;
   $('reader-attachments-more').hidden = true;
   document.body.classList.remove('reading');
+}
+function renderMessageHeaders(message) {
+  const list = $('reader-header-list');
+  list.replaceChildren();
+  const headers = Array.isArray(message.headers) ? message.headers : [];
+  for (const header of headers) {
+    const row = document.createElement('div');
+    row.className = 'header-row';
+    const name = document.createElement('dt');
+    const value = document.createElement('dd');
+    name.textContent = header.name;
+    value.textContent = header.value;
+    row.append(name, value);
+    list.append(row);
+  }
+  $('reader-header-details').open = false;
+  $('reader-header-details').hidden = headers.length === 0;
+  $('reader-headers-truncated').hidden = !message.headersTruncated;
 }
 function renderAttachments(message) {
   const list = $('reader-attachment-list');
@@ -158,6 +180,7 @@ async function showMessage(id) {
     $('reader-date').textContent = data.date || 'Date unavailable';
     $('reader-body').textContent = data.body || '[Plain-text body unavailable; this alpha does not display HTML.]';
     renderAttachments(data);
+    renderMessageHeaders(data);
     $('reader').hidden = false; $('reader-empty').hidden = true;
     document.body.classList.add('reading');
     updateActions(); renderList();
