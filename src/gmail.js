@@ -90,7 +90,6 @@ export function buildRawMessage({ to, subject, body }) {
   const safeTo = recipients(to);
   if (!subject?.trim() || /[\r\n]/.test(subject)) throw new Error('Subject must be a single non-empty line.');
   if (!body?.trim()) throw new Error('Message body is required.');
-  const encodedSubject = base64UrlEncode(subject.trim()).replace(/-/g, '+').replace(/_/g, '/');
   // RFC 2047 uses ordinary base64 with padding, not base64url.
   const subjectBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(subject.trim())));
   const normalizedBody = body.replace(/\r?\n/g, '\r\n');
