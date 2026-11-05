@@ -167,3 +167,10 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 @media(prefers-reduced-transparency:reduce){.sidebar{backdrop-filter:none!important;background:var(--gc-surface)!important}}
 @media(prefers-contrast:more){.mail-list-panel,.reader-panel,.dialog,.message-card.is-active{border-width:2px}.notice{border-width:2px}}
+
+.reader-back{display:none}
+@media(max-width:680px){
+  .sidebar>.primary::before{content:'+';display:block;font-size:26px;line-height:1;font-weight:750}
+  .reader-back{display:inline-flex;align-items:center;margin-bottom:10px;padding:4px 0;color:var(--gc-brand)}
+  .reader-top .eyebrow{display:block;margin-bottom:6px}
+}
