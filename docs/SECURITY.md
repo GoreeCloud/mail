@@ -8,7 +8,7 @@
 - Do not execute HTML, inline event handlers, scripts, active attachments, remote images, or tracking pixels from mail.
 - Current message viewer uses textContent only; text/plain content may include malicious wording, so it is never trusted as commands.
 - OAuth access tokens are short-lived and **in memory only**, never in URL parameters, localStorage, logs or repository.
-- Only the public Google OAuth client ID is stored locally; users can clear it.
+- The public Google OAuth client ID is stored locally; additionally, a user may deliberately store **one encrypted local draft snapshot**. Received mail and access tokens are never saved to browser storage. The draft's address and contents are encrypted, but browser extensions and malicious same-origin scripts remain in the threat model.
 - Requests are HTTPS-only to the configured Gmail API origin. CSP restricts script, frame and connect origins, with no inline JS.
 - Opening an email is read-only and does not mark it read. Initial Gmail authorization requests gmail.readonly only; explicit mutation and sending request gmail.modify and gmail.send respectively. Gmail.modify is itself a broad restricted scope that also permits sending, so user-facing consent must explain the provider's full grant.
 - No external analytics/tracking SDK. No remote mail storage owned by GoreeCloud.
@@ -18,10 +18,10 @@
 ## Known limits and open risks
 
 1. Google Identity Services compatibility, consent screen verification and app-origin configuration require real-browser testing.
-2. The browser has no encrypted persistent cache or draft recovery; do not promise offline mailbox storage.
+2. The browser has **manual passphrase-encrypted local draft save/restore**, not automatic drafts or provider synchronization. No persistent received-mail cache or full offline mailbox is implemented. Saved ciphertext remains after local Disconnect until explicitly deleted or browser storage is cleared.
 3. Plain text only: HTML-only emails display a safety notice; rich message rendering and attachments are not yet supported.
 4. Incremental read/modify/send permission requests, receipt validation, and account continuity checks are implemented and tested with mocks. Real Google OAuth consent, scope verification, restricted-scope app verification, and account-switch behavior still require live-browser testing.
-5. Sending accepts recipient list and subject with basic validation, but production MIME headers, internationalized mailboxes and all edge cases require a reviewed mail library and fuzz testing.
+5. Sending accepts recipient list and subject with basic validation, but production MIME headers, internationalized mailboxes and all edge cases require a reviewed mail library and fuzz testing. Manual encrypted drafts use PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM; user passphrases are not stored or recoverable. This crypto module has unit tests, **not** an independent audit.
 6. The current code does not yet implement CSP reporting, phishing scanning, key management, malware scanning, certificate pinning, S/MIME or OpenPGP.
 7. Metadata failures are counted and disclosed, and list pagination is available; introduce quota-aware retry and better recovery UX, with tests against live provider errors.
 8. Local disconnect discards tokens but does not revoke Google OAuth grants. Users must revoke the app in Google Account permissions if they want to remove prior consent. A user-selectable revoke feature may follow after review.
@@ -41,4 +41,4 @@
 - Secure credential persistence only if/when introduced, with keychain-backed storage and attack-surface review.
 - MIME parser and composer hardened, attachment safety review and HTML sandbox/sanitizer tested.
 - Clear privacy policy, permission inventory, threat model and provider compatibility matrix.
-- No critical/high unmitigated vulnerabilities; green tests and manual privacy/security review.
+- No critical/high unmitigated vulnerabilities; green tests and manual privacy/security review. Browser storage, passphrase handling, mobile nested modal/focus, offline operation, crypto/key-management and accidental-loss scenarios must be tested before Stable.
