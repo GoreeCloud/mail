@@ -177,3 +177,6 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 
 /* Provider pagination stays separate from message scrolling. */
 .load-more{flex:0 0 auto;margin:6px 18px 16px;min-height:44px}
+
+.mobile-settings{display:none}
+@media(max-width:680px){.mobile-settings{display:inline-flex;align-items:center;justify-content:center;min-width:40px;padding:5px 8px}}
