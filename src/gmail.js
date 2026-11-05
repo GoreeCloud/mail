@@ -83,7 +83,8 @@ export function extractPlainText(payload) {
     if (!part || typeof part !== 'object' || part.filename || part.body?.attachmentId) continue;
     const disposition = headerValue(part.headers, 'Content-Disposition').trim();
     if (/^attachment(?:\s|;|$)/i.test(disposition)) continue;
-    if (part.mimeType?.split(';')[0].trim().toLowerCase() === 'text/plain'
+    if (typeof part.mimeType === 'string'
+      && part.mimeType.split(';')[0].trim().toLowerCase() === 'text/plain'
       && typeof part.body?.data === 'string' && part.body.data) {
       return decodeB64Url(part.body.data, textCharset(part));
     }
