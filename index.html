@@ -94,9 +94,9 @@
       <div class="dialog-footer"><button id="clear-config" type="button" class="quiet">Clear saved ID</button><button type="button" class="outline" id="close-settings">Cancel</button><button class="primary" type="submit">Save settings</button></div>
     </form>
   </dialog>
-  <dialog id="composer-dialog" class="dialog composer-dialog">
+  <dialog id="composer-dialog" class="dialog composer-dialog" aria-labelledby="compose-title">
     <form id="compose-form">
-      <div class="dialog-heading"><span class="eyebrow">NEW MESSAGE</span><h2 id="compose-title">Write an email</h2></div>
+      <div class="dialog-heading"><span class="eyebrow" id="compose-eyebrow">NEW MESSAGE</span><h2 id="compose-title">Write an email</h2></div>
       <p id="compose-account" class="support">Requires an active Gmail connection. Compose is plain text in this initial milestone.</p>
       <p id="compose-reply-context" class="support" hidden>Replying in the original Gmail thread. Write your reply before sending. The original recipient and subject are locked for safe threading; start a new message to change either.</p>
       <label for="to">To</label><input id="to" name="to" type="text" placeholder="recipient@example.com" required>
