@@ -6,6 +6,7 @@
 
 - When a Gmail message is open, the user can choose **↩ Reply**. This prepares a new draft without sending anything or requesting additional permissions.
 - The recipient is selected from the original `Reply-To` header when a single supported address is present; otherwise from a single supported `From` header. Unclear, repeated, malformed, or unsupported address formats cause a refusal rather than a guessed recipient.
+- The composer has an accessible heading, contextual `THREAD REPLY` label and a description announced for replies; these return to new-message semantics when the reply is discarded or completed.
 - The composer fills the recipient and `Re:` subject. Both are **read-only** for threaded replies; starting a new message is required to change either. A separate programmatic check rejects changes even if the UI is bypassed.
 - The original `Message-ID`, supported `References`, and Gmail `threadId` are validated. A newly submitted reply carries `In-Reply-To` and `References` MIME headers alongside the target `threadId` in the Gmail API request.
 - Sending requires the user's explicit **Send with Gmail** action, the existing Gmail Send scope, same-account validation and normal input checks.
