@@ -38,7 +38,7 @@ class Element {
 function json(data) { return { status: 200, ok: true, json: async () => data }; }
 function message(id, full = false) {
   return {
-    id, labelIds: ['INBOX', 'UNREAD'], snippet: 'message',
+    id, threadId: 'threadSyn001', labelIds: ['INBOX', 'UNREAD'], snippet: 'message',
     payload: {
       mimeType: full ? 'text/plain' : undefined,
       body: full ? { data: 'SGVsbG8=' } : undefined,
@@ -47,6 +47,7 @@ function message(id, full = false) {
         { name: 'From', value: 'sender@example.com' },
         { name: 'Subject', value: 'Test message' },
         { name: 'Reply-To', value: 'reply@example.com' },
+        { name: 'Message-ID', value: '<parent@example.test>' },
         { name: 'Authentication-Results', value: 'mx.example; spf=pass' },
         { name: 'Date', value: 'Thu, 05 Nov 2026 12:00:00 GMT' }
       ]
@@ -110,7 +111,7 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     assert.equal(elements.get('reader-header-details').hidden, false);
     assert.equal(elements.get('reader-header-details').open, false, 'details remains collapsed');
     const headerRows = elements.get('reader-header-list').children;
-    assert.equal(headerRows.length, 5);
+    assert.equal(headerRows.length, 6);
     assert.ok(headerRows.some((row) => row.children[0].textContent === 'Reply-To'
       && row.children[1].textContent === 'reply@example.com'));
     assert.equal(elements.get('reader-attachments').hidden, false);
@@ -119,6 +120,15 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     assert.match(elements.get('reader-attachment-list').children[0].children[1].textContent, /250 bytes/);
     assert.equal(elements.get('unread').textContent, 'Mark read');
     assert.equal(calls.filter((path) => path.includes('/modify')).length, 0, 'opening must not write to Gmail');
+    await elements.get('reply').emit('click');
+    assert.equal(elements.get('composer-dialog').open, true, 'reply opens the composer');
+    assert.equal(elements.get('to').value, 'reply@example.com');
+    assert.equal(elements.get('subject').value, 'Re: Test message');
+    assert.equal(elements.get('compose-reply-context').hidden, false);
+    assert.deepEqual(scopes, [SCOPES.read], 'drafting a reply must not request send permission');
+    await elements.get('close-compose').emit('click');
+    assert.equal(elements.get('compose-reply-context').hidden, true);
+    assert.equal(elements.get('composer-dialog').open, false);
 
     await elements.get('unread').emit('click');
     assert.equal(calls.filter((path) => path.includes('/modify')).length, 1);
