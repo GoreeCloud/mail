@@ -125,9 +125,13 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     assert.equal(elements.get('to').value, 'reply@example.com');
     assert.equal(elements.get('subject').value, 'Re: Test message');
     assert.equal(elements.get('compose-reply-context').hidden, false);
+    assert.equal(elements.get('to').readOnly, true);
+    assert.equal(elements.get('subject').readOnly, true);
     assert.deepEqual(scopes, [SCOPES.read], 'drafting a reply must not request send permission');
     await elements.get('close-compose').emit('click');
     assert.equal(elements.get('compose-reply-context').hidden, true);
+    assert.equal(elements.get('to').readOnly, false);
+    assert.equal(elements.get('subject').readOnly, false);
     assert.equal(elements.get('composer-dialog').open, false);
 
     await elements.get('unread').emit('click');
