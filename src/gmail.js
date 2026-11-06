@@ -301,7 +301,7 @@ function encodeSubject(value) {
 export function buildRawMessage({ to, subject, body, reply = null }) {
   const safeTo = recipients(to);
   const safeSubject = encodeSubject(subject);
-  const replyMetadata = reply ? validateReplyContext(reply, subject) : null;
+  const replyMetadata = reply ? validateReplyContext(reply, subject, to) : null;
   if (typeof body !== 'string' || !body.trim()) throw new Error('Message body is required.');
   const normalizedBody = body.replace(/\r\n|\r|\n/g, '\r\n');
   const bodyBytes = new TextEncoder().encode(normalizedBody);
@@ -328,7 +328,7 @@ export async function sendMessage(input) {
   // Validate before any network request. Gmail accepted/submitted is not final delivery.
   const raw = buildRawMessage(input);
   const replyMetadata = input.reply
-    ? validateReplyContext(input.reply, input.subject) : null;
+    ? validateReplyContext(input.reply, input.subject, input.to) : null;
   const outbound = replyMetadata
     ? { raw, threadId: replyMetadata.threadId } : { raw };
   let receipt;
