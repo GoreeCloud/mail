@@ -46,6 +46,7 @@ Compose offers **Save encrypted draft** and **Restore local draft**, using a use
 - [Read-only attachment summaries and limitations](docs/ATTACHMENT_METADATA.md)
 - [Read-only message headers and trust limitations](docs/MESSAGE_HEADERS.md)
 - [Provider adapter contract and supported capability matrix](docs/PROVIDER_ADAPTERS.md)
+- [Conservative Gmail threaded replies](docs/THREADED_REPLY.md)
 - [Encrypted local drafts and limitations](docs/ENCRYPTED_DRAFTS.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Release plan and default mail gate](docs/ROADMAP.md)
