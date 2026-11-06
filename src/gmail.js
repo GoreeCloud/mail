@@ -348,5 +348,10 @@ export async function sendMessage(input) {
   if (!receipt || typeof receipt.id !== 'string' || !receipt.id.trim() || receipt.id.length > 256) {
     throw new Error('Gmail did not confirm a message ID. Check Sent before retrying to avoid duplicates.');
   }
+  if (replyMetadata && receipt.threadId !== replyMetadata.threadId) {
+    // The provider may already have accepted this message into a different thread.
+    // Never retry an ambiguous submission automatically.
+    throw new Error('Gmail returned an unexpected reply thread. Check Sent before retrying to avoid duplicates.');
+  }
   return { id: receipt.id, threadId: receipt.threadId || null, status: 'accepted_by_provider' };
 }
