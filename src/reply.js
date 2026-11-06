@@ -7,7 +7,8 @@ const MAX_REFERENCES = 12;
 
 function header(message, name) {
   const matches = Array.isArray(message?.headers)
-    ? message.headers.filter((entry) => entry?.name?.toLowerCase() === name.toLowerCase())
+    ? message.headers.filter((entry) => typeof entry?.name === 'string'
+      && entry.name.toLowerCase() === name.toLowerCase())
     : [];
   if (matches.length > 1) throw new Error('Reply header is ambiguous. Start a new message instead.');
   return matches[0]?.value ?? null;
@@ -78,8 +79,9 @@ export function prepareReplyDraft(message) {
   }
   const subject = /^Re:\s/i.test(originalSubject)
     ? originalSubject : 'Re: ' + originalSubject;
-  const references = referenceIds(header(message, 'References'));
-  if (!references.includes(rawId)) references.push(rawId);
+  const references = referenceIds(header(message, 'References'))
+    .filter((id) => id !== rawId);
+  references.push(rawId);
   // Cap safely without forging missing ancestors; the original parent remains last.
   const retained = references.slice(-MAX_REFERENCES);
   const reply = validateReplyContext({
