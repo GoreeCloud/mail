@@ -246,3 +246,49 @@ test('changed threaded reply subject is rejected before any Gmail submission', a
     assert.equal(requests, 0);
   });
 });
+
+
+test('a Gmail reply receipt for a different thread is treated as an ambiguous submission', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    const prepared = prepareReplyDraft({
+      threadId: 'expected-thread',
+      headers: [
+        { name: 'From', value: 'sender@example.test' },
+        { name: 'Subject', value: 'Review' },
+        { name: 'Message-ID', value: '<original@example.test>' }
+      ]
+    });
+    let requests = 0;
+    globalThis.fetch = async (url, init) => {
+      requests++;
+      assert.equal(JSON.parse(init.body).threadId, 'expected-thread');
+      return response({ id: 'possibly-sent', threadId: 'unexpected-thread' });
+    };
+    await assert.rejects(sendMessage({ ...prepared, body: 'A synthetic reply' }),
+      /unexpected reply thread.*Check Sent before retrying/i);
+    assert.equal(requests, 1, 'never automatically resend a potentially accepted reply');
+  });
+});
+
+test('a Gmail reply receipt with no thread ID is not a confirmation of threading', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async () => {
+      requests++;
+      return response({ id: 'possibly-sent' });
+    };
+    const prepared = prepareReplyDraft({
+      threadId: 'thread9',
+      headers: [
+        { name: 'From', value: 'author@example.test' },
+        { name: 'Subject', value: 'Topic' },
+        { name: 'Message-ID', value: '<original@example.test>' }
+      ]
+    });
+    await assert.rejects(sendMessage({ ...prepared, body: 'Synthetic reply' }),
+      /unexpected reply thread/i);
+    assert.equal(requests, 1);
+  });
+});
