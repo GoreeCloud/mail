@@ -8,6 +8,13 @@
 - Never commit OAuth tokens, a client secret, actual account emails, or screenshots of private correspondence.
 - Serve the static app locally over HTTP localhost for development; the app is an email **client only**. Do not deploy or set it as a default mail app.
 
+## Threaded reply acceptance (not yet executed)
+
+- In a dedicated test mailbox, open a safe synthetic received message with a valid Message-ID, then click **Reply**. Confirm no new Google scope was requested merely for drafting; recipient and subject remain locked and body is editable.
+- Confirm an authorized explicit send emits a Gmail messages.send request with the requested threadId, In-Reply-To and References headers, and only reports provider acceptance after a matching threadId and message ID in the response.
+- Exercise missing/invalid Reply-To, duplicate header fields, changed recipient/subject attempts and a Gmail receipt with an unexpected thread ID. Confirm the composer remains open, no automatic retries occur and the user is told to check Sent before retrying.
+- Restore an explicitly saved encrypted reply draft in the same account; confirm that its thread metadata is not readable in localStorage and that a different account or wrong passphrase cannot recover it.
+
 ## Permission acceptance
 
 1. Connect: consent requests **gmail.readonly**, not send or modify. Record the granted scopes shown by Google and confirm the inbox is accessible.
