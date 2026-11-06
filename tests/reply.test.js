@@ -100,3 +100,28 @@ test('a reply with excessive original subject length is refused rather than mist
     h.name === 'Subject' ? { ...h, value: 'x'.repeat(290) } : h) });
   assert.throws(() => prepareReplyDraft(m), /Reply subject/);
 });
+
+
+test('threaded reply validation rejects changed recipient before constructing MIME', () => {
+  const prepared = prepareReplyDraft(source());
+  assert.throws(() => buildRawMessage({ ...prepared,
+    to: 'different@example.test', body: 'Synthetic response' }),
+    /threading data or subject changed/);
+  assert.throws(() => validateReplyContext({
+    ...prepared.reply, recipient: 'different@example.test'
+  }, prepared.subject, prepared.to), /threading data or subject changed/);
+});
+
+test('threading references and raw IDs are bounded before inclusion in MIME', () => {
+  const prepared = prepareReplyDraft(source());
+  const tooMany = Array.from({ length: 12 },
+    (_, i) => '<' + 'x'.repeat(75) + i + '@example.test>');
+  tooMany[tooMany.length - 1] = prepared.reply.inReplyTo;
+  assert.throws(() => validateReplyContext({
+    ...prepared.reply, references: tooMany
+  }, prepared.subject, prepared.to), /threading data or subject changed/);
+  const rawTooLong = source({ headers: source().headers.map((entry) =>
+    entry.name === 'Message-ID'
+      ? { ...entry, value: '<' + 'a'.repeat(200) + '@example.test>' } : entry) });
+  assert.throws(() => prepareReplyDraft(rawTooLong), /Message-ID/);
+});
