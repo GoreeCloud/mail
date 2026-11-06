@@ -4,6 +4,11 @@ const ADDRESS = /^[A-Za-z0-9.!#$%&'*+/=?^_~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-
 const MESSAGE_ID = /^<[A-Za-z0-9.!#$%&'*+/=?^_~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?>$/;
 const THREAD_ID = /^[A-Za-z0-9_-]{1,256}$/;
 const MAX_REFERENCES = 12;
+const MAX_REPLY_REFERENCES_LENGTH = 900;
+const MAX_MESSAGE_ID_LENGTH = 180;
+function validId(id) {
+  return typeof id === 'string' && id.length <= MAX_MESSAGE_ID_LENGTH && MESSAGE_ID.test(id);
+}
 
 function header(message, name) {
   const matches = Array.isArray(message?.headers)
@@ -34,7 +39,7 @@ function referenceIds(value) {
     throw new Error('Message reference metadata is unsupported for safe threading.');
   }
   const parts = value.trim().split(/\s+/);
-  if (parts.length > MAX_REFERENCES || !parts.every((id) => MESSAGE_ID.test(id))) {
+  if (parts.length > MAX_REFERENCES || !parts.every(validId)) {
     throw new Error('Message reference metadata is unsupported for safe threading.');
   }
   return parts;
@@ -42,11 +47,12 @@ function referenceIds(value) {
 
 export function validateReplyContext(context, subject) {
   if (!context || typeof context !== 'object'
-    || !THREAD_ID.test(context.threadId)
-    || !MESSAGE_ID.test(context.inReplyTo)
+    || typeof context.threadId !== 'string' || !THREAD_ID.test(context.threadId)
+    || !validId(context.inReplyTo)
     || !Array.isArray(context.references) || context.references.length < 1
     || context.references.length > MAX_REFERENCES
-    || !context.references.every((id) => typeof id === 'string' && MESSAGE_ID.test(id))
+    || !context.references.every(validId)
+    || context.references.join(' ').length > MAX_REPLY_REFERENCES_LENGTH
     || context.references.at(-1) !== context.inReplyTo
     || typeof context.subject !== 'string' || subject !== context.subject) {
     throw new Error('Reply threading data or subject changed. Start a new message instead.');
@@ -65,7 +71,7 @@ export function prepareReplyDraft(message) {
     throw new Error('This message cannot be replied to safely with the available threading data.');
   }
   const rawId = header(message, 'Message-ID');
-  if (typeof rawId !== 'string' || !MESSAGE_ID.test(rawId)) {
+  if (!validId(rawId)) {
     throw new Error('The original Message-ID is missing or unsupported. Start a new message instead.');
   }
   const preferred = header(message, 'Reply-To');
