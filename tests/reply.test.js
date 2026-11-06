@@ -91,7 +91,7 @@ test('reply subject cannot be changed or used with arbitrary thread references',
   assert.throws(() => validateReplyContext({
     ...draft.reply, references: ['bad']
   }, draft.subject), /threading data or subject changed/);
-  assert.throws(() => buildRawMessage({ ...draft, to: 'victim@example.test\r\nBcc: other@example.test', body: 'Hello' }), /valid comma-separated/);
+  assert.throws(() => buildRawMessage({ ...draft, to: 'victim@example.test\r\nBcc: other@example.test', body: 'Hello' }), /Recipients must contain|valid comma-separated/);
 });
 
 test('a reply with excessive original subject length is refused rather than mistheaded', () => {
