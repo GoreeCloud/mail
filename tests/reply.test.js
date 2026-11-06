@@ -5,7 +5,6 @@ import { buildRawMessage, decodeB64Url } from '../src/gmail.js';
 
 function source(overrides = {}) {
   return {
-    recipient: 'reply@example.test',
     threadId: 'testThread0039',
     subject: 'Quarterly review',
     headers: [
@@ -25,6 +24,7 @@ test('reply targets Reply-To and retains Gmail parent identifiers', () => {
   assert.equal(reply.subject, 'Re: Quarterly review');
   assert.equal(reply.body, '');
   assert.deepEqual(reply.reply, {
+    recipient: 'reply@example.test',
     threadId: 'testThread0039',
     inReplyTo: '<original@example.test>',
     references: ['<ancestor@example.test>', '<original@example.test>'],
