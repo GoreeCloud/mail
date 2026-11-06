@@ -45,7 +45,7 @@ function referenceIds(value) {
   return parts;
 }
 
-export function validateReplyContext(context, subject) {
+export function validateReplyContext(context, subject, recipient = undefined) {
   if (!context || typeof context !== 'object'
     || typeof context.threadId !== 'string' || !THREAD_ID.test(context.threadId)
     || !validId(context.inReplyTo)
@@ -54,10 +54,13 @@ export function validateReplyContext(context, subject) {
     || !context.references.every(validId)
     || context.references.join(' ').length > MAX_REPLY_REFERENCES_LENGTH
     || context.references.at(-1) !== context.inReplyTo
-    || typeof context.subject !== 'string' || subject !== context.subject) {
+    || typeof context.subject !== 'string' || subject !== context.subject
+    || typeof context.recipient !== 'string' || !ADDRESS.test(context.recipient)
+    || (recipient !== undefined && recipient !== context.recipient)) {
     throw new Error('Reply threading data or subject changed. Start a new message instead.');
   }
   return {
+    recipient: context.recipient,
     threadId: context.threadId,
     inReplyTo: context.inReplyTo,
     references: [...context.references],
@@ -91,8 +94,8 @@ export function prepareReplyDraft(message) {
   // Cap safely without forging missing ancestors; the original parent remains last.
   const retained = references.slice(-MAX_REFERENCES);
   const reply = validateReplyContext({
-    threadId: message.threadId, inReplyTo: rawId,
+    recipient: to, threadId: message.threadId, inReplyTo: rawId,
     references: retained, subject
-  }, subject);
+  }, subject, to);
   return { to, subject, body: '', reply };
 }
