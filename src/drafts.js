@@ -62,7 +62,7 @@ function ensureDraft(draft) {
   for (const field of ['to', 'subject', 'body']) {
     if (typeof draft[field] !== 'string') throw new Error('Draft data is invalid.');
   }
-  if (draft.reply != null) validateReplyContext(draft.reply, draft.subject);
+  if (draft.reply != null) validateReplyContext(draft.reply, draft.subject, draft.to);
   if (!draft.to.trim() && !draft.subject.trim() && !draft.body.trim()) {
     throw new Error('Write some email content before saving an encrypted draft.');
   }
@@ -90,7 +90,7 @@ export async function saveEncryptedDraft(draft, passphrase, options = {}) {
   const account = normalizeAccount(draft.account);
   const text = JSON.stringify({
     account, to: draft.to, subject: draft.subject, body: draft.body,
-    ...(draft.reply ? { reply: validateReplyContext(draft.reply, draft.subject) } : {})
+    ...(draft.reply ? { reply: validateReplyContext(draft.reply, draft.subject, draft.to) } : {})
   });
   const plaintext = new TextEncoder().encode(text);
   if (plaintext.length > MAX_PLAINTEXT_BYTES) {
@@ -154,7 +154,7 @@ export async function restoreEncryptedDraft(expectedAccount, passphrase, options
   }
   ensureActive(options);
   return { to: data.to, subject: data.subject, body: data.body,
-    ...(data.reply ? { reply: validateReplyContext(data.reply, data.subject) } : {}) };
+    ...(data.reply ? { reply: validateReplyContext(data.reply, data.subject, data.to) } : {}) };
 }
 
 export function deleteEncryptedDraft(options = {}) {
