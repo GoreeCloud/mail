@@ -44,3 +44,13 @@ test('mobile configuration remains reachable with a labeled toolbar control', ()
   assert.match(css, /@media\(max-width:680px\)\{\.mobile-settings\{display:inline-flex/);
   assert.match(js, /'settings-mobile'\)\.addEventListener\('click', openSettings\)/);
 });
+
+test('compose dialog has a programmatic accessible name and description for reply', () => {
+  const html = read('index.html');
+  const js = read('src/main.js');
+  assert.match(html, /id="composer-dialog"[^>]*aria-labelledby="compose-title"/);
+  assert.match(html, /id="compose-eyebrow">NEW MESSAGE/);
+  assert.match(html, /id="compose-reply-context"[^>]*hidden/);
+  assert.match(js, /setAttribute\('aria-describedby', 'compose-reply-context'\)/);
+  assert.match(js, /removeAttribute\('aria-describedby'\)/);
+});
