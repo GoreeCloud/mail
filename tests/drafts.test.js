@@ -1,3 +1,4 @@
+import { prepareReplyDraft } from '../src/reply.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
@@ -142,4 +143,39 @@ test('cancelled restore cannot repopulate data after decryption completes', asyn
     (error) => error.name === 'AbortError'
   );
   assert.equal(hasEncryptedDraft(options), true);
+});
+
+
+test('encrypted snapshots retain reply threading context without storing it in plaintext', async () => {
+  const { items, options, draft } = fixture();
+  const prepared = prepareReplyDraft({
+    threadId: 'replyThread123',
+    headers: [
+      { name: 'From', value: 'sender@example.test' },
+      { name: 'Subject', value: 'Project update' },
+      { name: 'Message-ID', value: '<message123@example.test>' }
+    ]
+  });
+  const saved = { ...draft, ...prepared, body: 'Private response' };
+  await saveEncryptedDraft(saved, 'secure passphrase 123', options);
+  const serialized = [...items.values()][0];
+  assert.doesNotMatch(serialized, /replyThread123|message123@example\.test|Project update|Private response/);
+  const recovered = await restoreEncryptedDraft(draft.account, 'secure passphrase 123', options);
+  assert.equal(recovered.reply.threadId, 'replyThread123');
+  assert.equal(recovered.reply.inReplyTo, '<message123@example.test>');
+  assert.equal(recovered.body, 'Private response');
+  assert.deepEqual(recovered.reply, prepared.reply);
+});
+
+test('invalid encrypted reply metadata is refused before persistence', async () => {
+  const { options, draft } = fixture();
+  const unsafe = {
+    ...draft, reply: {
+      threadId: 'thread', inReplyTo: '<parent@example.test>',
+      references: ['<parent@example.test>'], subject: 'Another subject'
+    }
+  };
+  await assert.rejects(saveEncryptedDraft(unsafe, 'secure passphrase 123', options),
+    /threading data or subject changed/);
+  assert.equal(hasEncryptedDraft(options), false);
 });
