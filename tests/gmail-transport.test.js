@@ -1,3 +1,4 @@
+import { prepareReplyDraft } from '../src/reply.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { connectGoogle, disconnect, requestCapability } from '../src/auth.js';
@@ -187,6 +188,61 @@ test('invalid sending input is rejected before any provider network call', async
     let requests = 0;
     globalThis.fetch = async () => { requests++; return response({ id: 'never' }); };
     await assert.rejects(sendMessage({ ...draft, to: 'bad-address' }), /ASCII email addresses/);
+    assert.equal(requests, 0);
+  });
+});
+
+
+test('Gmail threaded reply sends validated RFC headers and an explicit threadId', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async (url, options) => {
+      requests++;
+      assert.match(String(url), /messages\/send$/);
+      const payload = JSON.parse(options.body);
+      assert.equal(payload.threadId, 'gmailThread001');
+      const mime = Buffer.from(payload.raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+      assert.match(mime, /In-Reply-To: <parent@example.test>\r\n/);
+      assert.match(mime, /References: <ancestor@example.test> <parent@example.test>\r\n/);
+      return response({ id: 'accepted123', threadId: 'gmailThread001' });
+    };
+    const prepared = prepareReplyDraft({
+      threadId: 'gmailThread001',
+      headers: [
+        { name: 'From', value: 'sender@example.test' },
+        { name: 'Subject', value: 'Question' },
+        { name: 'Message-ID', value: '<parent@example.test>' },
+        { name: 'References', value: '<ancestor@example.test>' }
+      ]
+    });
+    const result = await sendMessage({ ...prepared, body: 'The reply content' });
+    assert.equal(result.status, 'accepted_by_provider');
+    assert.equal(result.threadId, 'gmailThread001');
+    assert.equal(requests, 1);
+  });
+});
+
+test('changed threaded reply subject is rejected before any Gmail submission', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('send');
+    let requests = 0;
+    globalThis.fetch = async () => {
+      requests++;
+      return response({ id: 'should-not-send' });
+    };
+    const prepared = prepareReplyDraft({
+      threadId: 'thread2',
+      headers: [
+        { name: 'Reply-To', value: 'recipient@example.test' },
+        { name: 'Subject', value: 'Question' },
+        { name: 'Message-ID', value: '<parent@example.test>' }
+      ]
+    });
+    await assert.rejects(
+      sendMessage({ ...prepared, subject: 'Changed', body: 'Reply body' }),
+      /threading data or subject changed/
+    );
     assert.equal(requests, 0);
   });
 });
