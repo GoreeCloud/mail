@@ -59,6 +59,7 @@
           </div>
           <article id="reader" class="reader-content" hidden>
             <div class="reader-top"><button id="back" class="quiet reader-back" type="button">← Back to messages</button><span class="eyebrow">CONVERSATION</span><div class="reader-actions">
+              <button id="reply" class="quiet" type="button" title="Reply with Gmail (draft only)">↩ Reply</button>
               <button id="star" class="quiet" type="button">☆ Star</button>
               <button id="unread" class="quiet" type="button">Mark unread</button>
               <button id="archive" class="quiet" type="button">Archive</button>
@@ -97,6 +98,7 @@
     <form id="compose-form">
       <div class="dialog-heading"><span class="eyebrow">NEW MESSAGE</span><h2>Write an email</h2></div>
       <p id="compose-account" class="support">Requires an active Gmail connection. Compose is plain text in this initial milestone.</p>
+      <p id="compose-reply-context" class="support" hidden>Replying in the original Gmail thread. Write your reply before sending. Threading requires the original subject to remain unchanged.</p>
       <label for="to">To</label><input id="to" name="to" type="text" placeholder="recipient@example.com" required>
       <label for="subject">Subject</label><input id="subject" name="subject" type="text" maxlength="300" required>
       <label for="body">Message</label><textarea id="body" name="body" rows="10" required></textarea>
