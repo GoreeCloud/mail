@@ -1,5 +1,6 @@
 import { getToken } from './auth.js';
 import { summarizeMessageHeaders } from './message-headers.js';
+import { validateReplyContext } from './reply.js';
 
 const BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const PAGE_SIZE = 30;
@@ -297,9 +298,10 @@ function encodeSubject(value) {
   return words.join('\r\n ');
 }
 
-export function buildRawMessage({ to, subject, body }) {
+export function buildRawMessage({ to, subject, body, reply = null }) {
   const safeTo = recipients(to);
   const safeSubject = encodeSubject(subject);
+  const replyMetadata = reply ? validateReplyContext(reply, subject) : null;
   if (typeof body !== 'string' || !body.trim()) throw new Error('Message body is required.');
   const normalizedBody = body.replace(/\r\n|\r|\n/g, '\r\n');
   const bodyBytes = new TextEncoder().encode(normalizedBody);
@@ -309,6 +311,10 @@ export function buildRawMessage({ to, subject, body }) {
   const mime = [
     'To: ' + safeTo,
     'Subject: ' + safeSubject,
+    ...(replyMetadata ? [
+      'In-Reply-To: ' + replyMetadata.inReplyTo,
+      'References: ' + replyMetadata.references.join(' ')
+    ] : []),
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=UTF-8',
     'Content-Transfer-Encoding: base64',
@@ -321,10 +327,14 @@ export function buildRawMessage({ to, subject, body }) {
 export async function sendMessage(input) {
   // Validate before any network request. Gmail accepted/submitted is not final delivery.
   const raw = buildRawMessage(input);
+  const replyMetadata = input.reply
+    ? validateReplyContext(input.reply, input.subject) : null;
+  const outbound = replyMetadata
+    ? { raw, threadId: replyMetadata.threadId } : { raw };
   let receipt;
   try {
     receipt = await api('/messages/send', {
-      method: 'POST', body: { raw }, capability: 'send'
+      method: 'POST', body: outbound, capability: 'send'
     });
   } catch (error) {
     // Explicit auth failures are not ambiguous delivery receipts.
