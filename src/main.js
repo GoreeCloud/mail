@@ -4,6 +4,7 @@ const {
   getProfile, listMessages, getMessage, modifyMessage, sendMessage
 } = gmailAdapter;
 import { hasEncryptedDraft, saveEncryptedDraft, restoreEncryptedDraft, deleteEncryptedDraft } from './drafts.js';
+import { prepareReplyDraft } from './reply.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -16,6 +17,7 @@ const KEY = 'goreecloud-mail-public-oauth-client-id';
 let configuredClientId = '';
 let draftMode = null;
 let activeDraftController = null;
+let replyContext = null;
 const panel = $('message-list');
 
 function announce(message, error = false) {
@@ -206,6 +208,7 @@ function resetSession(message) {
   state.pageError = false;
   state.loading = false;
   $('compose-form').reset();
+  setReplyContext(null);
   $('search').value = '';
   if ($('composer-dialog').open) $('composer-dialog').close();
   closeDraftDialog();
@@ -337,7 +340,8 @@ async function submitDraft(event) {
   announce(mode === 'save' ? 'Encrypting local draft…' : 'Unlocking local draft…');
   try {
     if (mode === 'save') {
-      const draft = { account, to: $('to').value, subject: $('subject').value, body: $('body').value };
+      const draft = { account, to: $('to').value, subject: $('subject').value, body: $('body').value,
+        ...(replyContext ? { reply: replyContext } : {}) };
       await saveEncryptedDraft(draft, passphrase, { signal: controller.signal });
     } else {
       const draft = await restoreEncryptedDraft(account, passphrase, { signal: controller.signal });
@@ -345,6 +349,7 @@ async function submitDraft(event) {
       $('to').value = draft.to;
       $('subject').value = draft.subject;
       $('body').value = draft.body;
+      setReplyContext(draft.reply || null);
     }
     if (!controller.signal.aborted && connected() && seq === state.sequence) {
       closeDraftDialog();
@@ -373,6 +378,11 @@ function removeLocalDraft() {
   } catch (error) { announce(error.message, true); }
 }
 
+function setReplyContext(context) {
+  replyContext = context;
+  $('compose-reply-context').hidden = !context;
+}
+
 function hasUnsentComposition() {
   return ['to', 'subject', 'body'].some((id) => $(id).value.trim().length > 0);
 }
@@ -386,17 +396,44 @@ function discardComposition() {
   )) return;
   $('composer-dialog').close();
   $('compose-form').reset();
+  setReplyContext(null);
 }
 
 function openCompose() {
-  if (!connected()) return;
+  if (!connected() || state.busy || $('composer-dialog').open) return;
+  $('compose-form').reset();
+  setReplyContext(null);
   $('composer-dialog').showModal(); $('to').focus();
+}
+
+function openReply() {
+  if (!connected() || !state.active || state.busy) return;
+  if ($('composer-dialog').open) {
+    announce('Finish or discard the current unsent message before replying.', true);
+    return;
+  }
+  try {
+    const draft = prepareReplyDraft(state.active);
+    $('compose-form').reset();
+    $('to').value = draft.to;
+    $('subject').value = draft.subject;
+    $('body').value = '';
+    setReplyContext(draft.reply);
+    $('composer-dialog').showModal();
+    $('body').focus();
+    announce('Reply draft opened. Verify the recipient and write your response before sending.');
+  } catch (error) { announce(error.message, true); }
 }
 async function submitCompose(event) {
   event.preventDefault();
   if (state.busy) return;
+  if (replyContext && $('subject').value !== replyContext.subject) {
+    announce('A threaded reply must keep its original subject. Discard and start a new message to change it.', true);
+    return;
+  }
   state.busy = true; $('send').disabled = true;
-  const input = { to: $('to').value, subject: $('subject').value, body: $('body').value };
+  const input = { to: $('to').value, subject: $('subject').value, body: $('body').value,
+    ...(replyContext ? { reply: replyContext } : {}) };
   announce('Submitting message to Gmail…');
   try {
     const expectedEmail = state.email;
@@ -408,6 +445,7 @@ async function submitCompose(event) {
     await sendMessage(input);
     if (!connected() || listSequence !== state.sequence) return;
     $('composer-dialog').close(); $('compose-form').reset();
+    setReplyContext(null);
     announce('Gmail accepted your message for sending.');
     if (state.view === 'SENT') await loadMailbox();
   } catch (error) { announce(error.message, true); }
@@ -469,6 +507,7 @@ window.addEventListener?.('beforeunload', (event) => {
     event.returnValue = '';
   }
 });
+$('reply').addEventListener('click', openReply);
 $('star').addEventListener('click', () => actOnMessage('star'));
 $('unread').addEventListener('click', () => actOnMessage('unread'));
 $('archive').addEventListener('click', () => actOnMessage('archive'));
