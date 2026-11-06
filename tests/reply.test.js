@@ -5,6 +5,7 @@ import { buildRawMessage, decodeB64Url } from '../src/gmail.js';
 
 function source(overrides = {}) {
   return {
+    recipient: 'reply@example.test',
     threadId: 'testThread0039',
     subject: 'Quarterly review',
     headers: [
