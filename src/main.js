@@ -381,6 +381,9 @@ function removeLocalDraft() {
 function setReplyContext(context) {
   replyContext = context;
   $('compose-reply-context').hidden = !context;
+  $('compose-title').textContent = context ? 'Reply to email' : 'Write an email';
+  $('to').readOnly = Boolean(context);
+  $('subject').readOnly = Boolean(context);
 }
 
 function hasUnsentComposition() {
@@ -427,8 +430,9 @@ function openReply() {
 async function submitCompose(event) {
   event.preventDefault();
   if (state.busy) return;
-  if (replyContext && $('subject').value !== replyContext.subject) {
-    announce('A threaded reply must keep its original subject. Discard and start a new message to change it.', true);
+  if (replyContext && ($('subject').value !== replyContext.subject
+      || $('to').value !== replyContext.recipient)) {
+    announce('A threaded reply must keep its original recipient and subject. Start a new message to change them.', true);
     return;
   }
   state.busy = true; $('send').disabled = true;
