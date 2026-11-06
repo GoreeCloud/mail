@@ -382,6 +382,12 @@ function setReplyContext(context) {
   replyContext = context;
   $('compose-reply-context').hidden = !context;
   $('compose-title').textContent = context ? 'Reply to email' : 'Write an email';
+  $('compose-eyebrow').textContent = context ? 'THREAD REPLY' : 'NEW MESSAGE';
+  if (context) {
+    $('composer-dialog').setAttribute('aria-describedby', 'compose-reply-context');
+  } else {
+    $('composer-dialog').removeAttribute('aria-describedby');
+  }
   $('to').readOnly = Boolean(context);
   $('subject').readOnly = Boolean(context);
 }
