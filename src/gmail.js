@@ -249,10 +249,19 @@ async function fetchMetadata(id, signal) {
 // Gmail IDs are opaque URL path segments; no coerced objects, duplicate IDs, or
 // unbounded cursors should become requests or committed inbox state.
 function requireMessageId(id) {
-  if (typeof id !== 'string' || !MESSAGE_ID_PATTERN.test(id)) {
+  if (typeof id !== 'string' || !MESSAGE_ID_PATTERN.test(id) || /[\r\n]/.test(id)) {
     throw new Error('Gmail returned an invalid message identifier. Retry this mailbox.');
   }
   return id;
+}
+
+function requirePageToken(value) {
+  // Opaque tokens may contain punctuation, but must remain bounded plain text.
+  if (typeof value !== 'string' || value.length > MAX_PAGE_TOKEN_CHARS
+    || /[\x00-\x1f\x7f]/.test(value)) {
+    throw new Error('Gmail returned an invalid page cursor. Retry this page.');
+  }
+  return value;
 }
 
 function validateMessagePage(result) {
@@ -271,19 +280,16 @@ function validateMessagePage(result) {
     }
     seen.add(id);
   }
-  const rawToken = result.nextPageToken == null ? '' : result.nextPageToken;
-  if (typeof rawToken !== 'string' || rawToken.length > MAX_PAGE_TOKEN_CHARS
-    || /[\x00-\x1f\x7f]/.test(rawToken)) {
-    throw new Error('Gmail returned an invalid page cursor. Retry this page.');
-  }
-  return { ids, nextPageToken: rawToken };
+  const nextPageToken = requirePageToken(result.nextPageToken == null ? '' : result.nextPageToken);
+  return { ids, nextPageToken };
 }
 
 export async function listMessages(view, query = '', pageToken = '', { signal } = {}) {
+  const requestedToken = requirePageToken(pageToken);
   const params = new URLSearchParams({ maxResults: String(PAGE_SIZE) });
   if (view && view !== 'ALL') params.set('labelIds', view);
   if (query.trim()) params.set('q', query.trim());
-  if (pageToken) params.set('pageToken', pageToken);
+  if (requestedToken) params.set('pageToken', requestedToken);
   const result = await api('/messages?' + params.toString(), { signal });
   const { ids, nextPageToken } = validateMessagePage(result);
   const messages = [];
