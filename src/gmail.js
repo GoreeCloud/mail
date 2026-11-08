@@ -72,6 +72,27 @@ function textCharset(part) {
   return match?.[1] || match?.[2] || 'utf-8';
 }
 
+// Conservative MIME classification: only text/plain is rendered and only multipart
+// containers are traversed. Unknown dispositions are not automatically displayed.
+const MIME_TYPE_PATTERN = /^[a-z0-9!#$%&'*+.^_~-]{1,64}\/[a-z0-9!#$%&'*+.^_~-]{1,64}$/i;
+function partMediaType(part) {
+  const value = part?.mimeType;
+  return typeof value === 'string' && MIME_TYPE_PATTERN.test(value) ? value.toLowerCase() : '';
+}
+function dispositionIsAttachment(part) {
+  const disposition = headerValue(part.headers, 'Content-Disposition').trim();
+  if (!disposition) return false;
+  // Unknown dispositions are attachment-like under RFC 2183 section 2.
+  const type = disposition.split(';', 1)[0].trim().toLowerCase();
+  return type !== 'inline' || /(?:^|;)\s*filename\*?\s*=/i.test(disposition);
+}
+function isNonBodyPart(part) {
+  return (typeof part.filename === 'string' && part.filename.trim().length > 0)
+    || (typeof part.body?.attachmentId === 'string' && part.body.attachmentId.length > 0)
+    || dispositionIsAttachment(part)
+    || partMediaType(part).startsWith('message/');
+}
+
 export function extractPlainText(payload) {
   if (!payload) return '';
   const pending = [{ part: payload, depth: 0 }];
@@ -81,14 +102,15 @@ export function extractPlainText(payload) {
     if (++visited > MAX_MIME_NODES || depth > MAX_MIME_DEPTH) {
       throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
     }
-    if (!part || typeof part !== 'object' || part.filename || part.body?.attachmentId) continue;
-    const disposition = headerValue(part.headers, 'Content-Disposition').trim();
-    if (/^attachment(?:\s|;|$)/i.test(disposition)) continue;
-    if (typeof part.mimeType === 'string'
-      && part.mimeType.split(';')[0].trim().toLowerCase() === 'text/plain'
+    if (!part || typeof part !== 'object' || isNonBodyPart(part)) continue;
+    const mediaType = partMediaType(part);
+    if (mediaType === 'text/plain'
       && typeof part.body?.data === 'string' && part.body.data) {
       return decodeB64Url(part.body.data, textCharset(part));
     }
+    // Encapsulated messages and arbitrary application/image parts must never
+    // become the visible email body merely because they contain a child.
+    if (!mediaType.startsWith('multipart/')) continue;
     const children = Array.isArray(part.parts) ? part.parts : [];
     if (visited + pending.length + children.length > MAX_MIME_NODES
         || (depth >= MAX_MIME_DEPTH && children.length)) {
@@ -121,15 +143,10 @@ export function extractAttachmentSummaries(payload) {
       throw new Error('Message MIME structure exceeds this alpha\'s viewing limit.');
     }
     if (!part || typeof part !== 'object') continue;
-    const disposition = String(headerValue(part.headers, 'Content-Disposition') || '').trim();
-    const named = typeof part.filename === 'string' && part.filename.trim().length > 0;
-    const attached = named || /^attachment(?:\s|;|$)/i.test(disposition)
-      || (typeof part.body?.attachmentId === 'string' && part.body.attachmentId.length > 0);
-    if (attached) {
+    if (isNonBodyPart(part)) {
       if (items.length < MAX_VISIBLE_ATTACHMENTS) {
         const size = part.body?.size;
-        const mediaType = typeof part.mimeType === 'string' && /^[a-z0-9!#export function normalizeMessage(message) {^_.+-]+\/[a-z0-9!#export function normalizeMessage(message) {^_.+-]+$/i.test(part.mimeType)
-          ? part.mimeType.toLowerCase() : 'Unknown type';
+        const mediaType = partMediaType(part) || 'Unknown type';
         items.push({
           name: safeAttachmentLabel(part.filename),
           mediaType,
@@ -139,6 +156,9 @@ export function extractAttachmentSummaries(payload) {
       // Attached submessages are not recursively interpreted as message text.
       continue;
     }
+    // Only multipart containers can contribute attachment siblings. A malformed
+    // non-multipart part with subparts is never a traversal entry point.
+    if (!partMediaType(part).startsWith('multipart/')) continue;
     const children = Array.isArray(part.parts) ? part.parts : [];
     if (visited + pending.length + children.length > MAX_MIME_NODES
       || (depth >= MAX_MIME_DEPTH && children.length)) {
