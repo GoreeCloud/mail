@@ -303,6 +303,8 @@ test('Gmail refuses malformed, oversized, or duplicate list pages before metadat
       { messages: [{ id: 'one' }, { id: 'one' }] },
       { messages: [{ id: 'bad/id' }] },
       { messages: [{ id: 'valid\n' }] },
+      { messages: [{ id: 'valid\u2028' }] },
+      { messages: [{ id: 'valid\u2029' }] },
       { messages: [{ id: 42 }] },
       { messages: [{ id: 'x'.repeat(257) }] }
     ];
@@ -374,7 +376,7 @@ test('invalid message IDs are refused before any read or modification request', 
   await withFakeGoogle(async () => {
     let requests = 0;
     globalThis.fetch = async () => { requests++; return response({ id: 'unused' }); };
-    for (const badId of [null, 12, '', 'bad/id', 'space name', 'x'.repeat(257), 'one\n', 'one\r\nBcc: x']) {
+    for (const badId of [null, 12, '', 'bad/id', 'space name', 'x'.repeat(257), 'one\n', 'one\u2028', 'one\u2029', 'one\r\nBcc: x']) {
       await assert.rejects(getMessage(badId), /invalid message identifier/i);
       await assert.rejects(modifyMessage(badId, { addLabelIds: ['STARRED'] }),
         /invalid message identifier/i);
