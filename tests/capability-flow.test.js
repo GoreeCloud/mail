@@ -97,7 +97,7 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
     if (path.includes('/messages?')) return json({ messages: [{ id: 'one' }] });
     if (path.includes('/messages/one?format=full')) return json(message('one', true));
     if (path.includes('format=metadata')) return json(message('one'));
-    if (path.includes('/modify')) return json({});
+    if (path.includes('/modify')) return json({ id: 'one', labelIds: ['INBOX'] });
     if (path.includes('/send')) return json({});
     throw new Error('Unexpected mocked route ' + path);
   };
@@ -144,6 +144,8 @@ test('read-only viewing stays non-mutating; explicit modify prompts; account mis
 
     await elements.get('unread').emit('click');
     assert.equal(calls.filter((path) => path.includes('/modify')).length, 1);
+    assert.equal(elements.get('unread').textContent, 'Mark unread',
+      'reader reflects the provider-confirmed removal of UNREAD');
     assert.ok(scopes[1].includes(SCOPES.modify));
     assert.ok(!scopes[1].includes(SCOPES.send));
 
