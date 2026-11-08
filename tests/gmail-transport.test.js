@@ -302,6 +302,7 @@ test('Gmail refuses malformed, oversized, or duplicate list pages before metadat
       { messages: Array.from({ length: 31 }, (_, i) => ({ id: 'm' + i })) },
       { messages: [{ id: 'one' }, { id: 'one' }] },
       { messages: [{ id: 'bad/id' }] },
+      { messages: [{ id: 'valid\n' }] },
       { messages: [{ id: 42 }] },
       { messages: [{ id: 'x'.repeat(257) }] }
     ];
@@ -330,6 +331,17 @@ test('Gmail rejects invalid provider page cursors without accepting the current 
       await assert.rejects(listMessages('INBOX'), /invalid page cursor/i);
       assert.equal(requests, 1, 'invalid cursor must reject before metadata requests');
     }
+  });
+});
+
+test('invalid caller-supplied page cursors cannot trigger Gmail requests', async () => {
+  await withFakeGoogle(async () => {
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({}); };
+    for (const token of [null, 12, { cursor: true }, 'page\nbad', 'z'.repeat(4097)]) {
+      await assert.rejects(listMessages('INBOX', '', token), /invalid page cursor/i);
+    }
+    assert.equal(requests, 0, 'reject invalid cursor before network access');
   });
 });
 
@@ -362,7 +374,7 @@ test('invalid message IDs are refused before any read or modification request', 
   await withFakeGoogle(async () => {
     let requests = 0;
     globalThis.fetch = async () => { requests++; return response({ id: 'unused' }); };
-    for (const badId of [null, 12, '', 'bad/id', 'space name', 'x'.repeat(257), 'one\r\nBcc: x']) {
+    for (const badId of [null, 12, '', 'bad/id', 'space name', 'x'.repeat(257), 'one\n', 'one\r\nBcc: x']) {
       await assert.rejects(getMessage(badId), /invalid message identifier/i);
       await assert.rejects(modifyMessage(badId, { addLabelIds: ['STARRED'] }),
         /invalid message identifier/i);
