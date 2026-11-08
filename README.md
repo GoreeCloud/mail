@@ -59,3 +59,5 @@ Public source is not a blanket reuse license; licensing has not yet been designa
 ## License
 
 GoreeCloud Mail's original repository code, documentation, and locally authored SVG icon are licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) and [NOTICE](NOTICE). This repository has no third-party runtime packages. It reuses Apache-2.0 GoreeCloud UI design tokens from the first-party `GoreeCloud/gc-ui` repository; external services, trademarks and separately licensed materials retain their own terms. See [the repository licensing assessment](docs/LICENSING.md) for provenance and scope.
+
+CI runs Node.js syntax checks and automated tests with **commit-pinned GitHub Actions** and read-only workflow permissions. See [CI integrity and update requirements](docs/CI_INTEGRITY.md).
