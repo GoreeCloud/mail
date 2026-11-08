@@ -1,0 +1,21 @@
+GoreeCloud Mail
+Copyright 2026 GoreeCloud
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+First-party component provenance
+-------------------------------
+styles/app.css incorporates and adapts GoreeCloud UI semantic design tokens
+from GoreeCloud/gc-ui, styles/tokens.css:
+https://github.com/GoreeCloud/gc-ui/blob/main/styles/tokens.css
+
+The source design-token implementation is made available under the Apache
+License, Version 2.0. GoreeCloud Mail carries forward that license for this
+repository's original work and the adapted token definitions.
+
+This notice does not claim ownership of Google, Gmail, Microsoft, Proton, Tuta,
+or other third-party names, services, marks, or intellectual property.
+Those names appear for interoperability and product-description purposes.
+
+There are no bundled third-party runtime package dependencies in
+package.json at this checkpoint. Recheck the dependency and asset inventory
+before future builds or distributions.
