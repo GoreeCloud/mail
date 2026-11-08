@@ -4,6 +4,8 @@ import { validateReplyContext } from './reply.js';
 
 const BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const PAGE_SIZE = 30;
+const MAX_PAGE_TOKEN_CHARS = 4096;
+const MESSAGE_ID_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
 const MAX_BODY_BYTES = 1024 * 1024; // This alpha supports small, plain-text messages only.
 
 async function api(path, init = {}) {
@@ -243,24 +245,65 @@ async function fetchMetadata(id, signal) {
 }
 
 // Pagination is transactional: never return or advance an incomplete metadata page.
+// Validate provider-controlled page metadata before fetching or publishing previews.
+// Gmail IDs are opaque URL path segments; no coerced objects, duplicate IDs, or
+// unbounded cursors should become requests or committed inbox state.
+function requireMessageId(id) {
+  if (typeof id !== 'string' || !MESSAGE_ID_PATTERN.test(id)) {
+    throw new Error('Gmail returned an invalid message identifier. Retry this mailbox.');
+  }
+  return id;
+}
+
+function validateMessagePage(result) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw new Error('Gmail returned invalid mailbox page data. Retry this page.');
+  }
+  const ids = result.messages == null ? [] : result.messages;
+  if (!Array.isArray(ids) || ids.length > PAGE_SIZE) {
+    throw new Error('Gmail returned invalid mailbox page data. Retry this page.');
+  }
+  const seen = new Set();
+  for (const item of ids) {
+    const id = requireMessageId(item?.id);
+    if (seen.has(id)) {
+      throw new Error('Gmail returned duplicate message identifiers. Retry this page.');
+    }
+    seen.add(id);
+  }
+  const rawToken = result.nextPageToken == null ? '' : result.nextPageToken;
+  if (typeof rawToken !== 'string' || rawToken.length > MAX_PAGE_TOKEN_CHARS
+    || /[\x00-\x1f\x7f]/.test(rawToken)) {
+    throw new Error('Gmail returned an invalid page cursor. Retry this page.');
+  }
+  return { ids, nextPageToken: rawToken };
+}
+
 export async function listMessages(view, query = '', pageToken = '', { signal } = {}) {
   const params = new URLSearchParams({ maxResults: String(PAGE_SIZE) });
   if (view && view !== 'ALL') params.set('labelIds', view);
   if (query.trim()) params.set('q', query.trim());
   if (pageToken) params.set('pageToken', pageToken);
   const result = await api('/messages?' + params.toString(), { signal });
-  const ids = result.messages || [];
+  const { ids, nextPageToken } = validateMessagePage(result);
   const messages = [];
   let failedCount = 0;
   // Five concurrent metadata fetches per page keeps Gmail quota and browser load bounded.
   for (let i = 0; i < ids.length; i += 5) {
     if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
-    const batch = await Promise.allSettled(ids.slice(i, i + 5).map((item) =>
+    const requested = ids.slice(i, i + 5);
+    const batch = await Promise.allSettled(requested.map((item) =>
       fetchMetadata(item.id, signal)
     ));
-    for (const entry of batch) {
-      if (entry.status === 'fulfilled') messages.push(normalizeMessage(entry.value));
-      else {
+    for (let index = 0; index < batch.length; index++) {
+      const entry = batch[index];
+      if (entry.status === 'fulfilled') {
+        const message = normalizeMessage(entry.value);
+        if (message.id !== requested[index].id) {
+          throw new Error('Gmail returned mismatched message metadata. Retry this page.');
+        }
+        messages.push(message);
+      } else {
         // Expired or denied authorization is not an ordinary transient preview error.
         if ([401, 403].includes(entry.reason?.status)) throw entry.reason;
         if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
@@ -271,16 +314,22 @@ export async function listMessages(view, query = '', pageToken = '', { signal } 
   // Return nothing on a partial failure: the UI keeps the previous page cursor.
   if (failedCount) throw new Error('Unable to load ' + failedCount
     + ' message previews. Retry the same page; no messages were skipped.');
-  return { messages, nextPageToken: result.nextPageToken || '', failedCount: 0 };
+  return { messages, nextPageToken, failedCount: 0 };
 }
 
 export async function getMessage(id, { signal } = {}) {
-  const message = await api('/messages/' + encodeURIComponent(id) + '?format=full', { signal });
-  return normalizeMessage(message);
+  const requestedId = requireMessageId(id);
+  const message = await api('/messages/' + encodeURIComponent(requestedId) + '?format=full', { signal });
+  const normalized = normalizeMessage(message);
+  if (normalized.id !== requestedId) {
+    throw new Error('Gmail returned a different message identifier. Retry this message.');
+  }
+  return normalized;
 }
 
 export async function modifyMessage(id, { addLabelIds = [], removeLabelIds = [] }) {
-  return api('/messages/' + encodeURIComponent(id) + '/modify', {
+  const requestedId = requireMessageId(id);
+  return api('/messages/' + encodeURIComponent(requestedId) + '/modify', {
     method: 'POST', body: { addLabelIds, removeLabelIds }, capability: 'modify'
   });
 }
