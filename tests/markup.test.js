@@ -81,3 +81,12 @@ test('mobile primary navigation floats clear of screen edges and scrollable cont
   assert.match(css, /@media\(max-width:300px\)/);
   assert.match(css, /@media\(forced-colors:active\)/);
 });
+
+test('the mobile settings dialog provides an accessible theme switch', () => {
+  const html = read('index.html');
+  const js = read('src/main.js');
+  assert.match(html, /id="theme-settings" type="button"/);
+  assert.match(html, /Switch appearance \(light \/ dark\)/);
+  assert.match(js, /'theme-settings'\)\.addEventListener\('click', toggleAppearance\)/);
+  assert.match(html, /id="compose"[^>]*aria-label="Compose a new email"/);
+});
