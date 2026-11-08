@@ -90,3 +90,12 @@ test('the mobile settings dialog provides an accessible theme switch', () => {
   assert.match(js, /'theme-settings'\)\.addEventListener\('click', toggleAppearance\)/);
   assert.match(html, /id="compose"[^>]*aria-label="Compose a new email"/);
 });
+
+
+test('account settings provide browser-local draft deletion without account OAuth', () => {
+  const html = read('index.html');
+  const js = read('src/main.js');
+  assert.match(html, /id="delete-local-draft-settings" type="button"/);
+  assert.match(js, /'delete-local-draft-settings'\)\.addEventListener\('click', removeLocalDraft\)/);
+  assert.match(html, /No Gmail account or passphrase is needed/);
+});
