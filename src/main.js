@@ -243,12 +243,13 @@ async function actOnMessage(kind) {
     if (kind === 'star') (old.labels.includes('STARRED') ? removeLabelIds : addLabelIds).push('STARRED');
     if (kind === 'unread') (old.labels.includes('UNREAD') ? removeLabelIds : addLabelIds).push('UNREAD');
     if (kind === 'archive') removeLabelIds.push('INBOX');
-    await modifyMessage(old.id, { addLabelIds, removeLabelIds });
+    const receipt = await modifyMessage(old.id, { addLabelIds, removeLabelIds });
     if (!connected() || listSequence !== state.sequence
         || readSequence !== state.readerSequence || state.active?.id !== old.id) return;
-    state.active.labels = [...state.active.labels.filter((label) => !removeLabelIds.includes(label)), ...addLabelIds];
+    // Reflect only labels returned and confirmed for the requested Gmail message.
+    state.active.labels = receipt.labelIds;
     const listed = state.messages.find((message) => message.id === old.id);
-    if (listed) listed.labels = state.active.labels;
+    if (listed) listed.labels = receipt.labelIds;
     if (kind === 'archive' && state.view === 'INBOX') {
       state.messages = state.messages.filter((message) => message.id !== old.id);
       clearReader();

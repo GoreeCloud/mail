@@ -8,6 +8,12 @@
 - Never commit OAuth tokens, a client secret, actual account emails, or screenshots of private correspondence.
 - Serve the static app locally over HTTP localhost for development; the app is an email **client only**. Do not deploy or set it as a default mail app.
 
+## Gmail label-modification acceptance (not yet executed)
+
+- In a disposable Gmail test mailbox, verify single-message Mark read/unread, Star/unstar and Archive after explicit `gmail.modify` consent. Confirm the returned message ID and label set agree with the intended change before the UI updates.
+- Simulate missing/mismatched or contradictory modify receipts and request interruption. Confirm the browser does not repeat the operation and tells the user to refresh rather than reporting a successful change.
+- Test a message with no remaining labels, custom label IDs, account revocation, and concurrent mailbox changes. Document any compatibility limits before release. See [GMAIL_MODIFICATION_RECEIPTS.md](GMAIL_MODIFICATION_RECEIPTS.md).
+
 ## Threaded reply acceptance (not yet executed)
 
 - In a dedicated test mailbox, open a safe synthetic received message with a valid Message-ID, then click **Reply**. Confirm no new Google scope was requested merely for drafting; recipient and subject remain locked and body is editable.

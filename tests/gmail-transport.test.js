@@ -384,3 +384,81 @@ test('invalid message IDs are refused before any read or modification request', 
     assert.equal(requests, 0);
   });
 });
+
+
+test('Gmail modifications validate label arrays and conflicts before network access', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('modify');
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({ id: 'one', labelIds: [] }); };
+    for (const invalid of [
+      {}, { addLabelIds: 'STARRED' },
+      { removeLabelIds: 'UNREAD' },
+      { addLabelIds: ['STARRED', 'STARRED'] },
+      { removeLabelIds: ['INBOX', 'INBOX'] },
+      { addLabelIds: ['INBOX'], removeLabelIds: ['INBOX'] },
+      { addLabelIds: [12] },
+      { addLabelIds: ['bad/label'] },
+      { addLabelIds: ['bad\n'] },
+      { addLabelIds: ['bad\u2028'] },
+      { addLabelIds: ['L'.repeat(65)] },
+      { addLabelIds: Array.from({ length: 101 }, (_, i) => 'L' + i) }
+    ]) {
+      await assert.rejects(modifyMessage('one', invalid), /Gmail label changes/i);
+    }
+    assert.equal(requests, 0, 'no malformed or no-op modify calls sent');
+  });
+});
+
+test('Gmail modification confirms the exact message and label state', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('modify');
+    let calls = 0;
+    globalThis.fetch = async (url, init) => {
+      calls++;
+      assert.match(String(url), /\/messages\/one\/modify$/);
+      assert.equal(init.method, 'POST');
+      assert.equal(init.credentials, 'omit');
+      assert.equal(init.headers.Authorization, 'Bearer TEST-NOT-REAL');
+      assert.deepEqual(JSON.parse(init.body),
+        { addLabelIds: ['STARRED'], removeLabelIds: ['UNREAD'] });
+      return response({ id: 'one', labelIds: ['INBOX', 'STARRED'] });
+    };
+    const accepted = await modifyMessage('one', {
+      addLabelIds: ['STARRED'], removeLabelIds: ['UNREAD']
+    });
+    assert.deepEqual(accepted, { id: 'one', labelIds: ['INBOX', 'STARRED'] });
+    assert.equal(calls, 1);
+  });
+});
+
+test('Gmail can confirm a final-label removal with an explicit empty label array', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('modify');
+    let calls = 0;
+    globalThis.fetch = async () => { calls++; return response({ id: 'one', labelIds: [] }); };
+    const accepted = await modifyMessage('one', { removeLabelIds: ['INBOX'] });
+    assert.deepEqual(accepted, { id: 'one', labelIds: [] });
+    assert.equal(calls, 1);
+  });
+});
+
+test('ambiguous Gmail modification receipts keep UI update unconfirmed and never auto-retry', async () => {
+  await withFakeGoogle(async () => {
+    await requestCapability('modify');
+    const receipts = [
+      {}, { id: 'one' }, { id: 'two', labelIds: ['STARRED'] },
+      { id: 'one', labelIds: ['INBOX'] },
+      { id: 'one', labelIds: ['INBOX', 'STARRED', 'STARRED'] },
+      { id: 'one', labelIds: 'STARRED' },
+      { id: 'one', labelIds: ['STARRED', 'invalid\n'] }
+    ];
+    for (const receipt of receipts) {
+      let calls = 0;
+      globalThis.fetch = async () => { calls++; return response(receipt); };
+      await assert.rejects(modifyMessage('one', { addLabelIds: ['STARRED'] }),
+        /Refresh before retrying/i);
+      assert.equal(calls, 1, 'one possibly accepted mutation only; do not auto-repeat');
+    }
+  });
+});
