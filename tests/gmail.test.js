@@ -241,3 +241,14 @@ test('inline multipart alternatives remain visible without rendering HTML or act
   assert.equal(extractPlainText(payload), 'Safe plain alternative');
   assert.equal(extractAttachmentSummaries(payload).items.length, 1);
 });
+
+
+test('a text/plain node with fabricated parts does not expose nested attachment metadata', () => {
+  const malformed = {
+    mimeType: 'text/plain',
+    body: { data: base64UrlEncode('Current body') },
+    parts: [{ mimeType: 'application/pdf', filename: 'hidden.pdf', body: { size: 100 } }]
+  };
+  assert.equal(extractPlainText(malformed), 'Current body');
+  assert.deepEqual(extractAttachmentSummaries(malformed), { items: [], truncated: false });
+});
