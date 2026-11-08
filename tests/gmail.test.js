@@ -163,3 +163,81 @@ test('missing or oversized message identifiers are rejected', () => {
     assert.throws(() => normalizeMessage(item), /invalid message metadata/);
   }
 });
+
+
+test('encapsulated RFC 822 message bodies are never used as the current email text', () => {
+  const forwarded = {
+    mimeType: 'message/rfc822',
+    parts: [{ mimeType: 'text/plain', body: { data: base64UrlEncode('Private forwarded content') } }]
+  };
+  const payload = { mimeType: 'multipart/mixed', parts: [forwarded,
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Visible original message') } }
+  ] };
+  assert.equal(extractPlainText(forwarded), '');
+  assert.equal(extractPlainText(payload), 'Visible original message');
+  const meta = extractAttachmentSummaries(payload);
+  assert.equal(meta.items.length, 1);
+  assert.equal(meta.items[0].mediaType, 'message/rfc822');
+  assert.equal(meta.items[0].name, 'Unnamed attachment');
+  assert.doesNotMatch(JSON.stringify(meta), /Private forwarded content/);
+});
+
+test('non-multipart MIME parts cannot smuggle nested visible text or attachment records', () => {
+  const malformed = {
+    mimeType: 'application/octet-stream',
+    parts: [{ mimeType: 'text/plain', body: { data: base64UrlEncode('Hidden nested data') } },
+      { mimeType: 'application/pdf', filename: 'do-not-descend.pdf', body: { size: 9999 } }]
+  };
+  assert.equal(extractPlainText(malformed), '');
+  assert.deepEqual(extractAttachmentSummaries(malformed), { items: [], truncated: false });
+  const sibling = { mimeType: 'multipart/mixed', parts: [
+    malformed, { mimeType: 'text/plain', body: { data: base64UrlEncode('Visible sibling') } }
+  ] };
+  assert.equal(extractPlainText(sibling), 'Visible sibling');
+});
+
+test('unknown dispositions, attached multiparts and named inline parts never appear as body text', () => {
+  const named = { mimeType: 'text/plain',
+    headers: [{ name: 'Content-Disposition', value: 'inline; filename="secret.txt"' }],
+    body: { data: base64UrlEncode('Named content not message body') } };
+  const unknown = { mimeType: 'multipart/alternative',
+    headers: [{ name: 'Content-Disposition', value: 'preview; filename="unknown.msg"' }],
+    parts: [{ mimeType: 'text/plain', body: { data: base64UrlEncode('Suspicious nested content') } }] };
+  const attached = { mimeType: 'multipart/mixed',
+    headers: [{ name: 'Content-Disposition', value: 'ATTACHMENT' }],
+    parts: [{ mimeType: 'text/plain', body: { data: base64UrlEncode('Attached children') } }] };
+  const payload = { mimeType: 'multipart/mixed', parts: [named, unknown, attached,
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Visible safe body') } }
+  ] };
+  assert.equal(extractPlainText(payload), 'Visible safe body');
+  const metadata = extractAttachmentSummaries(payload);
+  assert.equal(metadata.items.length, 3);
+  assert.ok(metadata.items.every((item) => item.name === 'Unnamed attachment'));
+});
+
+test('valid media types are normalized but malformed provider MIME types are not trusted', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: [
+    { mimeType: 'Application/PDF', filename: 'invoice.pdf', body: { size: 57 } },
+    { mimeType: 'application/pdf<script>', filename: 'bad.pdf', body: { size: 5 } },
+    { mimeType: 'x'.repeat(70) + '/pdf', filename: 'long.pdf' },
+    { mimeType: 42, filename: 'bad-type.pdf' }
+  ] };
+  const meta = extractAttachmentSummaries(payload);
+  assert.deepEqual(meta.items.map((item) => item.mediaType),
+    ['application/pdf', 'Unknown type', 'Unknown type', 'Unknown type']);
+  assert.equal(extractPlainText(payload), '');
+});
+
+test('inline multipart alternatives remain visible without rendering HTML or active attachments', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: [
+    { mimeType: 'multipart/alternative',
+      headers: [{ name: 'Content-Disposition', value: 'INLINE' }],
+      parts: [
+        { mimeType: 'text/html', body: { data: base64UrlEncode('<script>bad()</script>') } },
+        { mimeType: 'text/plain', body: { data: base64UrlEncode('Safe plain alternative') } }
+      ] },
+    { mimeType: 'image/png', body: { attachmentId: 'hidden-content-id' } }
+  ] };
+  assert.equal(extractPlainText(payload), 'Safe plain alternative');
+  assert.equal(extractAttachmentSummaries(payload).items.length, 1);
+});
