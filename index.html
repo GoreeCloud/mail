@@ -16,7 +16,7 @@
   <div class="shell">
     <aside class="sidebar" aria-label="Mail navigation">
       <div class="brand"><div class="mark" aria-hidden="true">g</div><div><strong>GoreeCloud</strong><span>MAIL <span class="beta">ALPHA</span></span></div></div>
-      <button class="primary compose-trigger" id="compose" type="button">+ &nbsp; Compose</button>
+      <button class="primary compose-trigger" id="compose" type="button" aria-label="Compose a new email" title="Compose a new email">+ &nbsp; Compose</button>
       <nav class="nav" aria-label="Mailbox">
         <button type="button" data-view="INBOX" aria-current="page"><span aria-hidden="true">▣</span><span class="nav-label">Inbox</span><span class="count" id="inbox-count"></span></button>
         <button type="button" data-view="STARRED"><span aria-hidden="true">☆</span><span class="nav-label">Starred</span></button>
@@ -34,7 +34,7 @@
       <header class="toolbar">
         <div class="title-line"><span class="eyebrow">YOUR WORKSPACE</span><h1 id="view-title">Inbox</h1></div>
         <div class="toolbar-actions">
-          <label class="searchbox" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search mail" autocomplete="off" aria-label="Search Gmail messages"></label>
+          <label class="searchbox" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search" autocomplete="off" aria-label="Search Gmail messages"></label>
           <button id="refresh" class="tool-button" type="button" aria-label="Refresh messages" title="Refresh messages">↻</button>
           <button id="settings-mobile" class="tool-button mobile-settings" type="button" aria-label="Configure connection" title="Configure connection">⚙</button>
           <button id="connect" class="outline" type="button">Connect Google</button>
@@ -91,6 +91,7 @@
       <p>Enter the public OAuth Web client ID from your own Google Cloud project. Connecting requests read-only Gmail access; sending or changing messages requests additional Google consent. OAuth tokens and received mail stay in memory; only the public client ID and encrypted drafts you explicitly save can persist on this device.</p>
       <label for="client-id">Google OAuth client ID</label>
       <input type="text" id="client-id" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false" required>
+      <div class="settings-appearance"><button id="theme-settings" type="button" class="quiet">Switch appearance (light / dark)</button></div>
       <div class="dialog-footer"><button id="clear-config" type="button" class="quiet">Clear saved ID</button><button type="button" class="outline" id="close-settings">Cancel</button><button class="primary" type="submit">Save settings</button></div>
     </form>
   </dialog>
