@@ -80,15 +80,27 @@ function partMediaType(part) {
   return typeof value === 'string' && MIME_TYPE_PATTERN.test(value) ? value.toLowerCase() : '';
 }
 function dispositionIsAttachment(part) {
-  const disposition = headerValue(part.headers, 'Content-Disposition').trim();
+  const headers = Array.isArray(part.headers) ? part.headers : [];
+  let count = 0;
+  for (const entry of headers.slice(0, 256)) {
+    if (typeof entry?.name === 'string'
+      && entry.name.toLowerCase() === 'content-disposition') {
+      if (++count > 1) return true; // Conflicting instructions are not display-safe.
+    }
+  }
+  const disposition = headerValue(headers, 'Content-Disposition').trim();
   if (!disposition) return false;
   // Unknown dispositions are attachment-like under RFC 2183 section 2.
   const type = disposition.split(';', 1)[0].trim().toLowerCase();
-  return type !== 'inline' || /(?:^|;)\s*filename\*?\s*=/i.test(disposition);
+  // Recognize ordinary, RFC 2231 and continuation filename parameters.
+  return type !== 'inline'
+    || /(?:^|;)\s*filename(?:\*(?:\d+\*?)?)?\s*=/i.test(disposition);
 }
 function isNonBodyPart(part) {
-  return (typeof part.filename === 'string' && part.filename.trim().length > 0)
-    || (typeof part.body?.attachmentId === 'string' && part.body.attachmentId.length > 0)
+  const filename = part.filename;
+  const attachmentId = part.body?.attachmentId;
+  return (filename != null && (typeof filename !== 'string' || filename.trim().length > 0))
+    || (attachmentId != null && (typeof attachmentId !== 'string' || attachmentId.length > 0))
     || dispositionIsAttachment(part)
     || partMediaType(part).startsWith('message/');
 }
