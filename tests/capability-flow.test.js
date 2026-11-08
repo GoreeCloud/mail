@@ -40,9 +40,11 @@ function message(id, full = false) {
   return {
     id, threadId: 'threadSyn001', labelIds: ['INBOX', 'UNREAD'], snippet: 'message',
     payload: {
-      mimeType: full ? 'text/plain' : undefined,
-      body: full ? { data: 'SGVsbG8=' } : undefined,
-      parts: full ? [{ mimeType: 'application/pdf', filename: 'unsafe\u202E.pdf', body: { attachmentId: 'not-downloaded', size: 250 } }] : undefined,
+      mimeType: full ? 'multipart/mixed' : undefined,
+      parts: full ? [
+        { mimeType: 'text/plain', body: { data: 'SGVsbG8=' } },
+        { mimeType: 'application/pdf', filename: 'unsafe\u202E.pdf', body: { attachmentId: 'not-downloaded', size: 250 } }
+      ] : undefined,
       headers: [
         { name: 'From', value: 'sender@example.com' },
         { name: 'Subject', value: 'Test message' },
