@@ -2,7 +2,7 @@ import { prepareReplyDraft } from '../src/reply.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { connectGoogle, disconnect, requestCapability } from '../src/auth.js';
-import { listMessages, sendMessage } from '../src/gmail.js';
+import { listMessages, getMessage, modifyMessage, sendMessage } from '../src/gmail.js';
 
 const originalFetch = globalThis.fetch;
 const originalWindow = globalThis.window;
@@ -290,5 +290,97 @@ test('a Gmail reply receipt with no thread ID is not a confirmation of threading
     await assert.rejects(sendMessage({ ...prepared, body: 'Synthetic reply' }),
       /unexpected reply thread/i);
     assert.equal(requests, 1);
+  });
+});
+
+
+test('Gmail refuses malformed, oversized, or duplicate list pages before metadata requests', async () => {
+  await withFakeGoogle(async () => {
+    const invalidPages = [
+      null, [],
+      { messages: 'not-an-array' },
+      { messages: Array.from({ length: 31 }, (_, i) => ({ id: 'm' + i })) },
+      { messages: [{ id: 'one' }, { id: 'one' }] },
+      { messages: [{ id: 'bad/id' }] },
+      { messages: [{ id: 'valid\n' }] },
+      { messages: [{ id: 'valid\u2028' }] },
+      { messages: [{ id: 'valid\u2029' }] },
+      { messages: [{ id: 42 }] },
+      { messages: [{ id: 'x'.repeat(257) }] }
+    ];
+    for (const page of invalidPages) {
+      let requests = 0;
+      globalThis.fetch = async (url) => {
+        requests++;
+        assert.match(String(url), /\/messages\?/);
+        return response(page);
+      };
+      await assert.rejects(listMessages('INBOX'), /invalid|duplicate/i);
+      assert.equal(requests, 1, 'invalid page must not trigger metadata requests');
+    }
+  });
+});
+
+test('Gmail rejects invalid provider page cursors without accepting the current page', async () => {
+  await withFakeGoogle(async () => {
+    for (const nextPageToken of [{ unexpected: true }, 7, 'x'.repeat(4097), 'next\r\nbad']) {
+      let requests = 0;
+      globalThis.fetch = async (url) => {
+        requests++;
+        assert.match(String(url), /\/messages\?/);
+        return response({ messages: [{ id: 'one' }], nextPageToken });
+      };
+      await assert.rejects(listMessages('INBOX'), /invalid page cursor/i);
+      assert.equal(requests, 1, 'invalid cursor must reject before metadata requests');
+    }
+  });
+});
+
+test('invalid caller-supplied page cursors cannot trigger Gmail requests', async () => {
+  await withFakeGoogle(async () => {
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({}); };
+    for (const token of [null, 12, { cursor: true }, 'page\nbad', 'z'.repeat(4097)]) {
+      await assert.rejects(listMessages('INBOX', '', token), /invalid page cursor/i);
+    }
+    assert.equal(requests, 0, 'reject invalid cursor before network access');
+  });
+});
+
+test('Gmail metadata IDs must match each requested list entry or the page is discarded', async () => {
+  await withFakeGoogle(async () => {
+    let requests = 0;
+    globalThis.fetch = async (url) => {
+      requests++;
+      if (String(url).includes('/messages?')) {
+        return response({ messages: [{ id: 'one' }, { id: 'two' }], nextPageToken: 'next' });
+      }
+      return response(String(url).includes('/messages/two')
+        ? metadata('not-two') : metadata('one'));
+    };
+    await assert.rejects(listMessages('INBOX'), /mismatched message metadata/i);
+    assert.equal(requests, 3, 'one list and two metadata requests, with no cursor returned');
+  });
+});
+
+test('single-message reads reject unexpected provider identity', async () => {
+  await withFakeGoogle(async () => {
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response(metadata('wrong')); };
+    await assert.rejects(getMessage('expected'), /different message identifier/i);
+    assert.equal(requests, 1);
+  });
+});
+
+test('invalid message IDs are refused before any read or modification request', async () => {
+  await withFakeGoogle(async () => {
+    let requests = 0;
+    globalThis.fetch = async () => { requests++; return response({ id: 'unused' }); };
+    for (const badId of [null, 12, '', 'bad/id', 'space name', 'x'.repeat(257), 'one\n', 'one\u2028', 'one\u2029', 'one\r\nBcc: x']) {
+      await assert.rejects(getMessage(badId), /invalid message identifier/i);
+      await assert.rejects(modifyMessage(badId, { addLabelIds: ['STARRED'] }),
+        /invalid message identifier/i);
+    }
+    assert.equal(requests, 0);
   });
 });

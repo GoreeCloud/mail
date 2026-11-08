@@ -30,7 +30,7 @@
 
 - Repeat in current Chromium/Chrome, Firefox, Safari where available and supported mobile browsers; test popup blocking and consent denial.
 - Verify token expiry, 401/403 errors, network interruptions, rate limits, partial metadata failures, and search pagination.
-- Use synthetic test messages only; confirm headers, MIME, recipients and status of accepted vs delivered messages. Simulate a lost send response or missing message ID and verify the composer remains open, the user sees a check-Sent-before-retrying warning, and no automatic duplicate send is attempted.
+- Use synthetic test messages only; confirm headers, MIME, recipients and status of accepted vs delivered messages. Test real Gmail ID/page-token shapes and confirm malformed or mismatched pagination metadata never advances the inbox cursor; see [GMAIL_PAGE_INTEGRITY.md](GMAIL_PAGE_INTEGRITY.md). Simulate a lost send response or missing message ID and verify the composer remains open, the user sees a check-Sent-before-retrying warning, and no automatic duplicate send is attempted.
 - Run accessibility smoke tests with keyboard, screen readers, zoom, high contrast and reduced motion.
 - Record test evidence in an authorized private system without email bodies/tokens and update [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) only after confirmation.
 
