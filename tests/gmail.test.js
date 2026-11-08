@@ -252,3 +252,38 @@ test('a text/plain node with fabricated parts does not expose nested attachment 
   assert.equal(extractPlainText(malformed), 'Current body');
   assert.deepEqual(extractAttachmentSummaries(malformed), { items: [], truncated: false });
 });
+
+
+test('duplicate MIME dispositions and RFC 2231 filename continuations are never previewed', () => {
+  const entries = [
+    { mimeType: 'text/plain',
+      headers: [
+        { name: 'Content-Disposition', value: 'inline' },
+        { name: 'Content-Disposition', value: 'attachment' }
+      ],
+      body: { data: base64UrlEncode('conflicted header') } },
+    { mimeType: 'text/plain',
+      headers: [{ name: 'Content-Disposition', value: 'inline; filename*0*=UTF-8\'\'secret.txt' }],
+      body: { data: base64UrlEncode('continuation attachment') } },
+    { mimeType: 'text/plain',
+      headers: [{ name: 'Content-Disposition', value: 'INLINE; filename*=UTF-8\'\'secret.txt' }],
+      body: { data: base64UrlEncode('encoded attachment') } },
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Visible body only') } }
+  ];
+  const payload = { mimeType: 'multipart/mixed', parts: entries };
+  assert.equal(extractPlainText(payload), 'Visible body only');
+  assert.equal(extractAttachmentSummaries(payload).items.length, 3);
+});
+
+test('malformed provider filename and attachment ID data are never interpreted as body text', () => {
+  const payload = { mimeType: 'multipart/mixed', parts: [
+    { mimeType: 'text/plain', filename: { evil: 'object' },
+      body: { data: base64UrlEncode('not a body') } },
+    { mimeType: 'text/plain', body: { attachmentId: { invalid: 'id' },
+      data: base64UrlEncode('not visible') } },
+    { mimeType: 'text/plain', body: { data: base64UrlEncode('Visible text') } }
+  ] };
+  assert.equal(extractPlainText(payload), 'Visible text');
+  assert.equal(extractAttachmentSummaries(payload).items.length, 2);
+  assert.equal(extractAttachmentSummaries(payload).items[0].name, 'Unnamed attachment');
+});
