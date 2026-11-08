@@ -53,3 +53,7 @@ Compose offers **Save encrypted draft** and **Restore local draft**, using a use
 - [GoreeCloud UI reference](https://github.com/GoreeCloud/gc-ui)
 
 Public source is not a blanket reuse license; licensing has not yet been designated.
+
+## License
+
+GoreeCloud Mail's original repository code, documentation, and locally authored SVG icon are licensed under the **Apache License 2.0**. See [LICENSE](LICENSE) and [NOTICE](NOTICE). This repository has no third-party runtime packages. It reuses Apache-2.0 GoreeCloud UI design tokens from the first-party `GoreeCloud/gc-ui` repository; external services, trademarks and separately licensed materials retain their own terms. See [the repository licensing assessment](docs/LICENSING.md) for provenance and scope.
