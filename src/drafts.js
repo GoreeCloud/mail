@@ -12,16 +12,20 @@ function ensureActive(options) {
   if (options.signal?.aborted) throw new DOMException('Encrypted draft operation cancelled.', 'AbortError');
 }
 
-function getDependencies(options = {}) {
-  const cryptography = options.cryptography || globalThis.crypto;
-  const storage = options.storage || globalThis.localStorage;
+function getStorage(options = {}, operation = 'getItem') {
+  const storage = options.storage ?? globalThis.localStorage;
+  if (!storage || typeof storage[operation] !== 'function') {
+    throw new Error('Local encrypted draft storage is unavailable in this browser.');
+  }
+  return storage;
+}
+
+function getCryptography(options = {}) {
+  const cryptography = options.cryptography ?? globalThis.crypto;
   if (!cryptography?.subtle || typeof cryptography.getRandomValues !== 'function') {
     throw new Error('Encrypted drafts require a secure browser context with Web Crypto.');
   }
-  if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') {
-    throw new Error('Local encrypted draft storage is unavailable in this browser.');
-  }
-  return { cryptography, storage };
+  return cryptography;
 }
 
 function bytesToBase64(bytes) {
@@ -78,12 +82,13 @@ async function deriveKey(passphrase, salt, cryptography) {
 }
 
 export function hasEncryptedDraft(options = {}) {
-  const { storage } = getDependencies(options);
+  const storage = getStorage(options);
   return storage.getItem(STORAGE_KEY) !== null;
 }
 
 export async function saveEncryptedDraft(draft, passphrase, options = {}) {
-  const { storage, cryptography } = getDependencies(options);
+  const storage = getStorage(options, 'setItem');
+  const cryptography = getCryptography(options);
   ensurePassphrase(passphrase);
   ensureDraft(draft);
   ensureActive(options);
@@ -117,7 +122,8 @@ export async function saveEncryptedDraft(draft, passphrase, options = {}) {
 }
 
 export async function restoreEncryptedDraft(expectedAccount, passphrase, options = {}) {
-  const { storage, cryptography } = getDependencies(options);
+  const storage = getStorage(options);
+  const cryptography = getCryptography(options);
   ensurePassphrase(passphrase);
   ensureActive(options);
   const account = normalizeAccount(expectedAccount);
@@ -158,6 +164,6 @@ export async function restoreEncryptedDraft(expectedAccount, passphrase, options
 }
 
 export function deleteEncryptedDraft(options = {}) {
-  const { storage } = getDependencies(options);
+  const storage = getStorage(options, 'removeItem');
   storage.removeItem(STORAGE_KEY);
 }
