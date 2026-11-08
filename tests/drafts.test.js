@@ -179,3 +179,31 @@ test('invalid encrypted reply metadata is refused before persistence', async () 
     /threading data or subject changed/);
   assert.equal(hasEncryptedDraft(options), false);
 });
+
+
+test('ciphertext can still be discovered and deleted when Web Crypto is unavailable', async () => {
+  const { items, options, draft } = fixture();
+  await saveEncryptedDraft(draft, 'secure passphrase 123', options);
+  const storageOnly = { storage: options.storage, cryptography: {} };
+  assert.equal(hasEncryptedDraft(storageOnly), true);
+  await assert.rejects(
+    restoreEncryptedDraft(draft.account, 'secure passphrase 123', storageOnly),
+    /secure browser context with Web Crypto/
+  );
+  deleteEncryptedDraft(storageOnly);
+  assert.equal(items.size, 0);
+  assert.equal(hasEncryptedDraft(storageOnly), false);
+});
+
+test('deletion requires only a storage removeItem operation, not crypto or account access', () => {
+  let removedKey;
+  const deletionStorage = { removeItem: (key) => { removedKey = key; } };
+  deleteEncryptedDraft({ storage: deletionStorage, cryptography: {} });
+  assert.match(removedKey, /^goreecloud-mail:encrypted-draft:v1$/);
+  assert.equal(hasEncryptedDraft({ storage: { getItem: () => null }, cryptography: {} }), false);
+});
+
+test('storage-only operations still fail safely when requested storage methods are missing', () => {
+  assert.throws(() => hasEncryptedDraft({ storage: {}, cryptography: {} }), /storage is unavailable/);
+  assert.throws(() => deleteEncryptedDraft({ storage: {}, cryptography: {} }), /storage is unavailable/);
+});
