@@ -146,6 +146,23 @@ test('manual draft save/restore uses ciphertext and rejects a changed account', 
     assert.equal(elements.get('body').value, '');
     await elements.get('delete-draft').emit('click');
     assert.equal(store.has('goreecloud-mail:encrypted-draft:v1'), false);
+
+    // Ciphertext cleanup must also be possible without connecting any account.
+    store.set('goreecloud-mail:encrypted-draft:v1', ciphertext);
+    await elements.get('disconnect').emit('click');
+    await elements.get('settings-mobile').emit('click');
+    assert.equal(elements.get('settings-dialog').open, true);
+    allowDiscard = false;
+    await elements.get('delete-local-draft-settings').emit('click');
+    assert.equal(store.get('goreecloud-mail:encrypted-draft:v1'), ciphertext,
+      'cancelled local deletion must not remove encrypted data');
+    allowDiscard = true;
+    await elements.get('delete-local-draft-settings').emit('click');
+    assert.equal(store.has('goreecloud-mail:encrypted-draft:v1'), false,
+      'settings cleanup removes ciphertext without Gmail connection');
+    assert.match(elements.get('notice').textContent, /Encrypted local draft deleted/);
+    assert.equal(elements.get('settings-dialog').open, true,
+      'settings remain available after deleting local data');
   } finally {
     disconnect();
   }
