@@ -40,6 +40,7 @@
 - Never commit tokens, client secrets, email content, private domains, contact addresses, or production logs.
 - Review dependencies, licenses, permissions, workflow actions, external scripts and supply-chain changes before running them.
 - Do not enable email body transmission to any AI provider without separate informed consent.
+- Local encrypted draft deletion and existence checks require storage access but do **not** depend on Web Crypto availability; saving and unlocking remain cryptography-gated. This supports privacy-preserving deletion even if the browser loses cryptographic support. It does not guarantee secure erasure of storage media or backups.
 - No mail servers, relays, proxy accounts, credential theft or insecure provider compatibility hacks.
 - Security problems should be disclosed privately through an approved channel; do not attach sensitive example messages to public issues.
 
