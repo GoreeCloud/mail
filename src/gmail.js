@@ -5,7 +5,7 @@ import { validateReplyContext } from './reply.js';
 const BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const PAGE_SIZE = 30;
 const MAX_PAGE_TOKEN_CHARS = 4096;
-const MESSAGE_ID_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
+const MESSAGE_ID_PATTERN = /^[A-Za-z0-9_-]{1,256}(?![\s\S])/; // true end-of-input, including final Unicode line separators
 const MAX_BODY_BYTES = 1024 * 1024; // This alpha supports small, plain-text messages only.
 
 async function api(path, init = {}) {
@@ -249,7 +249,7 @@ async function fetchMetadata(id, signal) {
 // Gmail IDs are opaque URL path segments; no coerced objects, duplicate IDs, or
 // unbounded cursors should become requests or committed inbox state.
 function requireMessageId(id) {
-  if (typeof id !== 'string' || !MESSAGE_ID_PATTERN.test(id) || /[\r\n]/.test(id)) {
+  if (typeof id !== 'string' || !MESSAGE_ID_PATTERN.test(id)) {
     throw new Error('Gmail returned an invalid message identifier. Retry this mailbox.');
   }
   return id;
