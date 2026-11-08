@@ -333,11 +333,46 @@ export async function getMessage(id, { signal } = {}) {
   return normalized;
 }
 
+// The explicit modify operation must have a deterministic, bounded label intent.
+// A successful HTTP status alone is not proof that the requested message changed.
+const LABEL_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}(?![\s\S])/;
+function validatedLabelSet(value) {
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new Error('Gmail label changes must be arrays of at most 100 IDs.');
+  }
+  const seen = new Set();
+  for (const item of value) {
+    if (typeof item !== 'string' || !LABEL_ID_PATTERN.test(item) || seen.has(item)) {
+      throw new Error('Gmail label changes contain an invalid or duplicate label ID.');
+    }
+    seen.add(item);
+  }
+  return [...seen];
+}
+
 export async function modifyMessage(id, { addLabelIds = [], removeLabelIds = [] }) {
   const requestedId = requireMessageId(id);
-  return api('/messages/' + encodeURIComponent(requestedId) + '/modify', {
-    method: 'POST', body: { addLabelIds, removeLabelIds }, capability: 'modify'
+  const added = validatedLabelSet(addLabelIds);
+  const removed = validatedLabelSet(removeLabelIds);
+  if ((!added.length && !removed.length) || added.some((label) => removed.includes(label))) {
+    throw new Error('Gmail label changes must be nonempty and nonconflicting.');
+  }
+  const receipt = await api('/messages/' + encodeURIComponent(requestedId) + '/modify', {
+    method: 'POST', body: { addLabelIds: added, removeLabelIds: removed }, capability: 'modify'
   });
+  const returnedLabels = receipt?.labelIds == null ? [] : receipt.labelIds;
+  if (!receipt || receipt.id !== requestedId || !Array.isArray(returnedLabels)
+    || returnedLabels.length > 128
+    || returnedLabels.some((label) =>
+      typeof label !== 'string' || !LABEL_ID_PATTERN.test(label))
+    || new Set(returnedLabels).size !== returnedLabels.length
+    || added.some((label) => !returnedLabels.includes(label))
+    || removed.some((label) => returnedLabels.includes(label))) {
+    // The provider may have applied a mutation even if its receipt is incomplete.
+    // No automatic retry: refresh the message before deciding on another action.
+    throw new Error('Gmail did not confirm the requested message changes. Refresh before retrying.');
+  }
+  return { id: requestedId, labelIds: [...returnedLabels] };
 }
 
 function bytesToBinary(bytes) {
