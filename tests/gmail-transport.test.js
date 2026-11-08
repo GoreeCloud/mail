@@ -432,11 +432,11 @@ test('Gmail modification confirms the exact message and label state', async () =
   });
 });
 
-test('a removed final label may result in an absent Gmail labelIds field', async () => {
+test('Gmail can confirm a final-label removal with an explicit empty label array', async () => {
   await withFakeGoogle(async () => {
     await requestCapability('modify');
     let calls = 0;
-    globalThis.fetch = async () => { calls++; return response({ id: 'one' }); };
+    globalThis.fetch = async () => { calls++; return response({ id: 'one', labelIds: [] }); };
     const accepted = await modifyMessage('one', { removeLabelIds: ['INBOX'] });
     assert.deepEqual(accepted, { id: 'one', labelIds: [] });
     assert.equal(calls, 1);
@@ -447,7 +447,7 @@ test('ambiguous Gmail modification receipts keep UI update unconfirmed and never
   await withFakeGoogle(async () => {
     await requestCapability('modify');
     const receipts = [
-      {}, { id: 'two', labelIds: ['STARRED'] },
+      {}, { id: 'one' }, { id: 'two', labelIds: ['STARRED'] },
       { id: 'one', labelIds: ['INBOX'] },
       { id: 'one', labelIds: ['INBOX', 'STARRED', 'STARRED'] },
       { id: 'one', labelIds: 'STARRED' },
