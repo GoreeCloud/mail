@@ -7,6 +7,7 @@
 ## Available first milestone
 
 - Responsive web email client with an accessible three-pane inbox and reading view, based on verified GoreeCloud UI semantic tokens.
+- Floating, safe-area-aware primary mobile mailbox dock with visible destination labels, active-state indicators, and a mobile-accessible light/dark appearance switch.
 - Gmail API connection through a tested v1 provider adapter and Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
 - Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete pages never silently advance the cursor and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview) and a collapsed, read-only message-header inspector; user-triggered read/unread, star/unstar, archive, and plain-text send with confirmed Gmail message IDs and explicit uncertain-status warnings.
 - A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
@@ -47,6 +48,7 @@ Compose offers **Save encrypted draft** and **Restore local draft**, using a use
 - [Read-only message headers and trust limitations](docs/MESSAGE_HEADERS.md)
 - [Provider adapter contract and supported capability matrix](docs/PROVIDER_ADAPTERS.md)
 - [Conservative Gmail threaded replies](docs/THREADED_REPLY.md)
+- [Floating mobile navigation and test limits](docs/MOBILE_DOCK.md)
 - [Encrypted local drafts and limitations](docs/ENCRYPTED_DRAFTS.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Release plan and default mail gate](docs/ROADMAP.md)

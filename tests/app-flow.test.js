@@ -108,6 +108,11 @@ test('pagination loads another page; disconnect prevents stale reader text', asy
     throw new Error('Unexpected network request ' + request);
   };
   await import('../src/main.js');
+  const initialTheme = document.documentElement.dataset.mode;
+  await elements.get('theme-settings').click();
+  assert.equal(document.documentElement.dataset.mode, initialTheme === 'dark' ? 'light' : 'dark');
+  await elements.get('theme-settings').click();
+  assert.equal(document.documentElement.dataset.mode, initialTheme === 'dark' ? 'dark' : 'light');
   await elements.get('connect').click();
   assert.equal(elements.get('message-list').children.length, 1);
   assert.equal(elements.get('load-more').hidden, false);

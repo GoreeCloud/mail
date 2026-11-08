@@ -54,3 +54,39 @@ test('compose dialog has a programmatic accessible name and description for repl
   assert.match(js, /setAttribute\('aria-describedby', 'compose-reply-context'\)/);
   assert.match(js, /removeAttribute\('aria-describedby'\)/);
 });
+
+test('mobile dock exposes four labeled and accessible mailbox actions', () => {
+  const html = read('index.html');
+  const nav = html.match(/<nav class="nav"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+  assert.ok(nav, 'mailbox navigation must exist');
+  for (const [view, label] of [
+    ['INBOX', 'Inbox'], ['STARRED', 'Starred'],
+    ['SENT', 'Sent'], ['ALL', 'All mail']
+  ]) {
+    const found = nav.match(new RegExp('<button[^>]*data-view="' + view + '"[^>]*>[\\s\\S]*?<\\/button>'))?.[0];
+    assert.ok(found, 'missing mailbox control ' + view);
+    assert.match(found, new RegExp('<span class="nav-label">' + label + '<\\/span>'));
+  }
+  assert.match(nav, /data-view="INBOX" aria-current="page"/);
+});
+
+test('mobile primary navigation floats clear of screen edges and scrollable content', () => {
+  const css = read('styles/app.css');
+  assert.match(css, /\.sidebar\{position:fixed;bottom:calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(css, /left:calc\(12px \+ env\(safe-area-inset-left, 0px\)\)/);
+  assert.match(css, /right:calc\(12px \+ env\(safe-area-inset-right, 0px\)\)/);
+  assert.match(css, /border-radius:var\(--gc-radius-lg\)/);
+  assert.match(css, /\.workspace\{height:calc\(100dvh - 108px - env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(css, /\.nav button\{flex:1;min-width:0;max-width:120px;min-height:62px/);
+  assert.match(css, /@media\(max-width:300px\)/);
+  assert.match(css, /@media\(forced-colors:active\)/);
+});
+
+test('the mobile settings dialog provides an accessible theme switch', () => {
+  const html = read('index.html');
+  const js = read('src/main.js');
+  assert.match(html, /id="theme-settings" type="button"/);
+  assert.match(html, /Switch appearance \(light \/ dark\)/);
+  assert.match(js, /'theme-settings'\)\.addEventListener\('click', toggleAppearance\)/);
+  assert.match(html, /id="compose"[^>]*aria-label="Compose a new email"/);
+});

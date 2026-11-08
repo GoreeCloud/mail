@@ -485,9 +485,11 @@ $('clear-config').addEventListener('click', () => {
   try { localStorage.removeItem(KEY); } catch { /* storage unavailable */ }
   $('client-id').value = ''; announce('Saved public client ID cleared.');
 });
-$('theme').addEventListener('click', () => {
+function toggleAppearance() {
   document.documentElement.dataset.mode = document.documentElement.dataset.mode === 'dark' ? 'light' : 'dark';
-});
+}
+$('theme').addEventListener('click', toggleAppearance);
+$('theme-settings').addEventListener('click', toggleAppearance);
 $('compose').addEventListener('click', openCompose);
 $('compose-form').addEventListener('submit', submitCompose);
 $('save-draft').addEventListener('click', () => openDraftDialog('save'));

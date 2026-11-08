@@ -143,12 +143,15 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 @media(max-width:680px){
  body{overflow:auto}
  .shell{display:block;height:100dvh;min-height:0}
- .sidebar{position:fixed;bottom:0;left:0;right:0;height:72px;background:var(--gc-lens-fill);backdrop-filter:blur(16px);border:0;border-top:1px solid var(--gc-outline);padding:6px 12px;z-index:10}
+ .sidebar{position:fixed;bottom:calc(12px + env(safe-area-inset-bottom, 0px));left:calc(12px + env(safe-area-inset-left, 0px));right:calc(12px + env(safe-area-inset-right, 0px));height:78px;background:var(--gc-lens-fill);backdrop-filter:blur(16px);border:1px solid var(--gc-outline);border-radius:var(--gc-radius-lg);padding:6px;z-index:10;box-shadow:0 16px 42px rgba(0,0,0,.25)}
  .sidebar .brand{display:none}
- .sidebar>.primary{position:fixed;right:18px;bottom:90px;z-index:10;width:54px;height:54px;min-height:54px;border-radius:18px;box-shadow:0 12px 38px rgba(0,0,0,.25)}
- .nav{width:100%;flex-direction:row;align-items:center;justify-content:space-around;height:100%}
- .nav button{width:56px;min-height:52px}
- .workspace{height:calc(100dvh - 72px);padding:12px;gap:9px}
+ .sidebar>.primary{position:fixed;right:calc(22px + env(safe-area-inset-right, 0px));bottom:calc(106px + env(safe-area-inset-bottom, 0px));z-index:10;width:54px;height:54px;min-height:54px;border-radius:18px;box-shadow:0 12px 38px rgba(0,0,0,.25)}
+ .nav{width:100%;flex-direction:row;align-items:center;justify-content:space-around;height:100%;gap:4px}
+ .nav button{flex:1;min-width:0;max-width:120px;min-height:62px;width:auto;display:flex;flex-direction:column;gap:4px;padding:6px 2px;border-radius:16px;font-size:11px;line-height:1.1}
+ .nav button>span:first-child{font-size:21px;width:auto;line-height:1}
+ .nav .nav-label{font-size:11px;font-weight:700;white-space:nowrap}
+ .nav button[aria-current="page"]{box-shadow:inset 0 0 0 1px var(--gc-accent-border)}
+ .workspace{height:calc(100dvh - 108px - env(safe-area-inset-bottom, 0px));padding:12px;gap:9px}
  .toolbar{gap:8px;min-height:110px;align-content:center}
  .title-line{width:100%}h1{font-size:24px}
  .toolbar-actions{width:100%;justify-content:space-between;gap:6px}
@@ -211,3 +214,16 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 .header-row dt{color:var(--gc-text-soft);font-size:12px;font-weight:700;overflow-wrap:anywhere}
 .header-row dd{margin:0;color:var(--gc-text);font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext}
 @media(max-width:680px){.header-row{display:block}.header-row dt{margin-bottom:5px}}
+
+/* On extremely narrow CSS viewports (including high zoom), keep every dock item reachable. */
+@media(max-width:300px){
+  .nav{overflow-x:auto;justify-content:flex-start;scrollbar-width:thin}
+  .nav button{flex:0 0 58px}
+}
+@media(forced-colors:active){
+  .nav button[aria-current="page"]{border:2px solid Highlight}
+}
+
+/* The mobile settings entry is available even when the desktop sidebar is hidden. */
+.settings-appearance{margin-top:14px}
+.settings-appearance button{min-height:44px;padding:10px 0;text-align:left;color:var(--gc-brand)}
