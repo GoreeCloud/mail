@@ -14,9 +14,9 @@ GoreeCloud Mail uses the existing authorized Gmail `format=full` message respons
 - MIME traversal uses the existing **256-node and 32-level limits**; messages above the limits can be rejected with a visible error.
 - Filenames are limited to the first **120 Unicode code points** after safety normalization.
 - File size is displayed only when the provider supplies a nonnegative safe integer.
-- The scanner recognizes Gmail MIME part `filename`, an attachment disposition, or an attachment ID. Some unusual MIME constructions may not be listed. Inline content with attachment metadata can appear in the summary.
+- The scanner recognizes Gmail MIME part filenames, attachment IDs, attachment/unknown dispositions, named inline parts, and encapsulated `message/*` entities as **inert attachment-like metadata**. Duplicate disposition fields and RFC 2231-style filename continuations fail closed. Some unusual MIME constructions may not be listed; this is not a standards-complete MIME parser.
 - Attachment content is never obtained or scanned. **Listing a file does not mean it is safe to open.**
-- Nested attached messages are not recursively unpacked or treated as the enclosing message's body.
+- Only multipart containers are traversed. Nested attached messages and malformed non-multipart parts with fabricated children are not recursively unpacked or mistaken for the enclosing message's body. Media types are validated conservatively and shown as **Unknown type** when unsupported. See [MIME_PREVIEW_BOUNDARY.md](MIME_PREVIEW_BOUNDARY.md).
 
 ## Verified
 
