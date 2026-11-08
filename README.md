@@ -10,7 +10,7 @@
 - Floating, safe-area-aware primary mobile mailbox dock with visible destination labels, active-state indicators, and a mobile-accessible light/dark appearance switch.
 - Gmail API connection through a tested v1 provider adapter and Google Identity Services with **read-only consent first**; additional modify/send permissions requested on explicit actions. Public OAuth client ID supplied at runtime.
 - Plain-text MIME preview traversal is limited to legitimate multipart containers and excludes encapsulated message attachments and ambiguous dispositions. See [safe MIME preview limits](docs/MIME_PREVIEW_BOUNDARY.md).
-- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete or malformed pages never silently advance the cursor, returned message IDs are checked against requested IDs, and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview) and a collapsed, read-only message-header inspector; user-triggered read/unread, star/unstar, archive, and plain-text send with confirmed Gmail message IDs and explicit uncertain-status warnings.
+- Inbox, starred, sent, all mail; server-side search and explicit Load more pagination with bounded metadata retry; incomplete or malformed pages never silently advance the cursor, returned message IDs are checked against requested IDs, and the interface offers **Retry this page**; safe bounded plain-text reading (supported MIME charsets; 4 MiB text and structural limits), with **read-only attachment filename/type/size summaries** (no download or preview) and a collapsed, read-only message-header inspector; user-triggered read/unread, star/unstar and archive with confirmed Gmail modification receipts, plus plain-text send with confirmed Gmail message IDs and explicit uncertain-status warnings.
 - A confirmation protects unsent recipient, subject and body when the composer is discarded or closed with Escape; browsers may show a navigation warning for active drafts.
 - Ephemeral OAuth tokens and received messages remain in memory; **optional passphrase-encrypted local draft snapshots** persist only when explicitly saved. Message HTML, remote images, and tracking pixels are never rendered.
 - Provider metadata type checks and bounded display fields reduce UI failure risk from malformed Gmail responses.
@@ -50,6 +50,7 @@ Compose offers **Save encrypted draft** and **Restore local draft**, using a use
 - [Provider adapter contract and supported capability matrix](docs/PROVIDER_ADAPTERS.md)
 - [Conservative Gmail threaded replies](docs/THREADED_REPLY.md)
 - [Gmail page and message identity integrity](docs/GMAIL_PAGE_INTEGRITY.md)
+- [Gmail label-change confirmation and uncertainty handling](docs/GMAIL_MODIFICATION_RECEIPTS.md)
 - [Floating mobile navigation and test limits](docs/MOBILE_DOCK.md)
 - [Encrypted local drafts and limitations](docs/ENCRYPTED_DRAFTS.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
