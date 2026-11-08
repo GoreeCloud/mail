@@ -508,6 +508,7 @@ $('draft-dialog').addEventListener('close', () => {
   draftMode = null;
 });
 $('delete-draft').addEventListener('click', removeLocalDraft);
+$('delete-local-draft-settings').addEventListener('click', removeLocalDraft);
 $('close-compose').addEventListener('click', discardComposition);
 $('composer-dialog').addEventListener('cancel', (event) => {
   event.preventDefault();

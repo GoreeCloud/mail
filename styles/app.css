@@ -227,3 +227,10 @@ h1{font-size:30px;letter-spacing:-1px;line-height:1.1;margin:5px 0 0}
 /* The mobile settings entry is available even when the desktop sidebar is hidden. */
 .settings-appearance{margin-top:14px}
 .settings-appearance button{min-height:44px;padding:10px 0;text-align:left;color:var(--gc-brand)}
+
+/* Consent-based local draft cleanup remains available without Gmail connection. */
+.settings-local-data{margin-top:12px;padding-top:12px;border-top:1px solid var(--gc-outline)}
+.settings-local-data p{margin:4px 0 9px}
+.settings-local-data button{display:block;min-height:44px;width:100%;padding:10px 0;text-align:left;color:var(--gc-negative);font-weight:700}
+.settings-local-data #clear-config{color:var(--gc-text-soft);font-weight:600}
+.settings-local-data .support{font-size:12px}
