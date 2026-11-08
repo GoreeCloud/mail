@@ -49,3 +49,7 @@
 - MIME parser and composer hardened, attachment safety review and HTML sandbox/sanitizer tested.
 - Clear privacy policy, permission inventory, threat model and provider compatibility matrix.
 - No critical/high unmitigated vulnerabilities; green tests and manual privacy/security review. Browser storage, passphrase handling, mobile nested modal/focus, offline operation, crypto/key-management and accidental-loss scenarios must be tested before Stable.
+
+## CI supply-chain controls
+
+The current workflow pins official `actions/checkout` and `actions/setup-node` to verified immutable commit SHAs. The workflow token retains `contents: read`; no deployment permissions are configured. Automated tests guard these declarations, but cannot certify the underlying actions or their transitive supply chains. See [CI_INTEGRITY.md](CI_INTEGRITY.md).
