@@ -7,7 +7,7 @@
 1. Connect an existing Gmail account, open **Compose**, and enter recipient, subject and/or message.
 2. Choose **Save encrypted draft** and provide a unique passphrase of at least 12 characters. The passphrase is not saved.
 3. On a later visit to the *same browser origin*, reconnect the matching email account, open Compose, select **Restore local draft**, and supply the passphrase.
-4. To remove the snapshot, choose **Delete saved draft** in the encrypted-draft dialog and confirm. This operation needs no passphrase; it is an explicit local deletion.
+4. To remove the snapshot, choose **Delete saved draft** in the encrypted-draft dialog and confirm. This operation needs no passphrase or Web Crypto; it is an explicit local deletion. The app can discover and remove the encrypted snapshot even when the browser's cryptographic interface is unavailable, provided browser storage itself remains accessible.
 
 Only **one** draft snapshot is kept per browser origin. Saving another requires confirmation and replaces the previous ciphertext. The snapshot is not synchronized to Gmail or other devices. Local **Disconnect** clears tokens and active message/composer state but **does not delete** encrypted draft data. Browser clear-site-data may destroy it irreversibly.
 
@@ -20,6 +20,7 @@ Only **one** draft snapshot is kept per browser origin. Saving another requires 
 - Maximum serialized plaintext: **1 MiB**; maximum encrypted-envelope size: **2 MiB**.
 - Decryption checks authenticated data before presenting the content. Correct passphrase + mismatched email account is refused.
 - Cancelled save/decrypt operations cannot persist or restore their late results. UI handlers also verify connected account and session generation.
+- Reading the local snapshot's existence and deleting its ciphertext are storage-only operations; encryption and decryption continue to require working Web Crypto. This allows privacy-preserving deletion in an unsupported cryptographic environment without bypassing authentication for restore.
 - No third-party cryptographic package, backend processing, mail relay or hosted data service.
 
 ## Threat model and limitations
@@ -40,7 +41,7 @@ Web Crypto plus PBKDF2 is an alpha compatibility approach; before Stable, evalua
 - No readable recipient/subject/body/account in local storage.
 - Incorrect password, ciphertext tampering and invalid format rejection.
 - Account mismatch refusal.
-- Replacement, deletion, missing data and size/entropy preconditions.
+- Replacement, deletion, missing data and size/entropy preconditions, including no-Web-Crypto ciphertext detection/deletion and rejection of missing storage methods.
 - Cancellation during encryption and decryption.
 - Simulated composer save / restore / failed unlock / cross-account flow.
 - Existing message, OAuth, MIME and UI tests continue to pass.
