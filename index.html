@@ -92,6 +92,11 @@
       <label for="client-id">Google OAuth client ID</label>
       <input type="text" id="client-id" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false" required>
       <div class="settings-appearance"><button id="theme-settings" type="button" class="quiet">Switch appearance (light / dark)</button></div>
+      <div class="settings-local-data">
+        <p><strong>Local privacy controls</strong></p>
+        <button id="delete-local-draft-settings" type="button" class="quiet">Delete saved encrypted draft from this browser</button>
+        <p class="support">This deletes only the local encrypted snapshot. No Gmail account or passphrase is needed.</p>
+      </div>
       <div class="dialog-footer"><button id="clear-config" type="button" class="quiet">Clear saved ID</button><button type="button" class="outline" id="close-settings">Cancel</button><button class="primary" type="submit">Save settings</button></div>
     </form>
   </dialog>
