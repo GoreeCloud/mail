@@ -12,7 +12,7 @@ Google's [`users.messages.modify` API](https://developers.google.com/workspace/g
 - The existing UI obtains explicit `gmail.modify` consent when needed and verifies the connected account before an action. The current implementation changes one selected message, not an entire thread.
 - The adapter rejects empty, non-array, duplicated or contradictory label instructions before making HTTP requests.
 - The request uses at most **100** added or removed label IDs per operation, each a bounded ASCII path-safe ID of at most **64 characters**. These are alpha client-side restrictions, not an assertion of Google's guaranteed label-ID character set or length.
-- After a successful HTTP response, the adapter requires the returned message ID to match the requested ID and the returned `labelIds` to be a valid, bounded, duplicate-free array when present. A missing `labelIds` is interpreted as an empty label set, which is useful for a successful final-label removal.
+- After a successful HTTP response, the adapter requires the returned message ID to match the requested ID and the returned `labelIds` to be a valid, bounded, duplicate-free **array**. A missing `labelIds` cannot confirm the mutation and must be refreshed; an explicit empty array can confirm removal of the last label.
 - Every requested addition must be present, and every requested removal absent, in the returned label set. If these checks fail, the UI reports **Refresh before retrying**, does not apply a guessed local label state, and **never automatically repeats** a possibly accepted mutation.
 - On a confirmed response, the reader and visible inbox list adopt the **provider-reported label state** rather than constructing an optimistic result from the requested action.
 - Provider label metadata is still untrusted data; only a bounded, sanitized ID list is propagated to the UI. No additional message content is read or persisted.
@@ -27,7 +27,7 @@ Google's [`users.messages.modify` API](https://developers.google.com/workspace/g
 
 ## Verified evidence
 
-The combined automated suite passes **107/107** tests locally in an isolated checkout. New tests cover invalid label inputs and conflicts before HTTP, a matching success receipt, final-label removal with an omitted `labelIds` field, malformed or mismatched receipts with no automatic retry, and the UI's provider-confirmed label display. JavaScript syntax checks also pass.
+The combined automated suite passes **107/107** tests locally in an isolated checkout. New tests cover invalid label inputs and conflicts before HTTP, a matching success receipt, final-label removal with an explicit empty label set, rejection of an omitted `labelIds` field, malformed or mismatched receipts with no automatic retry, and the UI's provider-confirmed label display. JavaScript syntax checks also pass.
 
 Real Gmail, large/custom-label collections, account revocation mid-request, multi-browser accessibility, mobile devices and independent security review are **not** verified by these synthetic tests.
 
