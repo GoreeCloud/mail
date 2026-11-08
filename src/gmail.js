@@ -360,7 +360,7 @@ export async function modifyMessage(id, { addLabelIds = [], removeLabelIds = [] 
   const receipt = await api('/messages/' + encodeURIComponent(requestedId) + '/modify', {
     method: 'POST', body: { addLabelIds: added, removeLabelIds: removed }, capability: 'modify'
   });
-  const returnedLabels = receipt?.labelIds == null ? [] : receipt.labelIds;
+  const returnedLabels = receipt?.labelIds;
   if (!receipt || receipt.id !== requestedId || !Array.isArray(returnedLabels)
     || returnedLabels.length > 128
     || returnedLabels.some((label) =>
