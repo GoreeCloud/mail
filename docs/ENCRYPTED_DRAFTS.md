@@ -7,9 +7,9 @@
 1. Connect an existing Gmail account, open **Compose**, and enter recipient, subject and/or message.
 2. Choose **Save encrypted draft** and provide a unique passphrase of at least 12 characters. The passphrase is not saved.
 3. On a later visit to the *same browser origin*, reconnect the matching email account, open Compose, select **Restore local draft**, and supply the passphrase.
-4. To remove the snapshot, choose **Delete saved draft** in the encrypted-draft dialog and confirm. This operation needs no passphrase or Web Crypto; it is an explicit local deletion. The app can discover and remove the encrypted snapshot even when the browser's cryptographic interface is unavailable, provided browser storage itself remains accessible.
+4. To remove the snapshot, either use **Delete saved draft** in the encrypted-draft dialog while connected, or open **Configure connection → Local privacy controls → Delete saved encrypted draft from this browser** while disconnected. Confirm the removal. This operation needs **no account connection, passphrase or Web Crypto**, provided local browser storage remains accessible.
 
-Only **one** draft snapshot is kept per browser origin. Saving another requires confirmation and replaces the previous ciphertext. The snapshot is not synchronized to Gmail or other devices. Local **Disconnect** clears tokens and active message/composer state but **does not delete** encrypted draft data. Browser clear-site-data may destroy it irreversibly.
+Only **one** draft snapshot is kept per browser origin. Saving another requires confirmation and replaces the previous ciphertext. The snapshot is not synchronized to Gmail or other devices. The disconnected Settings deletion control works without granting access to Gmail, and closing Settings afterward does not restore a deleted snapshot. Local **Disconnect** clears tokens and active message/composer state but **does not delete** encrypted draft data. Browser clear-site-data may destroy it irreversibly.
 
 ## Cryptographic construction
 
@@ -42,6 +42,7 @@ Web Crypto plus PBKDF2 is an alpha compatibility approach; before Stable, evalua
 - Incorrect password, ciphertext tampering and invalid format rejection.
 - Account mismatch refusal.
 - Replacement, deletion, missing data and size/entropy preconditions, including no-Web-Crypto ciphertext detection/deletion and rejection of missing storage methods.
+- Simulated UI flow: confirm or cancel deletion of a saved snapshot through account Settings after disconnecting Gmail; no provider request is made.
 - Cancellation during encryption and decryption.
 - Simulated composer save / restore / failed unlock / cross-account flow.
 - Existing message, OAuth, MIME and UI tests continue to pass.
