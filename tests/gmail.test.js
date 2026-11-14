@@ -159,11 +159,25 @@ test('untrusted label and preview sizes are bounded', () => {
 });
 
 test('missing or oversized message identifiers are rejected', () => {
-  for (const item of [null, {}, { id: 12 }, { id: '' }, { id: 'z'.repeat(257) }]) {
+  for (const item of [null, {}, { id: 12 }, { id: '' }, { id: 'z'.repeat(257) },
+    { id: 'a/b' }, { id: 'a\\nforged' }, { id: 'a\\u2028' }, { id: 'a ' }]) {
     assert.throws(() => normalizeMessage(item), /invalid message metadata/);
   }
 });
 
+
+test('provider thread IDs and label IDs do not carry malformed opaque identifiers', () => {
+  const malformed = normalizeMessage({
+    id: 'safe_id',
+    threadId: 'bad/thread\\n',
+    labelIds: ['INBOX', 'INBOX', 'Label_7', 'bad/label', 'strange\\u2028', null],
+    payload: { headers: [] }
+  });
+  assert.equal(malformed.threadId, '');
+  assert.deepEqual(malformed.labels, ['INBOX', 'Label_7']);
+  const valid = normalizeMessage({ id: 'safe_id', threadId: 'thread-123', labelIds: ['UNREAD'] });
+  assert.equal(valid.threadId, 'thread-123');
+});
 
 test('encapsulated RFC 822 message bodies are never used as the current email text', () => {
   const forwarded = {

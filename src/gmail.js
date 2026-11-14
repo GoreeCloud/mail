@@ -187,7 +187,7 @@ export function extractAttachmentSummaries(payload) {
 
 export function normalizeMessage(message) {
   if (!message || typeof message !== 'object'
-    || typeof message.id !== 'string' || !message.id.trim() || message.id.length > 256) {
+    || typeof message.id !== 'string' || !MESSAGE_ID_PATTERN.test(message.id)) {
     throw new Error('Provider returned invalid message metadata. Retry this mailbox.');
   }
   const headers = Array.isArray(message.payload?.headers) ? message.payload.headers : [];
@@ -201,9 +201,13 @@ export function normalizeMessage(message) {
     attachments: attachmentInfo.items,
     attachmentsTruncated: attachmentInfo.truncated,
     id: message.id,
-    threadId: typeof message.threadId === 'string' ? message.threadId.slice(0, 256) : '',
+    // A provider-supplied thread identifier must satisfy the same opaque-ID
+    // shape as a message identifier before it can reach a reply context.
+    threadId: typeof message.threadId === 'string' && MESSAGE_ID_PATTERN.test(message.threadId)
+      ? message.threadId : '',
     labels: Array.isArray(message.labelIds)
-      ? message.labelIds.filter((label) => typeof label === 'string' && label.length <= 64).slice(0, 128)
+      ? [...new Set(message.labelIds.filter((label) => typeof label === 'string'
+        && LABEL_ID_PATTERN.test(label)).slice(0, 128))]
       : [],
     from: displayHeader('From') || '(Unknown sender)',
     subject: displayHeader('Subject') || '(No subject)',
