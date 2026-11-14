@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage, extractAttachmentSummaries } from '../src/gmail.js';
+import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage, extractAttachmentSummaries, validateSendReceipt } from '../src/gmail.js';
 
 test('base64url encodes and decodes UTF-8 safely', () => {
   const value = 'Hello, Görée ✉️';
@@ -302,4 +302,24 @@ test('malformed provider filename and attachment ID data are never interpreted a
   assert.equal(extractPlainText(payload), 'Visible text');
   assert.equal(extractAttachmentSummaries(payload).items.length, 2);
   assert.equal(extractAttachmentSummaries(payload).items[0].name, 'Unnamed attachment');
+});
+
+
+test('sent-mail receipts reject malformed IDs and unsafe provider thread metadata', () => {
+  assert.deepEqual(validateSendReceipt({ id: 'msg_123', threadId: 'thread_123' }), {
+    id: 'msg_123', threadId: 'thread_123', status: 'accepted_by_provider'
+  });
+  assert.deepEqual(validateSendReceipt({ id: 'msg_123' }), {
+    id: 'msg_123', threadId: null, status: 'accepted_by_provider'
+  });
+  for (const receipt of [null, {}, { id: 'has space' }, { id: 'a/b' },
+    { id: 'a\\nforged' }, { id: 'x'.repeat(257) }, { id: 'ok', threadId: 7 },
+    { id: 'ok', threadId: 'bad/thread' }, { id: 'ok', threadId: '' }]) {
+    assert.throws(() => validateSendReceipt(receipt), /Check Sent before retrying/);
+  }
+  assert.throws(() => validateSendReceipt({ id: 'sent', threadId: 'wrong' }, 'expected'),
+    /unexpected reply thread/);
+  assert.deepEqual(validateSendReceipt({ id: 'sent', threadId: 'expected' }, 'expected'), {
+    id: 'sent', threadId: 'expected', status: 'accepted_by_provider'
+  });
 });

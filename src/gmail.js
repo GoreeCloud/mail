@@ -471,12 +471,19 @@ export async function sendMessage(input) {
     // There is no automatic retry: that could duplicate mail.
     throw new Error('Gmail submission could not be confirmed. Check Sent before retrying to avoid duplicates.');
   }
-  if (!receipt || typeof receipt.id !== 'string' || !receipt.id.trim() || receipt.id.length > 256) {
-    throw new Error('Gmail did not confirm a message ID. Check Sent before retrying to avoid duplicates.');
+  return validateSendReceipt(receipt, replyMetadata?.threadId || null);
+}
+
+// A successful POST may already have submitted mail. Reject malformed provider
+// receipts without silently manufacturing an ID or automatically retrying.
+export function validateSendReceipt(receipt, expectedThreadId = null) {
+  if (!receipt || typeof receipt.id !== 'string' || !MESSAGE_ID_PATTERN.test(receipt.id)
+    || (receipt.threadId != null &&
+      (typeof receipt.threadId !== 'string' || !MESSAGE_ID_PATTERN.test(receipt.threadId)))) {
+    throw new Error('Gmail did not confirm valid message metadata. Check Sent before retrying to avoid duplicates.');
   }
-  if (replyMetadata && receipt.threadId !== replyMetadata.threadId) {
-    // The provider may already have accepted this message into a different thread.
-    // Never retry an ambiguous submission automatically.
+  if (expectedThreadId && receipt.threadId !== expectedThreadId) {
+    // Gmail might have already accepted this send in a different thread.
     throw new Error('Gmail returned an unexpected reply thread. Check Sent before retrying to avoid duplicates.');
   }
   return { id: receipt.id, threadId: receipt.threadId || null, status: 'accepted_by_provider' };
