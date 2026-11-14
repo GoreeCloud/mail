@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage, extractAttachmentSummaries } from '../src/gmail.js';
+import { base64UrlEncode, decodeB64Url, extractPlainText, buildRawMessage, normalizeMessage, extractAttachmentSummaries, validateSendReceipt } from '../src/gmail.js';
 
 test('base64url encodes and decodes UTF-8 safely', () => {
   const value = 'Hello, Görée ✉️';
@@ -153,17 +153,33 @@ test('untrusted label and preview sizes are bounded', () => {
       body: { data: base64UrlEncode('Safe') } }
   });
   assert.deepEqual(item.labels, ['INBOX', 'UNREAD']);
-  assert.equal(item.threadId.length, 256);
+  // A too-long provider thread ID is discarded rather than truncated into
+  // an invented valid-looking reply target.
+  assert.equal(item.threadId, '');
   assert.equal(item.snippet.length, 2048);
   assert.equal(item.body, 'Safe');
 });
 
 test('missing or oversized message identifiers are rejected', () => {
-  for (const item of [null, {}, { id: 12 }, { id: '' }, { id: 'z'.repeat(257) }]) {
+  for (const item of [null, {}, { id: 12 }, { id: '' }, { id: 'z'.repeat(257) },
+    { id: 'a/b' }, { id: 'a\\nforged' }, { id: 'a\\u2028' }, { id: 'a ' }]) {
     assert.throws(() => normalizeMessage(item), /invalid message metadata/);
   }
 });
 
+
+test('provider thread IDs and label IDs do not carry malformed opaque identifiers', () => {
+  const malformed = normalizeMessage({
+    id: 'safe_id',
+    threadId: 'bad/thread\\n',
+    labelIds: ['INBOX', 'INBOX', 'Label_7', 'bad/label', 'strange\\u2028', null],
+    payload: { headers: [] }
+  });
+  assert.equal(malformed.threadId, '');
+  assert.deepEqual(malformed.labels, ['INBOX', 'Label_7']);
+  const valid = normalizeMessage({ id: 'safe_id', threadId: 'thread-123', labelIds: ['UNREAD'] });
+  assert.equal(valid.threadId, 'thread-123');
+});
 
 test('encapsulated RFC 822 message bodies are never used as the current email text', () => {
   const forwarded = {
@@ -286,4 +302,24 @@ test('malformed provider filename and attachment ID data are never interpreted a
   assert.equal(extractPlainText(payload), 'Visible text');
   assert.equal(extractAttachmentSummaries(payload).items.length, 2);
   assert.equal(extractAttachmentSummaries(payload).items[0].name, 'Unnamed attachment');
+});
+
+
+test('sent-mail receipts reject malformed IDs and unsafe provider thread metadata', () => {
+  assert.deepEqual(validateSendReceipt({ id: 'msg_123', threadId: 'thread_123' }), {
+    id: 'msg_123', threadId: 'thread_123', status: 'accepted_by_provider'
+  });
+  assert.deepEqual(validateSendReceipt({ id: 'msg_123' }), {
+    id: 'msg_123', threadId: null, status: 'accepted_by_provider'
+  });
+  for (const receipt of [null, {}, { id: 'has space' }, { id: 'a/b' },
+    { id: 'a\\nforged' }, { id: 'x'.repeat(257) }, { id: 'ok', threadId: 7 },
+    { id: 'ok', threadId: 'bad/thread' }, { id: 'ok', threadId: '' }]) {
+    assert.throws(() => validateSendReceipt(receipt), /Check Sent before retrying/);
+  }
+  assert.throws(() => validateSendReceipt({ id: 'sent', threadId: 'wrong' }, 'expected'),
+    /unexpected reply thread/);
+  assert.deepEqual(validateSendReceipt({ id: 'sent', threadId: 'expected' }, 'expected'), {
+    id: 'sent', threadId: 'expected', status: 'accepted_by_provider'
+  });
 });
