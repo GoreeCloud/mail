@@ -153,7 +153,9 @@ test('untrusted label and preview sizes are bounded', () => {
       body: { data: base64UrlEncode('Safe') } }
   });
   assert.deepEqual(item.labels, ['INBOX', 'UNREAD']);
-  assert.equal(item.threadId.length, 256);
+  // A too-long provider thread ID is discarded rather than truncated into
+  // an invented valid-looking reply target.
+  assert.equal(item.threadId, '');
   assert.equal(item.snippet.length, 2048);
   assert.equal(item.body, 'Safe');
 });
